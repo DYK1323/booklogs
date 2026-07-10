@@ -20,6 +20,7 @@
 - 첫 화면(대시보드)은 책장처럼 표지를 늘어놓고, 각 표지에 dim 처리 + 원형(도넛) 진행률 오버레이를 씌우는 비주얼
 - 진행률 기록은 페이지 번호 직접 입력뿐 아니라, 책 페이지를 촬영해 OCR로 페이지 번호를 자동 인식해 채워주는 방식도 지원
 - **빈도 기반 마찰 설계**: 책 등록은 자주 하는 작업이 아니므로 여러 단계 절차(스캔→조회→확인폼)를 유지해도 되지만, 진행 중인 책 3~4권의 진행률 체크와 인용구 등록은 거의 매일 반복되는 작업이므로 화면 전환을 최소화한 원탭 진입 방식으로 설계한다 (아래 "빠른 기록 UX" 참고). 기록 절차가 번거로우면 결국 기록을 포기하게 된다는 것이 설계 원칙.
+- **리마인더**: 사용자가 설정한 시각에 하루 한 번, 현재 READING인 책 중 **무작위로 1권**을 골라 진행률을 알림으로 보여줌(예: "『책 제목』 62% 읽는 중"). 알림 탭 시 해당 책의 빠른 기록 시트로 바로 진입해 그 자리에서 진행률을 기록할 수 있음.
 
 ## 기술 스택
 
@@ -37,6 +38,7 @@
 | 이미지 로딩 | Coil (표지 썸네일) | |
 | 차트 | Compose `Canvas`로 직접 구현하는 막대그래프 (외부 차트 라이브러리 미사용) | 요구사항이 "일별 합산 막대그래프" 하나뿐이라 Vico 등 의존성 추가보다 ~100줄 커스텀 Canvas가 더 가볍고, 데이터 버켓팅 로직은 순수 Kotlin 함수로 분리해 단위 테스트 가능 |
 | 내비게이션 | Jetpack Compose Navigation, 단일 Activity | |
+| 리마인더 | `AlarmManager`(비정확 알람, `setAndAllowWhileIdle`) + `NotificationManager` + DataStore Preferences(설정 저장) | 클라우드/서버 푸시 없이 기기 로컬 알람만으로 구현 가능. 분 단위 오차는 독서 리마인더 용도에 무해하다고 보고 정확 알람(Android 12+ `SCHEDULE_EXACT_ALARM` 권한 필요)은 피해 권한 요청 절차를 단순화 |
 | SDK | minSdk 26, target/compile SDK 35 | ML Kit 한글 인식·CameraX 안정 지원 범위 |
 
 ## 데이터 모델 (Room)
@@ -64,6 +66,7 @@ com.dyk1323.booklogs/
     local/{BooklogsDatabase, dao/*, entity/*}
     remote/{GoogleBooksApi, dto/*, BookMetadataMapper}
     repository/{Book,ReadingLog,Quote,Review,BookMetadata}Repository(+Impl)
+    settings/ (ReminderSettingsDataStore — DataStore Preferences, Room이 아님. reminderEnabled: Boolean, reminderHour/Minute: Int)
   domain/
     model/ (Book, ReadingLog, Quote, Review, ReadingRound — Room 엔티티와 분리된 순수 모델)
     usecase/
@@ -74,6 +77,7 @@ com.dyk1323.booklogs/
       DeleteLogUseCase.kt             ← 임의 로그 삭제(단순 delete, 이웃 로그 재계산 불필요)
       ComputeBookProgressUseCase.kt   ← 진행률 %
       ChangeBookStatusUseCase.kt      ← 상태 전이 처리(READING↔PAUSED는 라운드 유지, →FINISHED/DROPPED는 현재 라운드 종료+endReason 기록, FINISHED/DROPPED→READING은 새 라운드 생성). 전이 종류별 라운드 부수효과를 한 곳에 모아 화면(책 상세)에서는 단순 호출만 하도록 함
+      PickReminderBookUseCase.kt      ← 순수 함수: READING 상태 책 목록을 받아 무작위로 1권 선택(빈 목록이면 null 반환 → 리시버가 알림을 건너뜀)
   ui/
     dashboard/ (DashboardScreen, DashboardViewModel, TodayPagesHero, DailyPagesBarChart, BookShelfGrid, BookCoverProgressRing, BookQuickActionSheet, QuickProgressEntryViewModel)
     registration/ (BookRegistrationScreen, BarcodeScanScreen, BarcodeAnalyzer, TitleSearchScreen, BookConfirmFormScreen, BookRegistrationViewModel)
@@ -81,8 +85,14 @@ com.dyk1323.booklogs/
     library/ (LibraryScreen, LibraryViewModel — 상태별 필터가 가능한 전체 책 목록. PAUSED/DROPPED/FINISHED/PLANNED 책은 대시보드 책장(READING 전용)에 안 나오므로 이 화면이 유일한 접근 경로)
     quote/ (QuoteCaptureScreen, TextRecognitionAnalyzer, QuoteTextSelectionScreen, QuoteCaptureViewModel — bookId 파라미터로 대시보드/책상세 양쪽에서 직접 진입 가능)
     review/ (ReviewEditorScreen, ReviewEditorViewModel)
+    settings/ (SettingsScreen, SettingsViewModel — 리마인더 on/off 토글 + TimePicker)
     common/{theme, components}
     navigation/{BooklogsNavHost, Destinations}
+  notification/
+    ReminderScheduler.kt              ← AlarmManager 등록/취소 래퍼
+    ReminderReceiver.kt               ← BroadcastReceiver, 알람 시각에 실행: 책 조회→PickReminderBookUseCase→알림 표시→다음날 알람 재등록
+    BootReceiver.kt                   ← RECEIVE_BOOT_COMPLETED 수신 시 저장된 설정 기준으로 알람 재등록(재부팅 시 AlarmManager 알람이 사라지므로)
+    ReminderNotificationBuilder.kt    ← 알림 콘텐츠/딥링크(PendingIntent → 대시보드 특정 bookId로 BookQuickActionSheet 자동 오픈) 구성
   di/AppContainer.kt
   MainActivity.kt, BooklogsApplication.kt
 ```
@@ -117,6 +127,7 @@ com.dyk1323.booklogs/
 5. **인용구 캡처**: 대시보드 빠른 기록 시트 또는 책 상세에서 진입(둘 다 책 컨텍스트를 이미 알고 있어 책 선택 단계 없음). 단발 촬영(연속 프레임 아님, 정확도 우선) → Latin+Korean 인식기 동시 실행 → 인식된 줄(line) 단위 리스트를 체크박스로 선택("전체 선택" 토글도 제공, 문단 전체를 인용하는 경우가 많음) → 선택된 줄을 순서대로 합쳐 편집 가능한 텍스트필드에 표시 → 페이지번호(선택) 입력 후 저장 → "계속 촬영"(같은 책으로 카메라 재진입) / "완료"(호출한 곳으로 복귀) 선택.
 6. **독후감 작성**: 특정 라운드에 연결된 텍스트+평점(선택) 작성/저장 — 중단한(DROPPED) 라운드에도 독후감(왜 중단했는지 등)을 남길 수 있음, 제약 없음
 7. **라이브러리(전체 책 목록)**: 대시보드 상단바에서 진입, 상태별(읽는 중/일시중지/완독/중단/읽을 예정) 필터와 검색 제공. PAUSED·DROPPED·FINISHED·PLANNED 책은 대시보드 책장에는 안 보이므로 이 화면이 유일한 접근 경로. 목록 아이템 탭 → 책 상세.
+8. **설정(리마인더)**: 대시보드 상단바에서 진입. 리마인더 on/off 토글 + 시각 선택(`TimePicker`, 하루 1회). 저장 즉시 `ReminderScheduler`가 알람을 재등록/취소. 알림 자체는 매일 정해진 시각에 현재 READING인 책 중 **무작위로 1권**을 골라 "『책 제목』 62% 읽는 중" 형태로 표시하고, 알림 탭 시 그 책의 빠른 기록 시트가 바로 열려 그 자리에서 진행률을 기록할 수 있음(리마인더가 곧 빠른 기록 진입점이 되도록 설계). READING인 책이 하나도 없는 날은 알림을 건너뛰고 다음날 알람만 재등록.
 
 ## 구현 시 유의사항
 
@@ -137,20 +148,21 @@ com.dyk1323.booklogs/
   - FINISHED/DROPPED → READING: `roundNumber = 이전 최대값 + 1`인 새 `ReadingRoundEntity` 삽입(startedAt=now, finishedAt=null) + `BookEntity.status = READING`. 첫 등록 시 라운드 생성 로직과 동일한 헬퍼 재사용.
   - 각 케이스가 독립적인 분기라 파악이 쉽고, 트랜잭션 하나(`@Transaction`)로 묶어 라운드/책 상태가 항상 같이 갱신되도록 함(하나만 갱신되고 나머지가 실패하는 상태 방지).
 - **라이브러리 화면 쿼리**: `BookDao.observeAll(): Flow<List<BookEntity>>`를 가져와 ViewModel에서 status로 필터링(데이터 양이 적어 SQL WHERE 없이 메모리 필터로 충분). 검색은 title/author `contains` 매칭.
+- **리마인더 알람/알림**: `ReminderScheduler.schedule(hour, minute)`이 `AlarmManager.setAndAllowWhileIdle(RTC_WAKEUP, triggerAtMillis, pendingIntent)`로 다음 발생 시각 하나만 예약(반복 알람 대신 매번 재예약 — Doze 하에서 `setRepeating` 오차 누적을 피하기 위함). `ReminderReceiver.onReceive`가 (1) `BookDao`에서 READING 목록 조회 → `PickReminderBookUseCase`로 무작위 1권 선택(없으면 알림 생략) → (2) 알림 표시 시 `PendingIntent`의 딥링크 extra로 `bookId`를 실어 `MainActivity` → `Destinations.Dashboard(openQuickSheetFor = bookId)`로 진입하도록 구성 → (3) 다음날 같은 시각으로 알람 재예약. 기기 재부팅 시 `AlarmManager` 알람이 사라지므로 `BootReceiver`가 `RECEIVE_BOOT_COMPLETED`를 받아 저장된 설정으로 재등록. Android 13(API 33)+에서는 알림 표시 전 런타임 `POST_NOTIFICATIONS` 권한 요청 필요(설정 화면에서 리마인더를 켤 때 요청).
 - DAO는 인터페이스로 정의해 Repository 단위 테스트에서 Room 없이 Fake DAO로 대체 가능하게 함.
 
 ## Gradle 설정
 
-- Version Catalog(`gradle/libs.versions.toml`)에 Compose BOM, Room(+KSP), CameraX, ML Kit(barcode-scanning, text-recognition, text-recognition-korean), Retrofit+OkHttp, Coil, Navigation-Compose, Coroutines 추가
-- `AndroidManifest.xml`: `CAMERA`, `INTERNET` 권한, `<uses-feature android:name="android.hardware.camera" required="true"/>`
+- Version Catalog(`gradle/libs.versions.toml`)에 Compose BOM, Room(+KSP), CameraX, ML Kit(barcode-scanning, text-recognition, text-recognition-korean), Retrofit+OkHttp, Coil, Navigation-Compose, Coroutines, **DataStore Preferences** 추가
+- `AndroidManifest.xml`: `CAMERA`, `INTERNET`, **`POST_NOTIFICATIONS`(API 33+ 런타임 권한), `RECEIVE_BOOT_COMPLETED`** 권한, `<uses-feature android:name="android.hardware.camera" required="true"/>`, `ReminderReceiver`/`BootReceiver`를 `<receiver>`로 등록
 - 카카오 REST API 키: `local.properties`에 `KAKAO_API_KEY=...` 추가 → `app/build.gradle.kts`에서 `buildConfigField`로 주입, `local.properties`는 이미 `.gitignore` 대상이므로 키가 커밋되지 않음을 확인. 사용자가 카카오 디벨로퍼스(https://developers.kakao.com)에서 앱을 등록하고 키를 발급받아야 하는 단계는 구현 완료 후 별도 안내
 
 ## 검증 계획
 
 샌드박스에 Android SDK/에뮬레이터가 없으므로:
 - **가능**: `./gradlew :app:compileDebugKotlin`, `./gradlew :app:testDebugUnitTest`로 순수 로직 검증
-  - `ComputeLogDeltasUseCaseTest`(핵심: 정렬/인접쌍 차이/클램프, 그리고 **중간 로그 수정·삭제 후 이웃 델타가 재저장 없이 올바르게 다시 계산되는지** — 이번 스키마 변경의 핵심 검증 대상), `AggregateDailyPagesUseCaseTest`(일자 버켓팅/0채움/여러 책 합산/기간 경계 밖 로그 포함 여부), `LogProgressUseCaseTest`(단순 insert), `EditLogUseCaseTest`/`DeleteLogUseCaseTest`(임의 시점 로그 수정/삭제, 이웃 로그 미변경 확인), `ComputeBookProgressUseCaseTest`(totalPages null 처리), `ChangeBookStatusUseCaseTest`(READING↔PAUSED는 라운드 불변, →FINISHED/DROPPED는 라운드 종료+endReason 정확성, FINISHED/DROPPED→READING은 roundNumber 증가한 새 라운드 생성, PAUSED→READING은 라운드 재사용), `BookMetadataMapperTest`(카카오 DTO 매핑 + Google Books DTO 매핑 + 폴백 분기), `PageNumberCandidateExtractorTest`(숫자 토큰 필터링/코너 스코어링 로직, 순수 함수로 분리해 단위 테스트), Fake DAO 기반 Repository 테스트
+  - `ComputeLogDeltasUseCaseTest`(핵심: 정렬/인접쌍 차이/클램프, 그리고 **중간 로그 수정·삭제 후 이웃 델타가 재저장 없이 올바르게 다시 계산되는지** — 이번 스키마 변경의 핵심 검증 대상), `AggregateDailyPagesUseCaseTest`(일자 버켓팅/0채움/여러 책 합산/기간 경계 밖 로그 포함 여부), `LogProgressUseCaseTest`(단순 insert), `EditLogUseCaseTest`/`DeleteLogUseCaseTest`(임의 시점 로그 수정/삭제, 이웃 로그 미변경 확인), `ComputeBookProgressUseCaseTest`(totalPages null 처리), `ChangeBookStatusUseCaseTest`(READING↔PAUSED는 라운드 불변, →FINISHED/DROPPED는 라운드 종료+endReason 정확성, FINISHED/DROPPED→READING은 roundNumber 증가한 새 라운드 생성, PAUSED→READING은 라운드 재사용), `PickReminderBookUseCaseTest`(빈 목록→null, 여러 권 중 무작위 선택이 목록 범위 내에서만 나오는지), `BookMetadataMapperTest`(카카오 DTO 매핑 + Google Books DTO 매핑 + 폴백 분기), `PageNumberCandidateExtractorTest`(숫자 토큰 필터링/코너 스코어링 로직, 순수 함수로 분리해 단위 테스트), Fake DAO 기반 Repository 테스트
   - `assembleDebug`/`lint`는 SDK 플랫폼 컴포넌트 다운로드가 가능한지에 따라 시도해보되, 안 되면 컴파일+유닛테스트까지가 한계
-- **불가능(사용자가 실기기/에뮬레이터에서 직접 확인 필요)**: Compose 화면 렌더링/내비게이션 클릭 흐름(책장 그리드 + 도넛 오버레이 실제 표시 포함), CameraX 프리뷰·권한, 실제 바코드 인식 정확도, 실제 한글/영어 책 페이지 OCR 정확도 및 텍스트 선택 UX, 페이지 번호 자동 인식 정확도(폰트/각도/코너 위치 편차가 커서 실기기 튜닝 필요), Room 실기기 동작, 카카오/Google Books 실제 네트워크 응답, 전체 엔드투엔드 플로우(등록→기록→그래프 갱신→인용구→독후감)
+- **불가능(사용자가 실기기/에뮬레이터에서 직접 확인 필요)**: Compose 화면 렌더링/내비게이션 클릭 흐름(책장 그리드 + 도넛 오버레이 실제 표시 포함), CameraX 프리뷰·권한, 실제 바코드 인식 정확도, 실제 한글/영어 책 페이지 OCR 정확도 및 텍스트 선택 UX, 페이지 번호 자동 인식 정확도(폰트/각도/코너 위치 편차가 커서 실기기 튜닝 필요), Room 실기기 동작, 카카오/Google Books 실제 네트워크 응답, **AlarmManager 알람 발화·Doze 하 지연 정도·재부팅 후 재등록·알림 표시/딥링크 동작**, 전체 엔드투엔드 플로우(등록→기록→그래프 갱신→인용구→독후감→리마인더)
 
 구현 순서는 Room 스키마 → DAO/Repository → domain usecase(전부 유닛테스트로 검증) → ViewModel(Fake Repository로 검증) → Compose UI/CameraX/ML Kit(유닛테스트 불가, 최대한 단순하게 구현) 순으로 진행해, 샌드박스에서 검증 가능한 "핵심 로직"을 먼저 견고히 하고 카메라/OCR 튜닝은 사용자 몫으로 넘긴다.
