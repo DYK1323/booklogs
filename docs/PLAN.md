@@ -19,6 +19,7 @@
 - 바코드/제목 조회: 온라인 API로 메타데이터 자동완성 사용, 오프라인/실패 시 수동 입력으로 폴백. 독서 기록 데이터 자체는 기기에만 저장(Room DB만 사용, 서버/계정 없음). 메타데이터 API는 **카카오 책 검색 API 우선 + Google Books 보조**(카카오가 한국 도서 표지/정보 커버리지가 더 좋음; 카카오는 실패 시 Google Books로 폴백, 둘 다 실패하면 수동 입력)
 - 첫 화면(대시보드)은 책장처럼 표지를 늘어놓고, 각 표지에 dim 처리 + 원형(도넛) 진행률 오버레이를 씌우는 비주얼
 - 진행률 기록은 페이지 번호 직접 입력뿐 아니라, 책 페이지를 촬영해 OCR로 페이지 번호를 자동 인식해 채워주는 방식도 지원
+- **빈도 기반 마찰 설계**: 책 등록은 자주 하는 작업이 아니므로 여러 단계 절차(스캔→조회→확인폼)를 유지해도 되지만, 진행 중인 책 3~4권의 진행률 체크와 인용구 등록은 거의 매일 반복되는 작업이므로 화면 전환을 최소화한 원탭 진입 방식으로 설계한다 (아래 "빠른 기록 UX" 참고). 기록 절차가 번거로우면 결국 기록을 포기하게 된다는 것이 설계 원칙.
 
 ## 기술 스택
 
@@ -63,11 +64,10 @@ com.dyk1323.booklogs/
       LogProgressUseCase.kt           ← 델타 계산/클램프/라운드 연결
       ComputeBookProgressUseCase.kt   ← 진행률 %
   ui/
-    dashboard/ (DashboardScreen, DashboardViewModel, DailyPagesBarChart, BookProgressListItem)
+    dashboard/ (DashboardScreen, DashboardViewModel, DailyPagesBarChart, BookShelfGrid, BookCoverProgressRing, BookQuickActionSheet, QuickProgressEntryViewModel)
     registration/ (BookRegistrationScreen, BarcodeScanScreen, BarcodeAnalyzer, TitleSearchScreen, BookConfirmFormScreen, BookRegistrationViewModel)
-    logging/ (LogProgressScreen, LogProgressViewModel)
-    bookdetail/ (BookDetailScreen, BookDetailViewModel, ReadingRoundSection, QuoteListSection, ReviewListSection)
-    quote/ (QuoteCaptureScreen, TextRecognitionAnalyzer, QuoteTextSelectionScreen, QuoteCaptureViewModel)
+    bookdetail/ (BookDetailScreen, BookDetailViewModel, ReadingRoundSection, QuoteListSection, ReviewListSection — "진행률 기록"/"인용구 추가" 버튼은 dashboard의 BookQuickActionSheet/QuoteCaptureScreen을 그대로 재사용)
+    quote/ (QuoteCaptureScreen, TextRecognitionAnalyzer, QuoteTextSelectionScreen, QuoteCaptureViewModel — bookId 파라미터로 대시보드/책상세 양쪽에서 직접 진입 가능)
     review/ (ReviewEditorScreen, ReviewEditorViewModel)
     common/{theme, components}
     navigation/{BooklogsNavHost, Destinations}
@@ -75,16 +75,24 @@ com.dyk1323.booklogs/
   MainActivity.kt, BooklogsApplication.kt
 ```
 
+## 빠른 기록 UX (핵심 설계 원칙)
+
+책 등록은 저빈도 작업이라 여러 단계를 거쳐도 되지만, **진행률 체크와 인용구 등록은 거의 매일 반복**되므로 화면 전환 자체를 없애는 방향으로 설계한다.
+
+- **책장 표지 탭 → 화면 전환 없이 바텀시트**가 즉시 열림. 이 시트가 진행률 체크·인용구 추가·상세보기 세 가지 진입점을 모두 담당하며, "책 상세" 화면을 거치지 않는다.
+  - 시트를 열면 **진행률 입력이 바로 최상단에 프리필된 상태로 노출**된다: 마지막으로 기록한 페이지 번호를 숫자 입력창에 채워두고, 그 아래 `+5 / +10 / +20 / +50` 퀵칩 버튼으로 값을 빠르게 올릴 수 있게 한다(직접 타이핑도 가능). 값 확인 후 저장 버튼 1번이면 끝 — **표지 탭 1번 + 저장 1번**이 기본 경로.
+    - "사진으로 인식" 링크를 시트 하단에 작게 배치: 페이지 번호를 까먹었을 때만 쓰는 보조 수단으로 격하(카메라 대기/오인식 보정 때문에 직접 입력보다 느릴 수 있어 주 경로로 두지 않음). 탭하면 카메라가 열리고 OCR로 추출한 숫자를 같은 입력창에 채워준 뒤 그대로 확인/저장 흐름으로 복귀.
+  - 시트 내 "인용구 추가" 버튼: 탭하면 책 상세를 거치지 않고 곧바로 카메라(인용구 캡처)로 진입 — **대시보드 → 카메라 1홉**. 인용구 저장 후에는 "계속 촬영" / "완료"를 선택하게 해, 한 번에 여러 인용구를 찍을 때마다 대시보드로 돌아왔다 다시 들어가지 않아도 되게 한다.
+  - 시트 내 "책 상세보기" 버튼: 진행 이력·독후감처럼 가끔 보는 딥다이브용 화면으로 이동하는 세 번째(가장 낮은 빈도) 옵션.
+- `totalPages`가 없는 책은 도넛 대신 "?" 배지를 표시하고, 시트를 열면 총 페이지 수 입력을 먼저 유도.
+
 ## 화면 흐름
 
-1. **대시보드(홈, 시작 화면) — "책장" 뷰**: 상단에 최근 N일 합산 페이지 막대그래프. 하단에 진행 중인 책들을 책장처럼 그리드로 배치 — 각 표지 이미지에 dim 오버레이(반투명 검정)를 씌우고, 그 위에 원형(도넛) 진행률 링을 표지 중앙/코너에 겹쳐 그림(진행률 = currentPage/totalPages). `totalPages`가 없는 책은 도넛 대신 "?" 또는 페이지 입력 유도 배지 표시. → 책 등록/진행 기록 화면, 책 탭 시 상세로 이동
-2. **책 등록**: 스캔/제목검색/수동입력 선택 → 스캔은 CameraX+ML Kit 바코드 인식 → ISBN으로 카카오 책 검색 API 조회(실패 시 Google Books 폴백) → 확인/수정 폼(둘 다 실패 시 빈 폼+수동입력 안내) → 저장(상태 READING이면 첫 라운드 자동 생성). 제목 검색도 동일하게 카카오 우선 조회.
-3. **진행 기록**: 두 가지 입력 방식 제공
-   - 직접 입력: 진행중 책 선택 + 현재 페이지 숫자 입력
-   - 사진 인식: 책 페이지 촬영(인용구 캡처와 동일한 카메라+OCR 파이프라인 재사용) → 인식된 텍스트 중 페이지 코너에 위치한 독립된 숫자 토큰을 페이지 번호 후보로 추출해 입력창에 자동 채움 → 사용자가 확인/수정 후 저장(OCR 오인식 가능성이 있어 자동 저장은 하지 않고 항상 확인 단계를 거침)
-   - 두 방식 모두 해당 라운드의 마지막 로그 대비 델타 계산 후 저장
-4. **책 상세**: 메타데이터, 진행률, 라운드별 진행 이력/독후감, 인용구 목록. → 진행기록/인용구추가/독후감작성으로 이동
-5. **인용구 캡처**: 단발 촬영(연속 프레임 아님, 정확도 우선) → Latin+Korean 인식기 동시 실행 → 인식된 줄(line) 단위 리스트를 체크박스로 선택 → 선택된 줄을 순서대로 합쳐 편집 가능한 텍스트필드에 표시 → 페이지번호(선택) 입력 후 저장
+1. **대시보드(홈, 시작 화면) — "책장" 뷰**: 상단에 최근 N일 합산 페이지 막대그래프. 하단에 진행 중인 책들을 책장처럼 그리드로 배치 — 각 표지 이미지에 dim 오버레이(반투명 검정)를 씌우고, 그 위에 원형(도넛) 진행률 링을 표지 중앙/코너에 겹쳐 그림(진행률 = currentPage/totalPages). 표지 탭 → 위 "빠른 기록 UX"의 바텀시트가 열림(화면 전환 없음). 별도 FAB로 책 등록 화면 진입.
+2. **책 등록**: 스캔/제목검색/수동입력 선택 → 스캔은 CameraX+ML Kit 바코드 인식 → ISBN으로 카카오 책 검색 API 조회(실패 시 Google Books 폴백) → 확인/수정 폼(둘 다 실패 시 빈 폼+수동입력 안내) → 저장(상태 READING이면 첫 라운드 자동 생성). 제목 검색도 동일하게 카카오 우선 조회. 저빈도 작업이므로 기존의 다단계 절차를 그대로 유지.
+3. **진행률 빠른 기록 시트**: 위 "빠른 기록 UX" 참고. 대시보드 표지 탭으로 진입하는 것이 기본 경로이며, 책 상세 화면에서도 동일한 시트를 재사용해 진입 가능(어떤 경로든 "책 선택" 단계가 별도로 필요 없음 — 이미 어떤 책인지 알고 진입하므로). 사진 인식 모드는 인용구 캡처와 동일한 카메라+OCR 파이프라인을 재사용, 코너의 독립된 숫자 토큰을 페이지 후보로 추출해 프리필하되 항상 사용자 확인 후 저장.
+4. **책 상세**: 메타데이터, 진행률, 라운드별 진행 이력/독후감, 인용구 목록. 딥다이브용 화면이며 빠른 기록 시트에서 "상세보기"로 진입하거나, 검색/목록에서 직접 진입. → 독후감작성 등 저빈도 작업으로 이동
+5. **인용구 캡처**: 대시보드 빠른 기록 시트 또는 책 상세에서 진입(둘 다 책 컨텍스트를 이미 알고 있어 책 선택 단계 없음). 단발 촬영(연속 프레임 아님, 정확도 우선) → Latin+Korean 인식기 동시 실행 → 인식된 줄(line) 단위 리스트를 체크박스로 선택("전체 선택" 토글도 제공, 문단 전체를 인용하는 경우가 많음) → 선택된 줄을 순서대로 합쳐 편집 가능한 텍스트필드에 표시 → 페이지번호(선택) 입력 후 저장 → "계속 촬영"(같은 책으로 카메라 재진입) / "완료"(호출한 곳으로 복귀) 선택.
 6. **독후감 작성**: 특정 라운드에 연결된 텍스트+평점(선택) 작성/저장
 
 ## 구현 시 유의사항
@@ -95,6 +103,8 @@ com.dyk1323.booklogs/
 - **메타데이터 연동(카카오 우선 + Google Books 보조)**: `BookMetadataRepositoryImpl`이 카카오 책 검색 API를 먼저 호출하고, 결과 없음/에러/오프라인이면 Google Books를 호출, 그마저 실패하면 수동입력 폼으로 폴백(`MetadataLookupResult.Success/NotFound/NetworkError`로 구분). 두 API 모두 5초 타임아웃. 카카오 REST API 키는 `local.properties`에 저장 후 `BuildConfig` 필드로 노출(레포에 커밋되지 않도록 `.gitignore` 확인), 사용자가 카카오 디벨로퍼스에서 직접 발급받아야 함을 README/설정 안내에 명시.
 - **페이지 번호 사진 인식**: 인용구용 `TextRecognitionAnalyzer`를 그대로 재사용. 인식된 `Line` 중 (a) 순수 숫자로만 구성되고 (b) 자릿수가 1~4자리이며 (c) 이미지 상하단 코너 영역의 바운딩 박스에 위치하는 것을 페이지 번호 후보로 스코어링해 가장 그럴듯한 값을 입력창에 프리필. 후보가 여러 개면 가장 코너에 가까운 것을 우선하되 항상 사용자 확인/수정 단계를 거쳐 자동 저장하지 않음.
 - **도넛 진행률 오버레이**: `DashboardScreen`의 책장 그리드 아이템은 `Box`로 표지(Coil `AsyncImage`) + 반투명 검정 `Box`(dim) + `Canvas`로 그리는 도넛(진행률 arc, `drawArc(startAngle=-90, sweepAngle=360*progress)`)을 겹쳐 그림. 진행률 계산은 기존 `ComputeBookProgressUseCase` 재사용.
+- **빠른 기록 시트(`BookQuickActionSheet`)**: `ModalBottomSheet`로 구현, 열릴 때 해당 책의 마지막 `ReadingLog.currentPage`를 조회해 입력창에 프리필. 퀵칩(`+5/+10/+20/+50`)은 단순히 입력값에 더하는 로컬 state 조작이며, 저장 시 기존 `LogProgressUseCase`를 그대로 호출(스키마/usecase 변경 없음, UI 편의 기능만 추가). 시트는 화면 전환이 아니라 대시보드 위에 오버레이되므로 저장 후 자동 닫힘 + 진행률 링 애니메이션 갱신.
+- **인용구 "계속 촬영" 흐름**: `QuoteCaptureViewModel`이 저장 성공 후 `SnackbarResult`/다이얼로그로 "계속 촬영" 선택 시 동일 화면(같은 bookId)에서 카메라를 재시작하고, "완료" 선택 시 호출한 곳(대시보드 또는 책 상세)으로 pop. 내비게이션 스택에 화면을 새로 쌓지 않고 같은 컴포저블 내에서 상태만 리셋.
 - DAO는 인터페이스로 정의해 Repository 단위 테스트에서 Room 없이 Fake DAO로 대체 가능하게 함.
 
 ## Gradle 설정
