@@ -34,7 +34,7 @@
 | 카메라 | CameraX | 바코드 스캔 + 페이지 촬영 공용 |
 | 바코드 인식 | ML Kit Barcode Scanning (온디바이스), EAN-13 | ISBN-13은 EAN-13 포맷 |
 | OCR | ML Kit Text Recognition v2: Latin + Korean 모델 둘 다, 온디바이스 | 클라우드 미사용 요구사항 충족 |
-| 메타데이터 조회 | Retrofit + OkHttp. **카카오 책 검색 API**(`GET /v3/search/book`, ISBN/제목 검색 둘 다 지원) 우선 조회, 실패/결과없음 시 **Google Books API**(`q=isbn:{isbn}` / `q=intitle:{query}`, 키 불필요)로 폴백 | 카카오가 한국 도서 표지·정보 품질이 더 좋음. 카카오는 REST API 키가 필요(카카오 디벨로퍼스에서 무료 발급 후 `local.properties`/`BuildConfig`에 보관, 저장소에 커밋하지 않음). Google Books는 키 없이 국제 도서 폴백용 |
+| 메타데이터 조회 | Retrofit + OkHttp. **카카오 책 검색 API**(`GET /v3/search/book`)로 제목/저자/출판사/표지/ISBN을 채우고, **Google Books API**(`q=isbn:{isbn}` 또는 `q=intitle:{query}`, 키 불필요)를 항상 병렬로 같이 호출해 `pageCount`(총 페이지수)·`categories`(장르)만 보조로 채움. 카카오가 실패/결과없음이면 Google Books 결과로 전체를 대체(기존 폴백 유지) | 카카오·네이버 응답엔 페이지수·장르 필드 자체가 없어(비교 검토 결과) "카카오 우선, 실패시만 구글북스"만으로는 페이지수가 거의 항상 수동입력으로 남음. 두 API를 병렬 호출해 필드별로 합성하면 지연시간 증가 없이 자동완성률을 높일 수 있음. 카카오는 REST API 키 필요(카카오 디벨로퍼스에서 무료 발급 후 `local.properties`/`BuildConfig`에 보관, 저장소에 커밋하지 않음) |
 | 이미지 로딩 | Coil (표지 썸네일) | |
 | 차트 | Compose `Canvas`로 직접 구현하는 막대그래프 (외부 차트 라이브러리 미사용) | 요구사항이 "일별 합산 막대그래프" 하나뿐이라 Vico 등 의존성 추가보다 ~100줄 커스텀 Canvas가 더 가볍고, 데이터 버켓팅 로직은 순수 Kotlin 함수로 분리해 단위 테스트 가능 |
 | 내비게이션 | Jetpack Compose Navigation, 단일 Activity | |
@@ -44,7 +44,7 @@
 ## 데이터 모델 (Room)
 
 - **BookEntity** (`books`): id, isbn?, title, author?, publisher?, coverImageUrl?, totalPages?, status(READING/PAUSED/FINISHED/DROPPED/PLANNED), **format**(PHYSICAL/EBOOK, 기본 PHYSICAL), **genre?**, **country?**, createdAt
-  - genre/country는 카카오·구글북스 API가 안정적으로 제공하지 않는 정보라 항상 수동 입력(등록/수정 폼에 텍스트 필드로 추가). genre만 구글북스 `categories` 필드가 있으면 자동완성 시도(실패해도 무방, 사용자가 직접 채우거나 비워둘 수 있음), country는 항상 수동. 둘 다 비워두면 통계 화면에서 "미상"으로 집계.
+  - country는 어떤 API도 제공하지 않는 정보라 항상 수동 입력. genre는 카카오엔 필드 자체가 없지만, **Google Books를 항상 보조로 병렬 호출**하므로 그 응답에 `categories`가 있으면 자동완성됨(실패해도 무방, 사용자가 직접 채우거나 비워둘 수 있음). 둘 다 비워두면 통계 화면에서 "미상"으로 집계.
   - READING: 대시보드 책장에 노출, 진행 중
   - PAUSED: 일시중지 — 나중에 재개할 생각 있음. 같은 라운드를 유지한 채 책장에서만 빠짐
   - FINISHED: 완독
@@ -66,7 +66,7 @@
 com.dyk1323.booklogs/
   data/
     local/{BooklogsDatabase, dao/*, entity/*}
-    remote/{GoogleBooksApi, dto/*, BookMetadataMapper}
+    remote/{KakaoBooksApi, GoogleBooksApi, dto/*, BookMetadataMapper — 두 API 응답을 병합해 하나의 BookMetadata로 합성}
     repository/{Book,ReadingLog,Quote,Review,BookMetadata}Repository(+Impl)
     settings/ (AppSettingsDataStore — DataStore Preferences, Room이 아님. reminderEnabled: Boolean, reminderHour/Minute: Int, **dailyGoalPages: Int?**)
   domain/
@@ -125,7 +125,7 @@ com.dyk1323.booklogs/
    - **최근 7일 합산 페이지 막대그래프**(걷기 그래프 스타일): 오늘 막대는 강조색, 나머지는 흐린 색. 위 "오늘 읽은 페이지"와 이 그래프는 같은 데이터 소스(`AggregateDailyPagesUseCase`가 만드는 일자별 합산 배열) — 배열의 마지막(오늘) 항목을 숫자로 뽑아 보여주고 배열 전체를 막대로 그리는 것뿐, 별도 계산 불필요. 일일 목표가 설정돼 있으면 목표값 높이에 **점선 기준선**을 그려 넣어 날짜별로 목표 달성 여부를 한눈에 비교(목표를 넘긴 날의 막대는 성공 컬러로 표시).
    - **책장 그리드**: 진행 중인(`BookEntity.status == READING`) 책들을 표지로 배치 — 각 표지 이미지에 dim 오버레이(반투명 검정)를 씌우고, 그 위에 원형(도넛) 진행률 링을 겹쳐 그림(진행률 = currentPage/totalPages, `ComputeBookProgressUseCase` 재사용). **도넛 중앙에 퍼센트 텍스트("62%")를 함께 표시**해 시각적 링만으로 정확한 값을 가늠하기 어려운 문제를 보완 — 정확한 페이지 수(185/320p)는 표지 탭 시 열리는 빠른 기록 시트/책 상세에서 확인.
    - 표지 탭 → 위 "빠른 기록 UX"의 바텀시트가 열림(화면 전환 없음). 별도 FAB로 책 등록 화면 진입.
-2. **책 등록**: 스캔/제목검색/수동입력 선택 → 스캔은 CameraX+ML Kit 바코드 인식 → ISBN으로 카카오 책 검색 API 조회(실패 시 Google Books 폴백) → 확인/수정 폼(둘 다 실패 시 빈 폼+수동입력 안내) → 저장(상태 READING이면 첫 라운드 자동 생성). 제목 검색도 동일하게 카카오 우선 조회. **확인/수정 폼에 "종이책/전자책" 토글**을 추가(기본값 종이책, 메타데이터 API로는 형식을 알 수 없어 항상 수동 선택) — 전자책을 선택하면 이후 그 책의 빠른 기록 시트가 %입력 모드로 동작. **장르/국가 입력 필드**도 폼에 추가 — 장르는 Google Books 조회 결과에 `categories`가 있으면 자동완성 시도(실패해도 무방), 국가는 항상 수동, 둘 다 선택 입력이라 비워도 등록 가능(통계에서 "미상"으로 집계). 저빈도 작업이므로 기존의 다단계 절차를 그대로 유지.
+2. **책 등록**: 스캔/제목검색/수동입력 선택 → 스캔은 CameraX+ML Kit 바코드 인식 → ISBN으로 **카카오(메인) + Google Books(페이지수·장르 보조)를 병렬 조회**해 하나로 합성 → 확인/수정 폼(둘 다 실패 시 빈 폼+수동입력 안내) → 저장(상태 READING이면 첫 라운드 자동 생성). 제목 검색도 동일하게 카카오로 검색해 결과 목록을 보여주고, 사용자가 하나를 고르면 그때 Google Books를 페이지수/장르용으로 추가 조회. **확인/수정 폼에 "종이책/전자책" 토글**을 추가(기본값 종이책, 메타데이터 API로는 형식을 알 수 없어 항상 수동 선택) — 전자책을 선택하면 이후 그 책의 빠른 기록 시트가 %입력 모드로 동작. **장르/국가 입력 필드**도 폼에 추가 — 장르는 위 병렬 조회로 자동완성되는 경우가 많고, 국가는 항상 수동, 둘 다 선택 입력이라 비워도 등록 가능(통계에서 "미상"으로 집계). 저빈도 작업이므로 기존의 다단계 절차를 그대로 유지.
 3. **진행률 빠른 기록 시트**: 위 "빠른 기록 UX" 참고. 대시보드 표지 탭으로 진입하는 것이 기본 경로이며, 책 상세 화면에서도 동일한 시트를 재사용해 진입 가능(어떤 경로든 "책 선택" 단계가 별도로 필요 없음 — 이미 어떤 책인지 알고 진입하므로). PHYSICAL 책의 사진 인식 모드는 인용구 캡처와 동일한 카메라+OCR 파이프라인을 재사용, 코너의 독립된 숫자 토큰을 페이지 후보로 추출해 프리필하되 항상 사용자 확인 후 저장. EBOOK 책은 % 직접 입력만 지원.
 4. **책 상세**: 메타데이터, 진행률, 라운드별 진행 이력/독후감, 인용구 목록. 딥다이브용 화면이며 빠른 기록 시트에서 "상세보기"로 진입하거나, 검색/목록에서 직접 진입. **진행 이력 목록의 각 로그 행은 탭하면 인라인으로 펼쳐져 수정/삭제 가능**(대시보드 빠른 기록 시트와 동일한 `EditLogUseCase`/`DeleteLogUseCase` 재사용) — 과거 특정 날짜의 기록을 고치는 것은 이 화면이 담당. 이력의 각 행은 책 `format`에 따라 "245p" 또는 "62%"로 표시(저장된 값은 항상 페이지, 표시만 환산).
    - **상태 변경 액션**(`BookStatusActions`, `ChangeBookStatusUseCase` 호출): READING 중엔 "다 읽음" / "중단" / "일시중지" 세 버튼을 노출. "일시중지"는 라운드를 유지한 채 상태만 바꾸고, "다 읽음"/"중단"은 현재 라운드를 종료(각각 `endReason = COMPLETED`/`DROPPED`)하고 책 상태를 FINISHED/DROPPED로 바꿈. FINISHED/DROPPED/PAUSED 상태에선 "다시 읽기 시작" 버튼 하나로 재개(PAUSED는 같은 라운드 이어감, FINISHED/DROPPED는 새 라운드 시작). 등록/상태변경처럼 저빈도 작업이라 책 상세에 위치, 확인 다이얼로그 없이 즉시 적용 후 스낵바로 되돌리기 제공.
@@ -146,7 +146,7 @@ com.dyk1323.booklogs/
 - **바코드 분석기**: `ImageAnalysis.Analyzer`로 EAN-13만 필터링, `addOnCompleteListener`에서 반드시 `imageProxy.close()`. 첫 성공 인식 후 `clearAnalyzer()`로 중복 트리거 방지. ISBN 유효성(978/979로 시작하는 13자리)까지 확인 후 조회 호출.
 - **OCR**: 실시간 오버레이 대신 정지 이미지 캡처 후 처리(흔들림 있는 실시간 인식보다 안정적). 이미지 내 탭-선택 오버레이 대신 인식된 줄을 리스트 형태로 선택하게 해 구현 난이도를 낮춤(기기 없이 검증 불가한 부분이므로 최대한 단순한 UX로 설계).
 - **일별 합산 그래프**: `ComputeLogDeltasUseCase`(라운드별 로그를 `loggedAt`순 정렬 후 인접 쌍 차이 계산, 음수 클램프)로 델타를 파생시킨 뒤, 각 델타를 그 쌍의 뒤쪽 로그의 `logDateEpochDay`에 귀속시켜 날짜별로 합산하는 순수 Kotlin 함수(`AggregateDailyPagesUseCase`)로 분리 — 이 두 함수가 이번 프로젝트의 핵심 로직이자 최우선 단위 테스트 대상. 요청한 기간(예: 최근 14일) 밖의 로그도 델타 계산 입력에는 포함해야 기간 경계의 첫 델타가 정확하게 나옴에 유의.
-- **메타데이터 연동(카카오 우선 + Google Books 보조)**: `BookMetadataRepositoryImpl`이 카카오 책 검색 API를 먼저 호출하고, 결과 없음/에러/오프라인이면 Google Books를 호출, 그마저 실패하면 수동입력 폼으로 폴백(`MetadataLookupResult.Success/NotFound/NetworkError`로 구분). 두 API 모두 5초 타임아웃. 카카오 REST API 키는 `local.properties`에 저장 후 `BuildConfig` 필드로 노출(레포에 커밋되지 않도록 `.gitignore` 확인), 사용자가 카카오 디벨로퍼스에서 직접 발급받아야 함을 README/설정 안내에 명시.
+- **메타데이터 연동(카카오 메인 + Google Books 병렬 보조)**: `BookMetadataRepositoryImpl.lookup(isbn 또는 query)`가 코루틴 `async`로 카카오와 Google Books를 **동시에** 호출(서로 의존관계 없어 병렬화로 지연시간 증가 없음). 카카오 응답이 있으면 title/author/publisher/coverImageUrl/isbn을 채택하고, Google Books 응답이 있으면 그 결과에서 `pageCount`→`totalPages`, `categories`→`genre`만 뽑아 덧씌움(나머지 필드는 무시 — 카카오 값이 한국 도서 기준으로 더 정확). **카카오가 실패/결과없음이면 Google Books 결과 전체로 대체**(기존 폴백 유지, 이 경우 표지·저자 등도 Google Books 값 사용). 둘 다 실패하면 수동입력 폼으로 폴백(`MetadataLookupResult.Success/NotFound/NetworkError`로 구분). 두 API 모두 5초 타임아웃. 카카오 REST API 키는 `local.properties`에 저장 후 `BuildConfig` 필드로 노출(레포에 커밋되지 않도록 `.gitignore` 확인), 사용자가 카카오 디벨로퍼스에서 직접 발급받아야 함을 README/설정 안내에 명시.
 - **페이지 번호 사진 인식**: 인용구용 `TextRecognitionAnalyzer`를 그대로 재사용. 인식된 `Line` 중 (a) 순수 숫자로만 구성되고 (b) 자릿수가 1~4자리이며 (c) 이미지 상하단 코너 영역의 바운딩 박스에 위치하는 것을 페이지 번호 후보로 스코어링해 가장 그럴듯한 값을 입력창에 프리필. 후보가 여러 개면 가장 코너에 가까운 것을 우선하되 항상 사용자 확인/수정 단계를 거쳐 자동 저장하지 않음.
 - **도넛 진행률 오버레이**: `DashboardScreen`의 책장 그리드 아이템은 `Box`로 표지(Coil `AsyncImage`) + 반투명 검정 `Box`(dim) + `Canvas`로 그리는 도넛(진행률 arc, `drawArc(startAngle=-90, sweepAngle=360*progress)`) + 도넛 중앙에 `Text("${(progress*100).roundToInt()}%")`를 겹쳐 그림. 진행률 계산은 기존 `ComputeBookProgressUseCase` 재사용. `totalPages`가 없으면 도넛/퍼센트 대신 "?" 배지로 대체(이미 앞서 정의됨).
 - **오늘 읽은 페이지 히어로 숫자 + 주간 막대그래프**: `DashboardViewModel`이 `AggregateDailyPagesUseCase`의 결과(`List<DayPageTotal>`, 최근 7일)를 한 번만 계산해 `DailyPagesBarChart`(전체 배열)와 `TodayPagesHero`(마지막 원소, `Text`로 큰 숫자) 두 컴포저블에 그대로 전달 — 별도 쿼리/계산 중복 없음.
@@ -176,7 +176,7 @@ com.dyk1323.booklogs/
 
 샌드박스에 Android SDK/에뮬레이터가 없으므로:
 - **가능**: `./gradlew :app:compileDebugKotlin`, `./gradlew :app:testDebugUnitTest`로 순수 로직 검증
-  - `ComputeLogDeltasUseCaseTest`(핵심: 정렬/인접쌍 차이/클램프, 그리고 **중간 로그 수정·삭제 후 이웃 델타가 재저장 없이 올바르게 다시 계산되는지** — 이번 스키마 변경의 핵심 검증 대상), `AggregateDailyPagesUseCaseTest`(일자 버켓팅/0채움/여러 책 합산/기간 경계 밖 로그 포함 여부, **목표값과 비교해 성공 여부 플래그가 맞는지**), `LogProgressUseCaseTest`(단순 insert), `EditLogUseCaseTest`/`DeleteLogUseCaseTest`(임의 시점 로그 수정/삭제, 이웃 로그 미변경 확인), `ComputeBookProgressUseCaseTest`(totalPages null 처리), `ChangeBookStatusUseCaseTest`(READING↔PAUSED는 라운드 불변, →FINISHED/DROPPED는 라운드 종료+endReason 정확성, FINISHED/DROPPED→READING은 roundNumber 증가한 새 라운드 생성, PAUSED→READING은 라운드 재사용), `PickReminderBookUseCaseTest`(빈 목록→null, 여러 권 중 무작위 선택이 목록 범위 내에서만 나오는지), `BookMetadataMapperTest`(카카오 DTO 매핑 + Google Books DTO 매핑 + 폴백 분기), `PageNumberCandidateExtractorTest`(숫자 토큰 필터링/코너 스코어링 로직, 순수 함수로 분리해 단위 테스트), `JoinSelectedQuoteLinesTest`(여러 페이지의 선택된 줄을 촬영 순서대로 합치는 순수 함수, 페이지 1건/2건 이상일 때 `pageNumberEnd` null 여부), `ConvertPagePercentUseCaseTest`(양방향 변환 반올림 정확성, totalPages null일 때 변환 불가 처리, 0%/100% 경계값), `AggregateBooksByAttributeUseCaseTest`(그룹별 카운트/내림차순 정렬/상위 N+"기타" 묶음/null·빈값 "미상" 처리), Fake DAO 기반 Repository 테스트
+  - `ComputeLogDeltasUseCaseTest`(핵심: 정렬/인접쌍 차이/클램프, 그리고 **중간 로그 수정·삭제 후 이웃 델타가 재저장 없이 올바르게 다시 계산되는지** — 이번 스키마 변경의 핵심 검증 대상), `AggregateDailyPagesUseCaseTest`(일자 버켓팅/0채움/여러 책 합산/기간 경계 밖 로그 포함 여부, **목표값과 비교해 성공 여부 플래그가 맞는지**), `LogProgressUseCaseTest`(단순 insert), `EditLogUseCaseTest`/`DeleteLogUseCaseTest`(임의 시점 로그 수정/삭제, 이웃 로그 미변경 확인), `ComputeBookProgressUseCaseTest`(totalPages null 처리), `ChangeBookStatusUseCaseTest`(READING↔PAUSED는 라운드 불변, →FINISHED/DROPPED는 라운드 종료+endReason 정확성, FINISHED/DROPPED→READING은 roundNumber 증가한 새 라운드 생성, PAUSED→READING은 라운드 재사용), `PickReminderBookUseCaseTest`(빈 목록→null, 여러 권 중 무작위 선택이 목록 범위 내에서만 나오는지), `BookMetadataMapperTest`(카카오 DTO 매핑 + Google Books DTO 매핑 + **두 응답 병합 시 pageCount/categories만 Google Books에서 채택되는지** + 카카오 실패 시 Google Books 전체 대체 폴백 분기), `PageNumberCandidateExtractorTest`(숫자 토큰 필터링/코너 스코어링 로직, 순수 함수로 분리해 단위 테스트), `JoinSelectedQuoteLinesTest`(여러 페이지의 선택된 줄을 촬영 순서대로 합치는 순수 함수, 페이지 1건/2건 이상일 때 `pageNumberEnd` null 여부), `ConvertPagePercentUseCaseTest`(양방향 변환 반올림 정확성, totalPages null일 때 변환 불가 처리, 0%/100% 경계값), `AggregateBooksByAttributeUseCaseTest`(그룹별 카운트/내림차순 정렬/상위 N+"기타" 묶음/null·빈값 "미상" 처리), Fake DAO 기반 Repository 테스트
   - `assembleDebug`/`lint`는 SDK 플랫폼 컴포넌트 다운로드가 가능한지에 따라 시도해보되, 안 되면 컴파일+유닛테스트까지가 한계
 - **불가능(사용자가 실기기/에뮬레이터에서 직접 확인 필요)**: Compose 화면 렌더링/내비게이션 클릭 흐름(책장 그리드 + 도넛 오버레이 실제 표시 포함), CameraX 프리뷰·권한, 실제 바코드 인식 정확도, 실제 한글/영어 책 페이지 OCR 정확도 및 텍스트 선택 UX, 페이지 번호 자동 인식 정확도(폰트/각도/코너 위치 편차가 커서 실기기 튜닝 필요), Room 실기기 동작, 카카오/Google Books 실제 네트워크 응답, **AlarmManager 알람 발화·Doze 하 지연 정도·재부팅 후 재등록·알림 표시/딥링크 동작**, 전체 엔드투엔드 플로우(등록→기록→그래프 갱신→인용구→독후감→리마인더)
 
