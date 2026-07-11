@@ -15,22 +15,28 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +44,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.dyk1323.booklogs.domain.model.BookStatus
+import com.dyk1323.booklogs.domain.model.Quote
 import com.dyk1323.booklogs.domain.usecase.LogDelta
 import java.time.Instant
 import java.time.ZoneId
@@ -49,6 +57,7 @@ fun BookDetailScreen(
     bookId: Long,
     viewModel: BookDetailViewModel,
     onBack: () -> Unit,
+    onDeleted: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(bookId) {
@@ -56,6 +65,7 @@ fun BookDetailScreen(
     }
     val uiState by viewModel.uiState.collectAsState()
     val book = uiState.book
+    var showDeleteBookDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -69,7 +79,14 @@ fun BookDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "뒤로")
+                    }
+                },
+                actions = {
+                    if (book != null) {
+                        IconButton(onClick = { showDeleteBookDialog = true }) {
+                            Icon(Icons.Outlined.Delete, contentDescription = "책 삭제")
+                        }
                     }
                 },
             )
@@ -99,6 +116,14 @@ fun BookDetailScreen(
                 BookHeader(state = uiState)
             }
             item {
+                DetailSection(title = "상태") {
+                    StatusActions(
+                        status = book.status,
+                        onStatusClick = viewModel::changeStatus,
+                    )
+                }
+            }
+            item {
                 DetailSection(title = "진행 이력") {
                     if (uiState.logDeltas.isEmpty()) {
                         Text(
@@ -109,7 +134,7 @@ fun BookDetailScreen(
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             uiState.logDeltas.take(12).forEach { delta ->
-                                LogDeltaRow(delta = delta)
+                                LogDeltaRow(delta = delta, onDelete = { viewModel.deleteLog(delta.log.id) })
                             }
                         }
                     }
@@ -148,15 +173,7 @@ fun BookDetailScreen(
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             uiState.quotes.forEach { quote ->
-                                Text(text = quote.text, style = MaterialTheme.typography.bodyLarge)
-                                quote.pageNumber?.let {
-                                    Text(
-                                        text = "p. $it",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
-                                    )
-                                }
-                                Divider()
+                                QuoteRow(quote = quote, onDelete = { viewModel.deleteQuote(quote.id) })
                             }
                         }
                     }
@@ -188,7 +205,7 @@ fun BookDetailScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             uiState.reviews.forEach { review ->
                                 Text(text = review.content, style = MaterialTheme.typography.bodyLarge)
-                                Divider()
+                                HorizontalDivider()
                             }
                         }
                     }
@@ -205,6 +222,29 @@ fun BookDetailScreen(
                 } ?: Spacer(modifier = Modifier.height(24.dp))
             }
         }
+    }
+
+    if (showDeleteBookDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteBookDialog = false },
+            title = { Text(text = "책을 삭제할까요?") },
+            text = { Text(text = "진행 기록, 인용구, 독후감이 함께 삭제돼요.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteBookDialog = false
+                        viewModel.deleteBook(onDeleted)
+                    },
+                ) {
+                    Text(text = "삭제", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteBookDialog = false }) {
+                    Text(text = "취소")
+                }
+            },
+        )
     }
 }
 
@@ -268,7 +308,24 @@ private fun DetailSection(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun LogDeltaRow(delta: LogDelta) {
+private fun StatusActions(status: BookStatus, onStatusClick: (BookStatus) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        availableStatusActions(status).forEach { target ->
+            TextButton(
+                onClick = { onStatusClick(target) },
+                modifier = Modifier.weight(1f, fill = false),
+            ) {
+                Text(text = statusActionLabel(status, target))
+            }
+        }
+    }
+}
+
+@Composable
+private fun LogDeltaRow(delta: LogDelta, onDelete: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Column {
             Text(text = "p. ${delta.log.currentPage}", style = MaterialTheme.typography.bodyMedium)
@@ -278,8 +335,33 @@ private fun LogDeltaRow(delta: LogDelta) {
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
             )
         }
-        Text(text = "+${delta.pagesRead}p", style = MaterialTheme.typography.bodyMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = "+${delta.pagesRead}p", style = MaterialTheme.typography.bodyMedium)
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Outlined.Delete, contentDescription = "진행 기록 삭제")
+            }
+        }
     }
+}
+
+@Composable
+private fun QuoteRow(quote: Quote, onDelete: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = quote.text, style = MaterialTheme.typography.bodyLarge)
+            quote.pageNumber?.let {
+                Text(
+                    text = "p. $it",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                )
+            }
+        }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Outlined.Delete, contentDescription = "인용구 삭제")
+        }
+    }
+    HorizontalDivider()
 }
 
 private fun progressText(state: BookDetailUiState): String {
@@ -292,4 +374,23 @@ private fun progressText(state: BookDetailUiState): String {
 private fun formatDate(timestampMillis: Long): String {
     val formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
     return Instant.ofEpochMilli(timestampMillis).atZone(ZoneId.systemDefault()).format(formatter)
+}
+
+private fun availableStatusActions(status: BookStatus): List<BookStatus> = when (status) {
+    BookStatus.PLANNED -> listOf(BookStatus.READING)
+    BookStatus.READING -> listOf(BookStatus.PAUSED, BookStatus.FINISHED, BookStatus.DROPPED)
+    BookStatus.PAUSED -> listOf(BookStatus.READING)
+    BookStatus.FINISHED -> listOf(BookStatus.READING)
+    BookStatus.DROPPED -> listOf(BookStatus.READING)
+}
+
+private fun statusActionLabel(from: BookStatus, target: BookStatus): String = when {
+    from == BookStatus.FINISHED && target == BookStatus.READING -> "다시 읽기"
+    from == BookStatus.DROPPED && target == BookStatus.READING -> "다시 읽기"
+    target == BookStatus.READING -> "읽기 시작"
+    target == BookStatus.PAUSED -> "멈추기"
+    target == BookStatus.FINISHED -> "완독"
+    target == BookStatus.DROPPED -> "중단"
+    target == BookStatus.PLANNED -> "읽을 예정"
+    else -> "변경"
 }

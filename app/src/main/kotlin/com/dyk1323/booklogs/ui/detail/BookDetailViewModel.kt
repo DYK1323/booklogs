@@ -3,6 +3,7 @@ package com.dyk1323.booklogs.ui.detail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dyk1323.booklogs.domain.model.Book
+import com.dyk1323.booklogs.domain.model.BookStatus
 import com.dyk1323.booklogs.domain.model.Quote
 import com.dyk1323.booklogs.domain.model.ReadingLog
 import com.dyk1323.booklogs.domain.model.Review
@@ -11,6 +12,9 @@ import com.dyk1323.booklogs.domain.repository.QuoteRepository
 import com.dyk1323.booklogs.domain.repository.ReadingLogRepository
 import com.dyk1323.booklogs.domain.repository.ReadingRoundRepository
 import com.dyk1323.booklogs.domain.repository.ReviewRepository
+import com.dyk1323.booklogs.domain.usecase.ChangeBookStatusUseCase
+import com.dyk1323.booklogs.domain.usecase.DeleteBookUseCase
+import com.dyk1323.booklogs.domain.usecase.DeleteLogUseCase
 import com.dyk1323.booklogs.domain.usecase.LogDelta
 import com.dyk1323.booklogs.domain.usecase.computeBookProgress
 import com.dyk1323.booklogs.domain.usecase.computeLogDeltas
@@ -53,6 +57,9 @@ class BookDetailViewModel(
     private val readingRoundRepository: ReadingRoundRepository,
     private val quoteRepository: QuoteRepository,
     private val reviewRepository: ReviewRepository,
+    private val changeBookStatusUseCase: ChangeBookStatusUseCase,
+    private val deleteBookUseCase: DeleteBookUseCase,
+    private val deleteLogUseCase: DeleteLogUseCase,
 ) : ViewModel() {
 
     private val selectedBookId = MutableStateFlow<Long?>(null)
@@ -187,4 +194,52 @@ class BookDetailViewModel(
             message.value = "독후감을 저장했어요."
         }
     }
+
+    fun changeStatus(newStatus: BookStatus) {
+        val bookId = selectedBookId.value ?: return
+        viewModelScope.launch {
+            val result = changeBookStatusUseCase(
+                bookId = bookId,
+                newStatus = newStatus,
+                now = System.currentTimeMillis(),
+            )
+            message.value = result.fold(
+                onSuccess = { "상태를 ${statusLabel(newStatus)}으로 변경했어요." },
+                onFailure = { error ->
+                    error.message?.let { "상태를 변경하지 못했어요. $it" } ?: "상태를 변경하지 못했어요."
+                },
+            )
+        }
+    }
+
+    fun deleteBook(onDeleted: () -> Unit) {
+        val bookId = selectedBookId.value ?: return
+        viewModelScope.launch {
+            deleteBookUseCase(bookId)
+            selectedBookId.value = null
+            onDeleted()
+        }
+    }
+
+    fun deleteLog(logId: Long) {
+        viewModelScope.launch {
+            deleteLogUseCase(logId)
+            message.value = "진행 기록을 삭제했어요."
+        }
+    }
+
+    fun deleteQuote(quoteId: Long) {
+        viewModelScope.launch {
+            quoteRepository.deleteById(quoteId)
+            message.value = "인용구를 삭제했어요."
+        }
+    }
+}
+
+private fun statusLabel(status: BookStatus): String = when (status) {
+    BookStatus.READING -> "읽는 중"
+    BookStatus.PLANNED -> "읽을 예정"
+    BookStatus.PAUSED -> "멈춤"
+    BookStatus.FINISHED -> "완독"
+    BookStatus.DROPPED -> "중단"
 }

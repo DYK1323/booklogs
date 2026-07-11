@@ -13,6 +13,8 @@ import com.dyk1323.booklogs.ui.dashboard.DashboardScreen
 import com.dyk1323.booklogs.ui.dashboard.DashboardViewModel
 import com.dyk1323.booklogs.ui.detail.BookDetailScreen
 import com.dyk1323.booklogs.ui.detail.BookDetailViewModel
+import com.dyk1323.booklogs.ui.library.LibraryScreen
+import com.dyk1323.booklogs.ui.library.LibraryViewModel
 import com.dyk1323.booklogs.ui.registration.BarcodeScanScreen
 import com.dyk1323.booklogs.ui.registration.BookConfirmFormScreen
 import com.dyk1323.booklogs.ui.registration.BookRegistrationScreen
@@ -24,6 +26,7 @@ fun BooklogsNavHost(
     dashboardViewModel: DashboardViewModel,
     registrationViewModel: BookRegistrationViewModel,
     bookDetailViewModel: BookDetailViewModel,
+    libraryViewModel: LibraryViewModel,
     navController: NavHostController = rememberNavController(),
 ) {
     NavHost(navController = navController, startDestination = Destinations.DASHBOARD) {
@@ -37,6 +40,17 @@ fun BooklogsNavHost(
                 onBookDetailClick = { bookId ->
                     navController.navigate(Destinations.bookDetail(bookId))
                 },
+                onLibraryClick = {
+                    navController.navigate(Destinations.LIBRARY)
+                },
+            )
+        }
+
+        composable(Destinations.LIBRARY) {
+            LibraryScreen(
+                viewModel = libraryViewModel,
+                onBookClick = { bookId -> navController.navigate(Destinations.bookDetail(bookId)) },
+                onBack = { navController.popBackStack() },
             )
         }
 
@@ -49,6 +63,9 @@ fun BooklogsNavHost(
                 bookId = bookId,
                 viewModel = bookDetailViewModel,
                 onBack = { navController.popBackStack() },
+                onDeleted = {
+                    navController.popBackStack()
+                },
             )
         }
 

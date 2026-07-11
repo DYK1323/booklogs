@@ -1,0 +1,217 @@
+package com.dyk1323.booklogs.ui.library
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.dyk1323.booklogs.domain.model.BookStatus
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LibraryScreen(
+    viewModel: LibraryViewModel,
+    onBookClick: (Long) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(text = "라이브러리") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "뒤로")
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(innerPadding)
+                .padding(horizontal = 20.dp),
+        ) {
+            OutlinedTextField(
+                value = uiState.query,
+                onValueChange = viewModel::updateQuery,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(text = "제목 또는 저자 검색") },
+                singleLine = true,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                uiState.filters.forEach { filter ->
+                    val selected = uiState.selectedFilter == filter
+                    AssistChip(
+                        onClick = { viewModel.selectFilter(filter) },
+                        label = {
+                            Text(text = "${filter.label} ${uiState.countsByFilter[filter] ?: 0}")
+                        },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (selected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                            labelColor = if (selected) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                        ),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(18.dp))
+            if (uiState.books.isEmpty() && !uiState.isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "조건에 맞는 책이 없어요.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(uiState.books, key = { it.book.id }) { item ->
+                        LibraryBookRow(item = item, onClick = { onBookClick(item.book.id) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LibraryBookRow(item: LibraryBookItemUi, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(58.dp)
+                .aspectRatio(0.68f)
+                .clip(RoundedCornerShape(6.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (item.book.coverImageUrl != null) {
+                AsyncImage(
+                    model = item.book.coverImageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Outlined.Book,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.32f),
+                    modifier = Modifier.size(28.dp),
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    text = item.book.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = statusLabel(item.book.status),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            item.book.author?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = progressCaption(item),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+            )
+        }
+    }
+}
+
+private fun progressCaption(item: LibraryBookItemUi): String {
+    val totalPages = item.book.totalPages ?: return "전체 페이지 수가 필요해요."
+    val currentPage = item.currentPage ?: 0
+    val percent = item.progress?.let { (it * 100).toInt() } ?: 0
+    return "$currentPage / ${totalPages}p · $percent%"
+}
+
+fun statusLabel(status: BookStatus): String = when (status) {
+    BookStatus.READING -> "읽는 중"
+    BookStatus.PLANNED -> "읽을 예정"
+    BookStatus.PAUSED -> "멈춤"
+    BookStatus.FINISHED -> "완독"
+    BookStatus.DROPPED -> "중단"
+}

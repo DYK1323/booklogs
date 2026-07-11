@@ -67,6 +67,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel,
     onRegisterBookClick: () -> Unit,
     onBookDetailClick: (Long) -> Unit,
+    onLibraryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -101,11 +102,17 @@ fun DashboardScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(text = "읽는 중", style = MaterialTheme.typography.headlineMedium)
-                Text(
-                    text = "${uiState.readingBooks.size}권",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${uiState.readingBooks.size}권",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(onClick = onLibraryClick) {
+                        Text(text = "라이브러리")
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(14.dp))
             if (uiState.readingBooks.isEmpty() && !uiState.isLoading) {

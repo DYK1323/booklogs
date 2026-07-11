@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTheme
 import com.dyk1323.booklogs.ui.dashboard.DashboardViewModel
 import com.dyk1323.booklogs.ui.detail.BookDetailViewModel
+import com.dyk1323.booklogs.ui.library.LibraryViewModel
 import com.dyk1323.booklogs.ui.navigation.BooklogsNavHost
 import com.dyk1323.booklogs.ui.registration.BookRegistrationViewModel
 
@@ -53,6 +54,21 @@ class MainActivity : ComponentActivity() {
                     readingRoundRepository = container.readingRoundRepository,
                     quoteRepository = container.quoteRepository,
                     reviewRepository = container.reviewRepository,
+                    changeBookStatusUseCase = container.changeBookStatusUseCase,
+                    deleteBookUseCase = container.deleteBookUseCase,
+                    deleteLogUseCase = container.deleteLogUseCase,
+                ) as T
+        }
+    }
+
+    private val libraryViewModel: LibraryViewModel by viewModels {
+        val container = (application as BooklogsApplication).container
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =
+                LibraryViewModel(
+                    bookRepository = container.bookRepository,
+                    readingLogRepository = container.readingLogRepository,
                 ) as T
         }
     }
@@ -65,6 +81,7 @@ class MainActivity : ComponentActivity() {
                     dashboardViewModel = dashboardViewModel,
                     registrationViewModel = registrationViewModel,
                     bookDetailViewModel = bookDetailViewModel,
+                    libraryViewModel = libraryViewModel,
                 )
             }
         }
