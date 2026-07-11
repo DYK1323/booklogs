@@ -9,15 +9,8 @@ import androidx.compose.ui.unit.sp
 import com.dyk1323.booklogs.R
 
 /**
- * REQUIRES four Pretendard static TTF files to be added at `app/src/main/res/font/` before this
- * compiles — see docs/PLAN.md "Gradle 설정": download from https://github.com/orioncactus/pretendard
- * (static TTFs under packages/pretendard/dist/public/static/) and place as:
- *   res/font/pretendard_regular.ttf   (Regular, 400)
- *   res/font/pretendard_medium.ttf    (Medium, 500)
- *   res/font/pretendard_semibold.ttf  (SemiBold, 600)
- *   res/font/pretendard_bold.ttf      (Bold, 700)
- * This could not be done from the build sandbox (no reachable path to the release assets found), so
- * it's the one manual step left before `:app` will compile.
+ * Pretendard v1.3.9 static TTFs (Regular/Medium/SemiBold/Bold), bundled at `app/src/main/res/font/`.
+ * License (SIL OFL 1.1) copied to `licenses/PRETENDARD_LICENSE.txt`.
  */
 val PretendardFontFamily = FontFamily(
     Font(R.font.pretendard_regular, FontWeight.Normal),
