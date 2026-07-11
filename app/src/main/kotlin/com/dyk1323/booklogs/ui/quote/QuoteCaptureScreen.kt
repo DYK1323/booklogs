@@ -106,6 +106,18 @@ fun QuoteCaptureScreen(
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "뒤로")
                     }
                 },
+                actions = {
+                    if (capturedBitmap != null) {
+                        TextButton(
+                            onClick = {
+                                viewModel.discardCurrentCaptureText()
+                                openCameraForNextCapture()
+                            },
+                        ) {
+                            Text(text = "다시 촬영")
+                        }
+                    }
+                },
             )
         },
     ) { innerPadding ->
@@ -142,10 +154,6 @@ fun QuoteCaptureScreen(
                     onConfirmSelection = viewModel::confirmSelection,
                     onPageChanged = viewModel::updatePageText,
                     onQuoteChanged = viewModel::updateQuoteText,
-                    onRetake = {
-                        viewModel.discardCurrentCaptureText()
-                        openCameraForNextCapture()
-                    },
                     onNextPage = {
                         viewModel.startNextPage()
                         openCameraForNextCapture()
@@ -195,7 +203,6 @@ private fun WordSelectQuoteContent(
     onConfirmSelection: () -> Unit,
     onPageChanged: (String) -> Unit,
     onQuoteChanged: (String) -> Unit,
-    onRetake: () -> Unit,
     onNextPage: () -> Unit,
     onContinueAfterSave: () -> Unit,
     onSave: () -> Unit,
@@ -204,7 +211,7 @@ private fun WordSelectQuoteContent(
     val startIndex = state.selectionStartIndex
     val endIndex = state.selectionEndIndex
 
-    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Column(modifier = Modifier.fillMaxSize()) {
         Text(
             text = when {
                 startIndex == null -> "시작 단어를 터치해주세요."
@@ -212,13 +219,13 @@ private fun WordSelectQuoteContent(
                 else -> "다른 단어를 탭하면 범위를 다시 고를 수 있어요."
             },
             style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
         )
-        Spacer(modifier = Modifier.height(10.dp))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .onSizeChanged(onContainerSizeChanged)
                 .pointerInput(bitmap, imageBounds, state.recognizedWords) {
                     detectTapGestures(
@@ -242,11 +249,15 @@ private fun WordSelectQuoteContent(
                 val bounds = imageBounds ?: computeImageBounds(imageContainerSize, bitmap)
                 state.recognizedWords.forEachIndexed { index, word ->
                     val viewRect = word.boundingBox.toComposeRect(bounds, bitmap) ?: return@forEachIndexed
-                    val selected = startIndex != null && endIndex != null &&
-                        index in minOf(startIndex, endIndex)..maxOf(startIndex, endIndex)
+                    val selected = when {
+                        startIndex != null && endIndex != null ->
+                            index in minOf(startIndex, endIndex)..maxOf(startIndex, endIndex)
+                        startIndex != null -> index == startIndex
+                        else -> false
+                    }
                     if (selected) {
                         drawRect(
-                            color = Color(0xFFFFD54F).copy(alpha = 0.36f),
+                            color = Color(0xFFFFD54F).copy(alpha = 0.42f),
                             topLeft = Offset(viewRect.left, viewRect.top),
                             size = androidx.compose.ui.geometry.Size(viewRect.width, viewRect.height),
                         )
@@ -260,62 +271,59 @@ private fun WordSelectQuoteContent(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onRetake) {
-                Text(text = "다시 촬영")
-            }
-        }
+        // Kept out of the way while picking words so the photo can use nearly the whole screen —
+        // there's nothing to review/save yet until at least one range has been confirmed.
         if (state.capturedPages.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            CapturedPagesSummary(pages = state.capturedPages)
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        OutlinedTextField(
-            value = state.currentPageText,
-            onValueChange = onPageChanged,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(text = "현재 페이지") },
-            singleLine = true,
-            enabled = !state.isSaved,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = state.quoteText,
-            onValueChange = onQuoteChanged,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(text = "최종 인용구") },
-            minLines = 2,
-            maxLines = 4,
-            enabled = !state.isSaved,
-        )
-        state.message?.let {
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = it,
-                style = MaterialTheme.typography.labelMedium,
-                color = if (state.isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-            )
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        if (state.isSaved) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onContinueAfterSave) {
-                    Text(text = "계속 촬영")
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+                CapturedPagesSummary(pages = state.capturedPages)
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = state.currentPageText,
+                    onValueChange = onPageChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(text = "현재 페이지") },
+                    singleLine = true,
+                    enabled = !state.isSaved,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = state.quoteText,
+                    onValueChange = onQuoteChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(text = "최종 인용구") },
+                    minLines = 2,
+                    maxLines = 4,
+                    enabled = !state.isSaved,
+                )
+                state.message?.let {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (state.isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = onDone, shape = RoundedCornerShape(8.dp)) {
-                    Text(text = "완료")
-                }
-            }
-        } else {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onNextPage, enabled = state.capturedPages.isNotEmpty()) {
-                    Text(text = "다음 페이지 이어서 촬영")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = onSave, enabled = !state.isSaving, shape = RoundedCornerShape(8.dp)) {
-                    Text(text = if (state.isSaving) "저장 중" else "저장")
+                Spacer(modifier = Modifier.height(10.dp))
+                if (state.isSaved) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = onContinueAfterSave) {
+                            Text(text = "계속 촬영")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(onClick = onDone, shape = RoundedCornerShape(8.dp)) {
+                            Text(text = "완료")
+                        }
+                    }
+                } else {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = onNextPage) {
+                            Text(text = "다음 페이지 이어서 촬영")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(onClick = onSave, enabled = !state.isSaving, shape = RoundedCornerShape(8.dp)) {
+                            Text(text = if (state.isSaving) "저장 중" else "저장")
+                        }
+                    }
                 }
             }
         }
@@ -417,13 +425,24 @@ private fun GapAdjustableText(
                 } else {
                     "${words[i].text} ${words[i + 1].text}"
                 }
+                val containerColor = if (merged) {
+                    MaterialTheme.colorScheme.tertiaryContainer
+                } else {
+                    MaterialTheme.colorScheme.primaryContainer
+                }
+                val contentColor = if (merged) {
+                    MaterialTheme.colorScheme.onTertiaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                }
                 Text(
                     text = pairText,
                     style = MaterialTheme.typography.bodyLarge,
+                    color = contentColor,
                     modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
+                        .background(containerColor, RoundedCornerShape(4.dp))
                         .clickable { onGapToggle(gapIndex) }
-                        .padding(horizontal = 3.dp, vertical = 1.dp),
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
                 )
                 i += 2
             } else {
