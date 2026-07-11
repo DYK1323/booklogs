@@ -2,6 +2,7 @@ package com.dyk1323.booklogs.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dyk1323.booklogs.data.settings.AppSettingsDataStore
 import com.dyk1323.booklogs.domain.model.Book
 import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.domain.model.BookStatus
@@ -26,6 +27,7 @@ data class DashboardUiState(
     val readingBooks: List<BookShelfItemUi> = emptyList(),
     val weekTotals: List<DayPageTotal> = emptyList(),
     val todayPages: Int = 0,
+    val dailyGoalPages: Int? = null,
     val isLoading: Boolean = true,
 )
 
@@ -54,6 +56,7 @@ class DashboardViewModel(
     readingLogRepository: ReadingLogRepository,
     private val readingRoundRepository: ReadingRoundRepository,
     private val logProgressUseCase: LogProgressUseCase,
+    appSettingsDataStore: AppSettingsDataStore,
     private val zoneId: ZoneId = ZoneId.systemDefault(),
 ) : ViewModel() {
 
@@ -65,12 +68,14 @@ class DashboardViewModel(
     val uiState: StateFlow<DashboardUiState> = combine(
         bookRepository.observeAll(),
         readingLogRepository.observeAll(),
-    ) { books, logs ->
+        appSettingsDataStore.settings,
+    ) { books, logs, settings ->
         val today = LocalDate.now(zoneId).toEpochDay()
         val weekTotals = aggregateDailyPages(
             allLogs = logs,
             startEpochDay = today - 6,
             endEpochDay = today,
+            dailyGoalPages = settings.dailyGoalPages,
         )
         val latestPageByBook = logs
             .groupBy { it.bookId }
@@ -89,6 +94,7 @@ class DashboardViewModel(
                 },
             weekTotals = weekTotals,
             todayPages = weekTotals.lastOrNull()?.totalPages ?: 0,
+            dailyGoalPages = settings.dailyGoalPages,
             isLoading = false,
         )
     }.stateIn(

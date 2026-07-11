@@ -1,6 +1,7 @@
 package com.dyk1323.booklogs.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.NavType
@@ -24,6 +25,9 @@ import com.dyk1323.booklogs.ui.registration.BookRegistrationViewModel
 import com.dyk1323.booklogs.ui.registration.TitleSearchScreen
 import com.dyk1323.booklogs.ui.review.ReviewEditorScreen
 import com.dyk1323.booklogs.ui.review.ReviewEditorViewModel
+import com.dyk1323.booklogs.ui.settings.SettingsScreen
+import com.dyk1323.booklogs.ui.settings.SettingsViewModel
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun BooklogsNavHost(
@@ -33,10 +37,19 @@ fun BooklogsNavHost(
     libraryViewModel: LibraryViewModel,
     quoteCaptureViewModel: QuoteCaptureViewModel,
     reviewEditorViewModel: ReviewEditorViewModel,
+    settingsViewModel: SettingsViewModel,
+    pendingReminderBookId: Long? = null,
+    onPendingReminderBookIdConsumed: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
 ) {
     NavHost(navController = navController, startDestination = Destinations.DASHBOARD) {
         composable(Destinations.DASHBOARD) {
+            LaunchedEffect(pendingReminderBookId) {
+                val bookId = pendingReminderBookId ?: return@LaunchedEffect
+                dashboardViewModel.uiState.first { !it.isLoading }
+                dashboardViewModel.openQuickLog(bookId)
+                onPendingReminderBookIdConsumed()
+            }
             DashboardScreen(
                 viewModel = dashboardViewModel,
                 onRegisterBookClick = {
@@ -52,6 +65,16 @@ fun BooklogsNavHost(
                 onLibraryClick = {
                     navController.navigate(Destinations.LIBRARY)
                 },
+                onSettingsClick = {
+                    navController.navigate(Destinations.SETTINGS)
+                },
+            )
+        }
+
+        composable(Destinations.SETTINGS) {
+            SettingsScreen(
+                viewModel = settingsViewModel,
+                onBack = { navController.popBackStack() },
             )
         }
 

@@ -6,6 +6,7 @@ object Destinations {
     const val BOOK_DETAIL = "book/{bookId}"
     const val QUOTE_CAPTURE = "book/{bookId}/quote-capture"
     const val REVIEW_EDITOR = "book/{bookId}/review"
+    const val SETTINGS = "settings"
     const val REGISTRATION_ENTRY = "registration"
     const val REGISTRATION_SCAN = "registration/scan"
     const val REGISTRATION_SEARCH = "registration/search"

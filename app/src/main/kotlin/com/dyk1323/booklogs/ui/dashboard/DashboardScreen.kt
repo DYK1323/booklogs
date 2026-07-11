@@ -24,11 +24,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -45,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalFocusManager
@@ -68,6 +71,7 @@ fun DashboardScreen(
     onBookDetailClick: (Long) -> Unit,
     onCaptureQuoteClick: (Long) -> Unit,
     onLibraryClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -87,10 +91,11 @@ fun DashboardScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 20.dp, vertical = 18.dp),
         ) {
-            TodayPagesHero(todayPages = uiState.todayPages)
+            TodayPagesHero(todayPages = uiState.todayPages, dailyGoalPages = uiState.dailyGoalPages)
             Spacer(modifier = Modifier.height(20.dp))
             DailyPagesBarChart(
                 totals = uiState.weekTotals,
+                dailyGoalPages = uiState.dailyGoalPages,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(116.dp),
@@ -111,6 +116,9 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     TextButton(onClick = onLibraryClick) {
                         Text(text = "라이브러리")
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Outlined.Settings, contentDescription = "설정")
                     }
                 }
             }
@@ -159,7 +167,8 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun TodayPagesHero(todayPages: Int) {
+private fun TodayPagesHero(todayPages: Int, dailyGoalPages: Int?) {
+    val goalMet = dailyGoalPages != null && dailyGoalPages > 0 && todayPages >= dailyGoalPages
     Column {
         Text(
             text = "오늘",
@@ -170,8 +179,16 @@ private fun TodayPagesHero(todayPages: Int) {
             Text(
                 text = todayPages.toString(),
                 style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = if (goalMet) StatusGoodLight else MaterialTheme.colorScheme.onSurface,
             )
+            if (dailyGoalPages != null && dailyGoalPages > 0) {
+                Text(
+                    text = " / $dailyGoalPages",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 9.dp),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                )
+            }
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "페이지",
@@ -184,10 +201,11 @@ private fun TodayPagesHero(todayPages: Int) {
 }
 
 @Composable
-private fun DailyPagesBarChart(totals: List<DayPageTotal>, modifier: Modifier = Modifier) {
-    val maxValue = (totals.maxOfOrNull { it.totalPages } ?: 0).coerceAtLeast(1)
+private fun DailyPagesBarChart(totals: List<DayPageTotal>, dailyGoalPages: Int?, modifier: Modifier = Modifier) {
+    val maxValue = (totals.maxOfOrNull { it.totalPages }?.coerceAtLeast(dailyGoalPages ?: 0) ?: 0).coerceAtLeast(1)
     val primary = MaterialTheme.colorScheme.primary
     val muted = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f)
+    val hairline = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.32f)
     val today = LocalDate.now().toEpochDay()
 
     Canvas(
@@ -211,6 +229,16 @@ private fun DailyPagesBarChart(totals: List<DayPageTotal>, modifier: Modifier = 
                 topLeft = Offset(left, chartHeight - barHeight),
                 size = Size(barWidth, barHeight.coerceAtLeast(4.dp.toPx())),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx()),
+            )
+        }
+        if (dailyGoalPages != null && dailyGoalPages > 0) {
+            val goalY = chartHeight - chartHeight * (dailyGoalPages.toFloat() / maxValue)
+            drawLine(
+                color = hairline,
+                start = Offset(0f, goalY),
+                end = Offset(size.width, goalY),
+                strokeWidth = 1.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 6.dp.toPx())),
             )
         }
     }

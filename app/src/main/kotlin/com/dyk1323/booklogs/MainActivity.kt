@@ -1,12 +1,18 @@
 package com.dyk1323.booklogs
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
+import com.dyk1323.booklogs.notification.ReminderNotificationBuilder
+import com.dyk1323.booklogs.notification.ReminderScheduler
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTheme
 import com.dyk1323.booklogs.ui.dashboard.DashboardViewModel
 import com.dyk1323.booklogs.ui.detail.BookDetailViewModel
@@ -15,8 +21,11 @@ import com.dyk1323.booklogs.ui.navigation.BooklogsNavHost
 import com.dyk1323.booklogs.ui.quote.QuoteCaptureViewModel
 import com.dyk1323.booklogs.ui.registration.BookRegistrationViewModel
 import com.dyk1323.booklogs.ui.review.ReviewEditorViewModel
+import com.dyk1323.booklogs.ui.settings.SettingsViewModel
 
 class MainActivity : ComponentActivity() {
+
+    private var pendingReminderBookId by mutableStateOf<Long?>(null)
 
     private val dashboardViewModel: DashboardViewModel by viewModels {
         val container = (application as BooklogsApplication).container
@@ -28,6 +37,7 @@ class MainActivity : ComponentActivity() {
                     readingLogRepository = container.readingLogRepository,
                     readingRoundRepository = container.readingRoundRepository,
                     logProgressUseCase = container.logProgressUseCase,
+                    appSettingsDataStore = container.appSettingsDataStore,
                 ) as T
         }
     }
@@ -97,8 +107,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val settingsViewModel: SettingsViewModel by viewModels {
+        val container = (application as BooklogsApplication).container
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =
+                SettingsViewModel(
+                    appSettingsDataStore = container.appSettingsDataStore,
+                    reminderScheduler = ReminderScheduler(applicationContext),
+                ) as T
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingReminderBookId = extractReminderBookId(intent)
         setContent {
             BooklogsTheme {
                 BooklogsNavHost(
@@ -108,8 +131,22 @@ class MainActivity : ComponentActivity() {
                     libraryViewModel = libraryViewModel,
                     quoteCaptureViewModel = quoteCaptureViewModel,
                     reviewEditorViewModel = reviewEditorViewModel,
+                    settingsViewModel = settingsViewModel,
+                    pendingReminderBookId = pendingReminderBookId,
+                    onPendingReminderBookIdConsumed = { pendingReminderBookId = null },
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        extractReminderBookId(intent)?.let { pendingReminderBookId = it }
+    }
+
+    private fun extractReminderBookId(intent: Intent?): Long? {
+        val bookId = intent?.getLongExtra(ReminderNotificationBuilder.EXTRA_BOOK_ID, -1L) ?: -1L
+        return bookId.takeIf { it > 0 }
     }
 }

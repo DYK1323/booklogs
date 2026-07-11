@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.dyk1323.booklogs.BuildConfig
 import com.dyk1323.booklogs.data.local.BooklogsDatabase
+import com.dyk1323.booklogs.data.settings.AppSettingsDataStore
 import com.dyk1323.booklogs.data.remote.GoogleBooksApi
 import com.dyk1323.booklogs.data.remote.KakaoBooksApi
 import com.dyk1323.booklogs.data.repository.BookMetadataRepositoryImpl
@@ -50,6 +51,8 @@ class AppContainer(context: Context) {
     val readingLogRepository: ReadingLogRepository = ReadingLogRepositoryImpl(database.readingLogDao())
     val quoteRepository: QuoteRepository = QuoteRepositoryImpl(database.quoteDao())
     val reviewRepository: ReviewRepository = ReviewRepositoryImpl(database.reviewDao())
+
+    val appSettingsDataStore = AppSettingsDataStore(context)
 
     private val json = Json { ignoreUnknownKeys = true }
 
