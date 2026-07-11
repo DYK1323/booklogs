@@ -43,7 +43,8 @@
 
 ## 데이터 모델 (Room)
 
-- **BookEntity** (`books`): id, isbn?, title, author?, publisher?, coverImageUrl?, totalPages?, status(READING/PAUSED/FINISHED/DROPPED/PLANNED), **format**(PHYSICAL/EBOOK, 기본 PHYSICAL), createdAt
+- **BookEntity** (`books`): id, isbn?, title, author?, publisher?, coverImageUrl?, totalPages?, status(READING/PAUSED/FINISHED/DROPPED/PLANNED), **format**(PHYSICAL/EBOOK, 기본 PHYSICAL), **genre?**, **country?**, createdAt
+  - genre/country는 카카오·구글북스 API가 안정적으로 제공하지 않는 정보라 항상 수동 입력(등록/수정 폼에 텍스트 필드로 추가). genre만 구글북스 `categories` 필드가 있으면 자동완성 시도(실패해도 무방, 사용자가 직접 채우거나 비워둘 수 있음), country는 항상 수동. 둘 다 비워두면 통계 화면에서 "미상"으로 집계.
   - READING: 대시보드 책장에 노출, 진행 중
   - PAUSED: 일시중지 — 나중에 재개할 생각 있음. 같은 라운드를 유지한 채 책장에서만 빠짐
   - FINISHED: 완독
@@ -80,11 +81,13 @@ com.dyk1323.booklogs/
       ConvertPagePercentUseCase.kt    ← 순수 함수, 양방향 변환: `percentToPage(percent, totalPages)`(EBOOK 입력 저장 시, round 처리)와 `pageToPercent(currentPage, totalPages)`(EBOOK 이력 표시 시). totalPages가 null이면 변환 불가 예외/Result로 처리 → 호출부(빠른 기록 시트)가 먼저 총 페이지 입력을 유도
       ChangeBookStatusUseCase.kt      ← 상태 전이 처리(READING↔PAUSED는 라운드 유지, →FINISHED/DROPPED는 현재 라운드 종료+endReason 기록, FINISHED/DROPPED→READING은 새 라운드 생성). 전이 종류별 라운드 부수효과를 한 곳에 모아 화면(책 상세)에서는 단순 호출만 하도록 함
       PickReminderBookUseCase.kt      ← 순수 함수: READING 상태 책 목록을 받아 무작위로 1권 선택(빈 목록이면 null 반환 → 리시버가 알림을 건너뜀)
+      AggregateBooksByAttributeUseCase.kt ← 통계 화면용 순수 함수: 책 목록 + 키 추출 함수(genre/author/publisher/country)를 받아 그룹별 권수를 세고 내림차순 정렬, 상위 N개 외엔 "기타"로 묶음. null/빈 값은 "미상"으로 그룹핑. 장르/작가/출판사/국가 4개 차트가 모두 이 함수 하나를 재사용(키 추출 함수만 다름)
   ui/
     dashboard/ (DashboardScreen, DashboardViewModel, TodayPagesHero, DailyPagesBarChart, BookShelfGrid, BookCoverProgressRing, BookQuickActionSheet, QuickProgressEntryViewModel)
     registration/ (BookRegistrationScreen, BarcodeScanScreen, BarcodeAnalyzer, TitleSearchScreen, BookConfirmFormScreen, BookRegistrationViewModel)
     bookdetail/ (BookDetailScreen, BookDetailViewModel, ReadingRoundSection, QuoteListSection, ReviewListSection, BookStatusActions — "진행률 기록"/"인용구 추가" 버튼은 dashboard의 BookQuickActionSheet/QuoteCaptureScreen을 그대로 재사용)
     library/ (LibraryScreen, LibraryViewModel — 상태별 필터가 가능한 전체 책 목록. PAUSED/DROPPED/FINISHED/PLANNED 책은 대시보드 책장(READING 전용)에 안 나오므로 이 화면이 유일한 접근 경로)
+    stats/ (StatsScreen, StatsViewModel, AttributeBarChart — 장르별/작가별/출판사별/국가별 4개 섹션이 모두 이 컴포저블 하나를 재사용)
     quote/ (QuoteCaptureScreen, TextRecognitionAnalyzer, QuoteTextSelectionScreen, QuoteCaptureViewModel — bookId 파라미터로 대시보드/책상세 양쪽에서 직접 진입 가능. `QuoteCaptureViewModel`은 캡처된 사진별 인식 결과를 `List<CapturedPageOcrResult>`로 누적 보관해 여러 페이지에 걸친 인용구를 지원)
     review/ (ReviewEditorScreen, ReviewEditorViewModel)
     settings/ (SettingsScreen, SettingsViewModel — 리마인더 on/off 토글 + TimePicker)
@@ -117,12 +120,12 @@ com.dyk1323.booklogs/
 
 ## 화면 흐름
 
-1. **대시보드(홈, 시작 화면) — "책장" 뷰**: 상단바(`TopAppBar`)엔 좌측에 타이틀, 우측에 **라이브러리 아이콘 + 설정 아이콘**을 직접 노출(햄버거+드로어 아님 — 목적지가 2개뿐이라 바로 누르는 게 탭 수가 적음, 항목이 늘어나면 그때 드로어로 전환 검토). 그 아래 본문은 위에서부터
+1. **대시보드(홈, 시작 화면) — "책장" 뷰**: 상단바(`TopAppBar`)엔 좌측에 타이틀, 우측에 **라이브러리 아이콘 + 통계 아이콘 + 설정 아이콘**을 직접 노출(햄버거+드로어 아님 — 아이콘 3개까지는 바로 누르는 게 탭 수가 적음, 더 늘어나면 그때 드로어로 전환 검토). 그 아래 본문은 위에서부터
    - **오늘 읽은 페이지** 큰 숫자로 강조 표시("오늘 128p"). 걷기 그래프의 "오늘 걸음 수"와 같은 위상. 일일 목표(`dailyGoalPages`)가 설정돼 있으면 "128 / 150p"처럼 목표를 옆에 같이 표시하고, 목표 달성 시 숫자를 강조색(성공 컬러)으로 전환.
    - **최근 7일 합산 페이지 막대그래프**(걷기 그래프 스타일): 오늘 막대는 강조색, 나머지는 흐린 색. 위 "오늘 읽은 페이지"와 이 그래프는 같은 데이터 소스(`AggregateDailyPagesUseCase`가 만드는 일자별 합산 배열) — 배열의 마지막(오늘) 항목을 숫자로 뽑아 보여주고 배열 전체를 막대로 그리는 것뿐, 별도 계산 불필요. 일일 목표가 설정돼 있으면 목표값 높이에 **점선 기준선**을 그려 넣어 날짜별로 목표 달성 여부를 한눈에 비교(목표를 넘긴 날의 막대는 성공 컬러로 표시).
    - **책장 그리드**: 진행 중인(`BookEntity.status == READING`) 책들을 표지로 배치 — 각 표지 이미지에 dim 오버레이(반투명 검정)를 씌우고, 그 위에 원형(도넛) 진행률 링을 겹쳐 그림(진행률 = currentPage/totalPages, `ComputeBookProgressUseCase` 재사용). **도넛 중앙에 퍼센트 텍스트("62%")를 함께 표시**해 시각적 링만으로 정확한 값을 가늠하기 어려운 문제를 보완 — 정확한 페이지 수(185/320p)는 표지 탭 시 열리는 빠른 기록 시트/책 상세에서 확인.
    - 표지 탭 → 위 "빠른 기록 UX"의 바텀시트가 열림(화면 전환 없음). 별도 FAB로 책 등록 화면 진입.
-2. **책 등록**: 스캔/제목검색/수동입력 선택 → 스캔은 CameraX+ML Kit 바코드 인식 → ISBN으로 카카오 책 검색 API 조회(실패 시 Google Books 폴백) → 확인/수정 폼(둘 다 실패 시 빈 폼+수동입력 안내) → 저장(상태 READING이면 첫 라운드 자동 생성). 제목 검색도 동일하게 카카오 우선 조회. **확인/수정 폼에 "종이책/전자책" 토글**을 추가(기본값 종이책, 메타데이터 API로는 형식을 알 수 없어 항상 수동 선택) — 전자책을 선택하면 이후 그 책의 빠른 기록 시트가 %입력 모드로 동작. 저빈도 작업이므로 기존의 다단계 절차를 그대로 유지.
+2. **책 등록**: 스캔/제목검색/수동입력 선택 → 스캔은 CameraX+ML Kit 바코드 인식 → ISBN으로 카카오 책 검색 API 조회(실패 시 Google Books 폴백) → 확인/수정 폼(둘 다 실패 시 빈 폼+수동입력 안내) → 저장(상태 READING이면 첫 라운드 자동 생성). 제목 검색도 동일하게 카카오 우선 조회. **확인/수정 폼에 "종이책/전자책" 토글**을 추가(기본값 종이책, 메타데이터 API로는 형식을 알 수 없어 항상 수동 선택) — 전자책을 선택하면 이후 그 책의 빠른 기록 시트가 %입력 모드로 동작. **장르/국가 입력 필드**도 폼에 추가 — 장르는 Google Books 조회 결과에 `categories`가 있으면 자동완성 시도(실패해도 무방), 국가는 항상 수동, 둘 다 선택 입력이라 비워도 등록 가능(통계에서 "미상"으로 집계). 저빈도 작업이므로 기존의 다단계 절차를 그대로 유지.
 3. **진행률 빠른 기록 시트**: 위 "빠른 기록 UX" 참고. 대시보드 표지 탭으로 진입하는 것이 기본 경로이며, 책 상세 화면에서도 동일한 시트를 재사용해 진입 가능(어떤 경로든 "책 선택" 단계가 별도로 필요 없음 — 이미 어떤 책인지 알고 진입하므로). PHYSICAL 책의 사진 인식 모드는 인용구 캡처와 동일한 카메라+OCR 파이프라인을 재사용, 코너의 독립된 숫자 토큰을 페이지 후보로 추출해 프리필하되 항상 사용자 확인 후 저장. EBOOK 책은 % 직접 입력만 지원.
 4. **책 상세**: 메타데이터, 진행률, 라운드별 진행 이력/독후감, 인용구 목록. 딥다이브용 화면이며 빠른 기록 시트에서 "상세보기"로 진입하거나, 검색/목록에서 직접 진입. **진행 이력 목록의 각 로그 행은 탭하면 인라인으로 펼쳐져 수정/삭제 가능**(대시보드 빠른 기록 시트와 동일한 `EditLogUseCase`/`DeleteLogUseCase` 재사용) — 과거 특정 날짜의 기록을 고치는 것은 이 화면이 담당. 이력의 각 행은 책 `format`에 따라 "245p" 또는 "62%"로 표시(저장된 값은 항상 페이지, 표시만 환산).
    - **상태 변경 액션**(`BookStatusActions`, `ChangeBookStatusUseCase` 호출): READING 중엔 "다 읽음" / "중단" / "일시중지" 세 버튼을 노출. "일시중지"는 라운드를 유지한 채 상태만 바꾸고, "다 읽음"/"중단"은 현재 라운드를 종료(각각 `endReason = COMPLETED`/`DROPPED`)하고 책 상태를 FINISHED/DROPPED로 바꿈. FINISHED/DROPPED/PAUSED 상태에선 "다시 읽기 시작" 버튼 하나로 재개(PAUSED는 같은 라운드 이어감, FINISHED/DROPPED는 새 라운드 시작). 등록/상태변경처럼 저빈도 작업이라 책 상세에 위치, 확인 다이얼로그 없이 즉시 적용 후 스낵바로 되돌리기 제공.
@@ -133,7 +136,8 @@ com.dyk1323.booklogs/
    - 저장 후 "계속 촬영"(같은 책으로 카메라 재진입해 **별개의 새 인용구** 캡처 시작) / "완료"(호출한 곳으로 복귀) 선택 — 이건 "다음 페이지 이어서 촬영"과 달리 저장 이후에만 등장하는, 완전히 다른 인용구를 잇달아 찍기 위한 것.
 6. **독후감 작성**: 특정 라운드에 연결된 텍스트+평점(선택) 작성/저장 — 중단한(DROPPED) 라운드에도 독후감(왜 중단했는지 등)을 남길 수 있음, 제약 없음
 7. **라이브러리(전체 책 목록)**: 대시보드 상단바에서 진입, 상태별(읽는 중/일시중지/완독/중단/읽을 예정) 필터와 검색 제공. PAUSED·DROPPED·FINISHED·PLANNED 책은 대시보드 책장에는 안 보이므로 이 화면이 유일한 접근 경로. 목록 아이템 탭 → 책 상세.
-8. **설정**: 대시보드 상단바에서 진입.
+8. **통계**: 대시보드 상단바에서 진입. 상단에 "지금까지 읽은 책 32권"(PLANNED 제외 전체 카운트) 요약, 그 아래 **장르별 / 작가별 / 출판사별 / 국가별** 4개 섹션이 각각 가로 막대 리스트로 표시(책 권수 기준, `AggregateBooksByAttributeUseCase` 재사용). 상위 N개 외엔 "기타"로 묶고, genre/country가 비어있는 책은 "미상"으로 집계. 막대 탭 시 그 그룹에 속한 책 목록으로 필터링된 라이브러리 화면으로 이동(선택 사항, 있으면 좋지만 필수는 아님).
+9. **설정**: 대시보드 상단바에서 진입.
    - 리마인더 on/off 토글 + 시각 선택(`TimePicker`, 하루 1회). 저장 즉시 `ReminderScheduler`가 알람을 재등록/취소. 알림 자체는 매일 정해진 시각에 현재 READING인 책 중 **무작위로 1권**을 골라 "『책 제목』 62% 읽는 중" 형태로 표시하고, 알림 탭 시 그 책의 빠른 기록 시트가 바로 열려 그 자리에서 진행률을 기록할 수 있음(리마인더가 곧 빠른 기록 진입점이 되도록 설계). READING인 책이 하나도 없는 날은 알림을 건너뛰고 다음날 알람만 재등록.
    - **일일 목표 페이지 수**(숫자 입력, 비워두면 목표 없음/그래프에 기준선 미표시). 저장 즉시 대시보드의 히어로 숫자·막대그래프에 반영(둘 다 DataStore를 구독하는 Flow라 별도 갱신 로직 불필요).
 
@@ -158,6 +162,7 @@ com.dyk1323.booklogs/
   - FINISHED/DROPPED → READING: `roundNumber = 이전 최대값 + 1`인 새 `ReadingRoundEntity` 삽입(startedAt=now, finishedAt=null) + `BookEntity.status = READING`. 첫 등록 시 라운드 생성 로직과 동일한 헬퍼 재사용.
   - 각 케이스가 독립적인 분기라 파악이 쉽고, 트랜잭션 하나(`@Transaction`)로 묶어 라운드/책 상태가 항상 같이 갱신되도록 함(하나만 갱신되고 나머지가 실패하는 상태 방지).
 - **라이브러리 화면 쿼리**: `BookDao.observeAll(): Flow<List<BookEntity>>`를 가져와 ViewModel에서 status로 필터링(데이터 양이 적어 SQL WHERE 없이 메모리 필터로 충분). 검색은 title/author `contains` 매칭.
+- **통계 화면**: `StatsViewModel`이 `BookDao.observeAll()`을 status != PLANNED로 필터링한 뒤 `AggregateBooksByAttributeUseCase`를 genre/author/publisher/country 4번 호출(키 추출 함수만 다르게 전달)해 4개 섹션 데이터를 만듦 — 별도 쿼리/usecase 중복 없이 하나의 순수 함수 재사용. 장르 자동완성은 `BookMetadataMapper`가 Google Books 응답의 `volumeInfo.categories`(List<String>) 중 첫 값을 확인/수정 폼의 장르 필드에 프리필하되, 카카오 우선 조회 결과엔 이 필드가 없으므로 Google Books 폴백이 실제로 호출된 경우에만 채워짐 — 항상 사용자가 확인/수정 가능.
 - **리마인더 알람/알림**: `ReminderScheduler.schedule(hour, minute)`이 `AlarmManager.setAndAllowWhileIdle(RTC_WAKEUP, triggerAtMillis, pendingIntent)`로 다음 발생 시각 하나만 예약(반복 알람 대신 매번 재예약 — Doze 하에서 `setRepeating` 오차 누적을 피하기 위함). `ReminderReceiver.onReceive`가 (1) `BookDao`에서 READING 목록 조회 → `PickReminderBookUseCase`로 무작위 1권 선택(없으면 알림 생략) → (2) 알림 표시 시 `PendingIntent`의 딥링크 extra로 `bookId`를 실어 `MainActivity` → `Destinations.Dashboard(openQuickSheetFor = bookId)`로 진입하도록 구성 → (3) 다음날 같은 시각으로 알람 재예약. 기기 재부팅 시 `AlarmManager` 알람이 사라지므로 `BootReceiver`가 `RECEIVE_BOOT_COMPLETED`를 받아 저장된 설정으로 재등록. Android 13(API 33)+에서는 알림 표시 전 런타임 `POST_NOTIFICATIONS` 권한 요청 필요(설정 화면에서 리마인더를 켤 때 요청).
 - DAO는 인터페이스로 정의해 Repository 단위 테스트에서 Room 없이 Fake DAO로 대체 가능하게 함.
 
@@ -171,7 +176,7 @@ com.dyk1323.booklogs/
 
 샌드박스에 Android SDK/에뮬레이터가 없으므로:
 - **가능**: `./gradlew :app:compileDebugKotlin`, `./gradlew :app:testDebugUnitTest`로 순수 로직 검증
-  - `ComputeLogDeltasUseCaseTest`(핵심: 정렬/인접쌍 차이/클램프, 그리고 **중간 로그 수정·삭제 후 이웃 델타가 재저장 없이 올바르게 다시 계산되는지** — 이번 스키마 변경의 핵심 검증 대상), `AggregateDailyPagesUseCaseTest`(일자 버켓팅/0채움/여러 책 합산/기간 경계 밖 로그 포함 여부, **목표값과 비교해 성공 여부 플래그가 맞는지**), `LogProgressUseCaseTest`(단순 insert), `EditLogUseCaseTest`/`DeleteLogUseCaseTest`(임의 시점 로그 수정/삭제, 이웃 로그 미변경 확인), `ComputeBookProgressUseCaseTest`(totalPages null 처리), `ChangeBookStatusUseCaseTest`(READING↔PAUSED는 라운드 불변, →FINISHED/DROPPED는 라운드 종료+endReason 정확성, FINISHED/DROPPED→READING은 roundNumber 증가한 새 라운드 생성, PAUSED→READING은 라운드 재사용), `PickReminderBookUseCaseTest`(빈 목록→null, 여러 권 중 무작위 선택이 목록 범위 내에서만 나오는지), `BookMetadataMapperTest`(카카오 DTO 매핑 + Google Books DTO 매핑 + 폴백 분기), `PageNumberCandidateExtractorTest`(숫자 토큰 필터링/코너 스코어링 로직, 순수 함수로 분리해 단위 테스트), `JoinSelectedQuoteLinesTest`(여러 페이지의 선택된 줄을 촬영 순서대로 합치는 순수 함수, 페이지 1건/2건 이상일 때 `pageNumberEnd` null 여부), `ConvertPagePercentUseCaseTest`(양방향 변환 반올림 정확성, totalPages null일 때 변환 불가 처리, 0%/100% 경계값), Fake DAO 기반 Repository 테스트
+  - `ComputeLogDeltasUseCaseTest`(핵심: 정렬/인접쌍 차이/클램프, 그리고 **중간 로그 수정·삭제 후 이웃 델타가 재저장 없이 올바르게 다시 계산되는지** — 이번 스키마 변경의 핵심 검증 대상), `AggregateDailyPagesUseCaseTest`(일자 버켓팅/0채움/여러 책 합산/기간 경계 밖 로그 포함 여부, **목표값과 비교해 성공 여부 플래그가 맞는지**), `LogProgressUseCaseTest`(단순 insert), `EditLogUseCaseTest`/`DeleteLogUseCaseTest`(임의 시점 로그 수정/삭제, 이웃 로그 미변경 확인), `ComputeBookProgressUseCaseTest`(totalPages null 처리), `ChangeBookStatusUseCaseTest`(READING↔PAUSED는 라운드 불변, →FINISHED/DROPPED는 라운드 종료+endReason 정확성, FINISHED/DROPPED→READING은 roundNumber 증가한 새 라운드 생성, PAUSED→READING은 라운드 재사용), `PickReminderBookUseCaseTest`(빈 목록→null, 여러 권 중 무작위 선택이 목록 범위 내에서만 나오는지), `BookMetadataMapperTest`(카카오 DTO 매핑 + Google Books DTO 매핑 + 폴백 분기), `PageNumberCandidateExtractorTest`(숫자 토큰 필터링/코너 스코어링 로직, 순수 함수로 분리해 단위 테스트), `JoinSelectedQuoteLinesTest`(여러 페이지의 선택된 줄을 촬영 순서대로 합치는 순수 함수, 페이지 1건/2건 이상일 때 `pageNumberEnd` null 여부), `ConvertPagePercentUseCaseTest`(양방향 변환 반올림 정확성, totalPages null일 때 변환 불가 처리, 0%/100% 경계값), `AggregateBooksByAttributeUseCaseTest`(그룹별 카운트/내림차순 정렬/상위 N+"기타" 묶음/null·빈값 "미상" 처리), Fake DAO 기반 Repository 테스트
   - `assembleDebug`/`lint`는 SDK 플랫폼 컴포넌트 다운로드가 가능한지에 따라 시도해보되, 안 되면 컴파일+유닛테스트까지가 한계
 - **불가능(사용자가 실기기/에뮬레이터에서 직접 확인 필요)**: Compose 화면 렌더링/내비게이션 클릭 흐름(책장 그리드 + 도넛 오버레이 실제 표시 포함), CameraX 프리뷰·권한, 실제 바코드 인식 정확도, 실제 한글/영어 책 페이지 OCR 정확도 및 텍스트 선택 UX, 페이지 번호 자동 인식 정확도(폰트/각도/코너 위치 편차가 커서 실기기 튜닝 필요), Room 실기기 동작, 카카오/Google Books 실제 네트워크 응답, **AlarmManager 알람 발화·Doze 하 지연 정도·재부팅 후 재등록·알림 표시/딥링크 동작**, 전체 엔드투엔드 플로우(등록→기록→그래프 갱신→인용구→독후감→리마인더)
 
