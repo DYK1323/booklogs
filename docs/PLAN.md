@@ -91,7 +91,7 @@ com.dyk1323.booklogs/
     quote/ (QuoteCaptureScreen, TextRecognitionAnalyzer, QuoteTextSelectionScreen, QuoteCaptureViewModel — bookId 파라미터로 대시보드/책상세 양쪽에서 직접 진입 가능. `QuoteCaptureViewModel`은 캡처된 사진별 인식 결과를 `List<CapturedPageOcrResult>`로 누적 보관해 여러 페이지에 걸친 인용구를 지원)
     review/ (ReviewEditorScreen, ReviewEditorViewModel)
     settings/ (SettingsScreen, SettingsViewModel — 리마인더 on/off 토글 + TimePicker)
-    common/{theme, components}
+    common/{theme, components/(SkeletonBox, LoadingOverlay, EmptyState, BookCoverImage)}
     navigation/{BooklogsNavHost, Destinations}
   notification/
     ReminderScheduler.kt              ← AlarmManager 등록/취소 래퍼
@@ -117,6 +117,23 @@ com.dyk1323.booklogs/
   - 시트 내 "인용구 추가" 버튼: 탭하면 책 상세를 거치지 않고 곧바로 카메라(인용구 캡처)로 진입 — **대시보드 → 카메라 1홉**. 인용구 저장 후에는 "계속 촬영" / "완료"를 선택하게 해, 한 번에 여러 인용구를 찍을 때마다 대시보드로 돌아왔다 다시 들어가지 않아도 되게 한다.
   - 시트 내 "책 상세보기" 버튼: 진행 이력·독후감처럼 가끔 보는 딥다이브용 화면으로 이동하는 세 번째(가장 낮은 빈도) 옵션.
 - `totalPages`가 없는 책은 도넛 대신 "?" 배지를 표시하고, 시트를 열면 총 페이지 수 입력을 먼저 유도.
+
+## 로딩/대기 상태 UX
+
+**원칙**: 로컬 DB(Room `Flow`) 읽기는 대부분 즉시 응답하므로 별도 로딩 처리가 크게 중요하지 않지만, **최초 컴포지션 시 빈 화면이 한 프레임이라도 깜빡이지 않도록 항상 스켈레톤을 먼저 그리고** 첫 `Flow` emission이 오면 실제 콘텐츠 또는 빈 상태(EmptyState)로 교체한다. 반면 **네트워크(카카오/Google Books)나 온디바이스 연산(ML Kit OCR·바코드, CameraX 초기화)이 관여하는 지점은 반드시 명시적 로딩 표시**가 있어야 한다 — 결과 모양(목록/여러 필드)을 미리 아는 곳은 스켈레톤, 버튼 탭 같은 단발 액션은 스피너.
+
+- **`SkeletonBox`**(공용 컴포저블): 회색 사각형에 무한 반복 알파 애니메이션(`rememberInfiniteTransition`)을 입힌 shimmer placeholder. 외부 라이브러리(예: accompanist-placeholder) 없이 ~20줄로 직접 구현 — 차트와 동일하게 "필요한 건 딱 이거 하나"라 의존성 추가 안 함.
+- **`LoadingOverlay`**(공용 컴포저블): 반투명 검정 배경 + 중앙 `CircularProgressIndicator` + 안내 텍스트. 전체 화면/카메라 프리뷰 위에 덮어써서 입력을 막아야 하는 블로킹 대기(OCR 처리 등)에 사용.
+- 화면별 적용:
+  - **대시보드**: `TodayPagesHero`/`DailyPagesBarChart`/`BookShelfGrid` 모두 최초 컴포지션엔 `SkeletonBox`(막대그래프는 회색 막대 더미, 책장은 회색 카드 3~4개)로 시작 → 첫 `Flow` emission 시 실제 데이터 또는 "아직 읽는 중인 책이 없어요" EmptyState로 교체.
+  - **바코드 스캔**: `PreviewView` 초기화가 지연되면 카메라 프리뷰 위에 짧게 `LoadingOverlay`("카메라 준비 중"). 바코드 디코드 성공 후 카카오+Google Books 조회가 도는 동안(최악 5초) 확인 폼으로 넘어가기 전 `LoadingOverlay`("책 정보를 찾고 있어요") 노출 — 타임아웃/실패 시 위 "실패 처리 매트릭스"의 메시지로 전환.
+  - **제목 검색**: 검색 제출 시 결과 리스트 자리에 카드 5~6개 형태의 `SkeletonBox` 리스트를 먼저 그림 → 카카오(필요 시 Google Books 폴백) 응답 도착 시 실제 결과 또는 "검색 결과가 없어요"로 교체.
+  - **책 확인/수정 폼**: 카카오 필드는 검색 결과 선택 즉시 채워져 폼이 바로 열리고, `totalPages`/`genre` 입력칸만 Google Books 보조 조회가 끝날 때까지 그 칸 자리에 작은 `SkeletonBox`를 표시(폼 전체를 막지 않음 — 사용자가 다른 필드를 먼저 수정해도 무방) → 응답 도착 시 값 채움 또는 빈 칸 유지.
+  - **인용구 캡처**: 촬영 버튼 탭 직후 이미지 캡처+Latin/Korean 두 인식기 처리 동안 `LoadingOverlay`("텍스트 인식 중…")로 화면을 덮고 촬영 버튼 비활성화(중복 촬영 방지) → 완료 시 텍스트 선택 화면으로 전환. "다음 페이지 이어서 촬영"도 매 촬영마다 동일하게 적용.
+  - **책 상세**: 진행 이력/인용구/독후감 각 섹션이 독립적으로 최초엔 `SkeletonBox` 리스트 → 각자의 `Flow` emission이 오는 대로 개별 교체(로컬 DB라 사실상 동시에 채워지지만 섹션 단위로 독립 처리해 구조를 단순하게 유지).
+  - **라이브러리 / 통계**: 최초 컴포지션 시 `SkeletonBox`(라이브러리는 리스트, 통계는 막대) → `Flow` emission 후 실제 콘텐츠. 필터/검색은 이미 메모리에 있는 리스트를 즉시 거르는 동기 연산이라 별도 로딩 불필요.
+  - **표지 이미지**: 대시보드 책장·검색 결과·라이브러리·책 상세 등 표지가 나오는 모든 곳에서 Coil `AsyncImage`에 `placeholder`(회색 박스 또는 기본 책 아이콘) + `crossfade(true)`를 공통 설정 — 개별 화면마다 다르게 처리하지 않고 공용 `BookCoverImage` 컴포저블 하나로 통일.
+  - **빠른 기록 시트 저장 / 상태 변경 버튼**: 로컬 Room insert/update라 보통 즉시 끝나지만, 중복 탭 방지를 위해 버튼을 짧게 비활성화하고 라벨을 스피너로 교체(예: "저장" → 작은 `CircularProgressIndicator`) 후 자동 닫힘.
 
 ## 화면 흐름
 
