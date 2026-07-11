@@ -67,6 +67,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel,
     onRegisterBookClick: () -> Unit,
     onBookDetailClick: (Long) -> Unit,
+    onCaptureQuoteClick: (Long) -> Unit,
     onLibraryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -143,6 +144,11 @@ fun DashboardScreen(
                     val bookId = sheetState.book.id
                     viewModel.closeQuickLog()
                     onBookDetailClick(bookId)
+                },
+                onCaptureQuote = {
+                    val bookId = sheetState.book.id
+                    viewModel.closeQuickLog()
+                    onCaptureQuoteClick(bookId)
                 },
             )
         }
@@ -342,6 +348,7 @@ private fun QuickLogSheet(
     onSave: () -> Unit,
     onDismiss: () -> Unit,
     onOpenDetail: () -> Unit,
+    onCaptureQuote: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
     LaunchedEffect(state.book.id) {
@@ -386,6 +393,10 @@ private fun QuickLogSheet(
             },
         )
         Spacer(modifier = Modifier.height(18.dp))
+        TextButton(onClick = onCaptureQuote, modifier = Modifier.fillMaxWidth()) {
+            Text(text = "인용구 촬영")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             TextButton(onClick = onOpenDetail) {
                 Text(text = "상세 보기")

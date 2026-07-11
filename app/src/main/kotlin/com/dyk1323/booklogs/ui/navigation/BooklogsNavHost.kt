@@ -43,6 +43,9 @@ fun BooklogsNavHost(
                 onBookDetailClick = { bookId ->
                     navController.navigate(Destinations.bookDetail(bookId))
                 },
+                onCaptureQuoteClick = { bookId ->
+                    navController.navigate(Destinations.quoteCapture(bookId))
+                },
                 onLibraryClick = {
                     navController.navigate(Destinations.LIBRARY)
                 },
