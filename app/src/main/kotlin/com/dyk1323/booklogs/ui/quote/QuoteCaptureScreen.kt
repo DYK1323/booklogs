@@ -94,6 +94,13 @@ fun QuoteCaptureScreen(
         if (!hasCameraPermission) permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
+    fun openCameraForNextCapture() {
+        capturedBitmap = null
+        highlightRect = null
+        imageBounds = null
+        imageContainerSize = IntSize.Zero
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -119,7 +126,7 @@ fun QuoteCaptureScreen(
                         capturedBitmap = bitmap
                         highlightRect = null
                         imageBounds = null
-                        viewModel.resetRecognizedText()
+                        viewModel.prefillPageNumber(bitmap)
                     },
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -148,12 +155,19 @@ fun QuoteCaptureScreen(
                         }
                     },
                     onRetake = {
-                        capturedBitmap = null
-                        highlightRect = null
-                        imageBounds = null
-                        viewModel.resetRecognizedText()
+                        viewModel.discardCurrentCaptureText()
+                        openCameraForNextCapture()
                     },
-                    onSave = { viewModel.save(onBack) },
+                    onNextPage = {
+                        viewModel.startNextPage()
+                        openCameraForNextCapture()
+                    },
+                    onContinueAfterSave = {
+                        viewModel.beginNewQuote()
+                        openCameraForNextCapture()
+                    },
+                    onSave = viewModel::save,
+                    onDone = onBack,
                 )
             }
         }
@@ -264,7 +278,10 @@ private fun HighlightQuoteContent(
     onQuoteChanged: (String) -> Unit,
     onRecognize: () -> Unit,
     onRetake: () -> Unit,
+    onNextPage: () -> Unit,
+    onContinueAfterSave: () -> Unit,
     onSave: () -> Unit,
+    onDone: () -> Unit,
 ) {
     var dragStart by remember(bitmap) { mutableStateOf<Offset?>(null) }
 
@@ -332,7 +349,7 @@ private fun HighlightQuoteContent(
             }
             Button(
                 onClick = onRecognize,
-                enabled = !state.isRecognizing && highlightRect != null,
+                enabled = !state.isRecognizing && highlightRect != null && !state.isSaved,
                 shape = RoundedCornerShape(8.dp),
             ) {
                 if (state.isRecognizing) {
@@ -342,32 +359,72 @@ private fun HighlightQuoteContent(
                 }
             }
         }
+        if (state.capturedPages.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            CapturedPagesSummary(pages = state.capturedPages)
+        }
         Spacer(modifier = Modifier.height(10.dp))
         OutlinedTextField(
-            value = state.pageText,
+            value = state.currentPageText,
             onValueChange = onPageChanged,
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(text = "페이지") },
+            label = { Text(text = "현재 페이지") },
             singleLine = true,
+            enabled = !state.isSaved,
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = state.quoteText,
             onValueChange = onQuoteChanged,
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(text = "인용구") },
+            label = { Text(text = "최종 인용구") },
             minLines = 2,
             maxLines = 4,
+            enabled = !state.isSaved,
         )
         state.message?.let {
             Spacer(modifier = Modifier.height(6.dp))
-            Text(text = it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (state.isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+            )
         }
         Spacer(modifier = Modifier.height(10.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            Button(onClick = onSave, enabled = !state.isSaving, shape = RoundedCornerShape(8.dp)) {
-                Text(text = if (state.isSaving) "저장 중" else "저장")
+        if (state.isSaved) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onContinueAfterSave) {
+                    Text(text = "계속 촬영")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = onDone, shape = RoundedCornerShape(8.dp)) {
+                    Text(text = "완료")
+                }
             }
+        } else {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onNextPage, enabled = state.capturedPages.isNotEmpty()) {
+                    Text(text = "다음 페이지 이어서 촬영")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = onSave, enabled = !state.isSaving, shape = RoundedCornerShape(8.dp)) {
+                    Text(text = if (state.isSaving) "저장 중" else "저장")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CapturedPagesSummary(pages: List<CapturedQuotePage>) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        pages.forEach { page ->
+            val pageLabel = page.pageText.ifBlank { "?" }
+            Text(
+                text = "${page.order}페이지 그룹 · p. $pageLabel",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.64f),
+            )
         }
     }
 }

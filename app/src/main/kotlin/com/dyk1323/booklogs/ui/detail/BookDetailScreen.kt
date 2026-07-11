@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -20,6 +22,8 @@ import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -178,9 +182,14 @@ fun BookDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
                     } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            uiState.quotes.forEach { quote ->
-                                QuoteRow(quote = quote, onDelete = { viewModel.deleteQuote(quote.id) })
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 320.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            items(uiState.quotes, key = { it.id }) { quote ->
+                                QuoteCard(quote = quote, onDelete = { viewModel.deleteQuote(quote.id) })
                             }
                         }
                     }
@@ -352,23 +361,45 @@ private fun LogDeltaRow(delta: LogDelta, onDelete: () -> Unit) {
 }
 
 @Composable
-private fun QuoteRow(quote: Quote, onDelete: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = quote.text, style = MaterialTheme.typography.bodyLarge)
-            quote.pageNumber?.let {
+private fun QuoteCard(quote: Quote, onDelete: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "p. $it",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                    text = quote.text,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis,
                 )
+                quotePageLabel(quote)?.let {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                    )
+                }
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Outlined.Delete, contentDescription = "인용구 삭제")
             }
         }
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Outlined.Delete, contentDescription = "인용구 삭제")
-        }
     }
-    HorizontalDivider()
+}
+
+private fun quotePageLabel(quote: Quote): String? {
+    val start = quote.pageNumber ?: return null
+    val end = quote.pageNumberEnd
+    return if (end != null && end != start) "p. $start-$end" else "p. $start"
 }
 
 private fun progressText(state: BookDetailUiState): String {
