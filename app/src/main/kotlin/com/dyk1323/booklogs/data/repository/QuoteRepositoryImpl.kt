@@ -15,6 +15,8 @@ class QuoteRepositoryImpl(
 
     override suspend fun insert(quote: Quote): Long = quoteDao.insert(quote.toEntity())
 
+    override suspend fun update(quote: Quote) = quoteDao.update(quote.toEntity())
+
     override suspend fun deleteById(quoteId: Long) = quoteDao.deleteById(quoteId)
 }
 

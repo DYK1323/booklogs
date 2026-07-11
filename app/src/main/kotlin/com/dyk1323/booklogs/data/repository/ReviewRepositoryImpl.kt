@@ -17,6 +17,10 @@ class ReviewRepositoryImpl(
         reviewDao.observeForRound(roundId).map { entities -> entities.map { it.toDomain() } }
 
     override suspend fun insert(review: Review): Long = reviewDao.insert(review.toEntity())
+
+    override suspend fun update(review: Review) = reviewDao.update(review.toEntity())
+
+    override suspend fun deleteById(reviewId: Long) = reviewDao.deleteById(reviewId)
 }
 
 internal fun ReviewEntity.toDomain(): Review = Review(

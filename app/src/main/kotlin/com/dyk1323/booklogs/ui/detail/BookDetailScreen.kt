@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -151,6 +152,14 @@ fun BookDetailScreen(
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
+                    if (uiState.editingQuoteId != null) {
+                        Text(
+                            text = "인용구 수정 중",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                     OutlinedTextField(
                         value = uiState.quoteText,
                         onValueChange = viewModel::updateQuoteText,
@@ -168,8 +177,14 @@ fun BookDetailScreen(
                             singleLine = true,
                         )
                         Spacer(modifier = Modifier.width(8.dp))
+                        if (uiState.editingQuoteId != null) {
+                            TextButton(onClick = viewModel::cancelEditQuote) {
+                                Text(text = "취소")
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
                         Button(onClick = viewModel::saveQuote, shape = RoundedCornerShape(8.dp)) {
-                            Text(text = "저장")
+                            Text(text = if (uiState.editingQuoteId != null) "수정 저장" else "저장")
                         }
                     }
                     Spacer(modifier = Modifier.height(14.dp))
@@ -187,7 +202,11 @@ fun BookDetailScreen(
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             items(uiState.quotes, key = { it.id }) { quote ->
-                                QuoteCard(quote = quote, onDelete = { viewModel.deleteQuote(quote.id) })
+                                QuoteCard(
+                                    quote = quote,
+                                    onEdit = { viewModel.startEditQuote(quote) },
+                                    onDelete = { viewModel.deleteQuote(quote.id) },
+                                )
                             }
                         }
                     }
@@ -334,7 +353,7 @@ private fun LogDeltaRow(delta: LogDelta, onDelete: () -> Unit) {
 }
 
 @Composable
-private fun QuoteCard(quote: Quote, onDelete: () -> Unit) {
+private fun QuoteCard(quote: Quote, onEdit: () -> Unit, onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
@@ -361,6 +380,9 @@ private fun QuoteCard(quote: Quote, onDelete: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                     )
                 }
+            }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Outlined.Edit, contentDescription = "인용구 수정")
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Outlined.Delete, contentDescription = "인용구 삭제")

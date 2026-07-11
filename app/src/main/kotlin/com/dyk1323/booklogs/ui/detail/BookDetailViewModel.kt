@@ -36,6 +36,7 @@ data class BookDetailUiState(
     val reviews: List<Review> = emptyList(),
     val quoteText: String = "",
     val quotePageText: String = "",
+    val editingQuoteId: Long? = null,
     val message: String? = null,
 )
 
@@ -62,6 +63,7 @@ class BookDetailViewModel(
     private val selectedBookId = MutableStateFlow<Long?>(null)
     private val quoteText = MutableStateFlow("")
     private val quotePageText = MutableStateFlow("")
+    private val editingQuote = MutableStateFlow<Quote?>(null)
     private val message = MutableStateFlow<String?>(null)
 
     private val quotes = selectedBookId.flatMapLatest { bookId ->
@@ -97,8 +99,9 @@ class BookDetailViewModel(
         baseState,
         quoteText,
         quotePageText,
+        editingQuote,
         message,
-    ) { base, quoteText, quotePageText, message ->
+    ) { base, quoteText, quotePageText, editingQuote, message ->
         BookDetailUiState(
             book = base.book,
             currentPage = base.currentPage,
@@ -108,6 +111,7 @@ class BookDetailViewModel(
             reviews = base.reviews,
             quoteText = quoteText,
             quotePageText = quotePageText,
+            editingQuoteId = editingQuote?.id,
             message = message,
         )
     }.stateIn(
@@ -118,6 +122,9 @@ class BookDetailViewModel(
 
     fun selectBook(bookId: Long) {
         selectedBookId.value = bookId
+        editingQuote.value = null
+        quoteText.value = ""
+        quotePageText.value = ""
         message.value = null
     }
 
@@ -131,6 +138,21 @@ class BookDetailViewModel(
         message.value = null
     }
 
+    /** Loads an existing quote's text/page into the inline add form, switching [saveQuote] to update mode. */
+    fun startEditQuote(quote: Quote) {
+        editingQuote.value = quote
+        quoteText.value = quote.text
+        quotePageText.value = quote.pageNumber?.toString().orEmpty()
+        message.value = null
+    }
+
+    fun cancelEditQuote() {
+        editingQuote.value = null
+        quoteText.value = ""
+        quotePageText.value = ""
+        message.value = null
+    }
+
     fun saveQuote() {
         val bookId = selectedBookId.value ?: return
         val text = quoteText.value.trim()
@@ -138,20 +160,31 @@ class BookDetailViewModel(
             message.value = "저장할 인용구를 입력해주세요."
             return
         }
+        val editing = editingQuote.value
         viewModelScope.launch {
-            quoteRepository.insert(
-                Quote(
-                    id = 0,
-                    bookId = bookId,
-                    text = text,
-                    pageNumber = quotePageText.value.toIntOrNull(),
-                    pageNumberEnd = null,
-                    createdAt = System.currentTimeMillis(),
-                ),
-            )
+            if (editing != null) {
+                // pageNumberEnd/createdAt are preserved from the original quote — this inline form
+                // only edits text/single page number, not the multi-page-capture range.
+                quoteRepository.update(
+                    editing.copy(text = text, pageNumber = quotePageText.value.toIntOrNull()),
+                )
+                message.value = "인용구를 수정했어요."
+            } else {
+                quoteRepository.insert(
+                    Quote(
+                        id = 0,
+                        bookId = bookId,
+                        text = text,
+                        pageNumber = quotePageText.value.toIntOrNull(),
+                        pageNumberEnd = null,
+                        createdAt = System.currentTimeMillis(),
+                    ),
+                )
+                message.value = "인용구를 저장했어요."
+            }
+            editingQuote.value = null
             quoteText.value = ""
             quotePageText.value = ""
-            message.value = "인용구를 저장했어요."
         }
     }
 
@@ -191,6 +224,11 @@ class BookDetailViewModel(
     fun deleteQuote(quoteId: Long) {
         viewModelScope.launch {
             quoteRepository.deleteById(quoteId)
+            if (editingQuote.value?.id == quoteId) {
+                editingQuote.value = null
+                quoteText.value = ""
+                quotePageText.value = ""
+            }
             message.value = "인용구를 삭제했어요."
         }
     }

@@ -49,7 +49,7 @@ fun ReviewEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "독후감 작성") },
+                title = { Text(text = if (uiState.isEditing) "독후감 수정" else "독후감 작성") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "뒤로")
@@ -91,7 +91,13 @@ fun ReviewEditorScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
             ) {
-                Text(text = if (uiState.isSaving) "저장 중" else "저장")
+                Text(
+                    text = when {
+                        uiState.isSaving -> "저장 중"
+                        uiState.isEditing -> "수정 저장"
+                        else -> "저장"
+                    },
+                )
             }
         }
     }

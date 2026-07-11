@@ -312,6 +312,10 @@ com.dyk1323.booklogs/
   - 간소화한 부분: 계획 문서의 "확인 폼이 즉시 열리고 totalPages/genre 칸만 개별 스켈레톤"이 아니라, 폼 화면 전체에 `LoadingOverlay`를 잠깐(병렬 호출이라 최악 5초) 띄운 뒤 완성된 폼을 보여주는 방식으로 구현(필드별 스켈레톤보다 구현이 단순하고 UX 차이는 미미). "카카오만 성공했을 때 Google Books만 재시도"도 전체 재조회(`lookupByIsbn` 재호출)로 단순화.
 - **대시보드/책 상세/인용구 캡처/독후감/라이브러리/설정 구현 완료**(다른 세션에서 진행): 책장 그리드(도넛 오버레이)+7일 막대그래프+일일 목표선, 진행률 빠른 기록 시트, 책 상세(진행 이력·상태 전이·삭제), 인용구 캡처(드래그 크롭 OCR 방식으로 계획 변경 — 위 "OCR" 항목 참고), 독후감 작성, 라이브러리, 설정(리마인더 on/off+시각, 일일 목표, `AlarmManager` 연동까지 실제 동작).
   - **빠른 기록 시트의 카메라 아이콘 버튼**(PHYSICAL 책만, "빠른 기록 UX" 섹션 참고)이 누락되어 있던 걸 추가 완료: 입력창 옆 카메라 아이콘 탭 → 시트 내에서 카메라 미리보기로 전환 → 촬영 → `QuoteOcrProcessor.detectPageNumber`(인용구 캡처와 동일 로직, 코너 숫자 후보 스코어링)로 페이지 번호를 인식해 입력창에 프리필 → 시트로 복귀해 확인 후 저장. 카메라 미리보기 자체는 `CameraCapturePreview`(공용 컴포저블)로 추출해 인용구 캡처 화면과 공유.
+- **인용구/독후감 수정 기능 추가 완료**(원래 없던 기능 — `QuoteRepository`/`ReviewRepository`엔 `update`가 아예 없었고 Review는 `deleteById`도 없었음):
+  - 인용구: 책 상세의 인용구 카드에 수정 아이콘 추가 → 탭하면 상단 인라인 입력 폼에 텍스트/페이지를 채우고 "수정 저장" 모드로 전환(취소 가능). `pageNumberEnd`/`createdAt`은 원본 값을 유지한 채 텍스트/페이지만 갱신.
+  - 독후감: `ReviewEditorViewModel.start()`가 이제 해당 책의 현재 라운드(열린 라운드, 없으면 최근 라운드)에 이미 독후감이 있는지 먼저 확인해 있으면 불러와 수정 모드로 시작(화면 타이틀 "독후감 수정", 버튼 "수정 저장"). 이전엔 "독후감 작성"을 다시 누를 때마다 무조건 새 행이 insert되어 같은 라운드에 독후감이 중복으로 쌓였음.
+  - 수정 중 발견한 별개 버그도 같이 고침: `ReviewEditorViewModel.start()`에 있던 "같은 bookId면 재초기화 스킵" 가드가, 저장 후 `isSaved=true`가 남은 상태로 같은 책의 독후감 편집 화면을 다시 열면 `LaunchedEffect(uiState.isSaved)`가 열리자마자 바로 뒤로 튕겨버리는 문제를 만들고 있었음 — 가드를 제거해 매번 새로 초기화하도록 수정.
 - **미구현(다음 작업)**: 통계 화면(장르/작가/출판사/국가별), 설정의 백업/복원(SAF JSON 내보내기/가져오기), 런처 아이콘. CI가 `:app` 유닛테스트(`BookMetadataRepositoryImplTest`, `ReminderSchedulerTest`, `QuoteCaptureViewModelTest`, `QuoteOcrProcessorTest` 등)를 아직 실행하지 않음(`:domain:test`만 돎) — 워크플로에 스텝 추가 필요.
 
 ## 검증 계획
