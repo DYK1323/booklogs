@@ -1,7 +1,6 @@
 package com.dyk1323.booklogs.ui.quote
 
 import android.graphics.Bitmap
-import android.graphics.Rect
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dyk1323.booklogs.domain.model.Quote
@@ -26,6 +25,10 @@ data class QuoteCaptureUiState(
     val currentPageText: String = "",
     val quoteText: String = "",
     val editingPageIndex: Int? = null,
+    val recognizedWords: List<RecognizedWord> = emptyList(),
+    val selectionStartIndex: Int? = null,
+    val selectionEndIndex: Int? = null,
+    val mergedLineBreakGaps: Set<Int> = emptySet(),
     val isRecognizing: Boolean = false,
     val isSaving: Boolean = false,
     val isSaved: Boolean = false,
@@ -56,6 +59,10 @@ class QuoteCaptureViewModel(
             it.copy(
                 currentPageText = "",
                 editingPageIndex = null,
+                recognizedWords = emptyList(),
+                selectionStartIndex = null,
+                selectionEndIndex = null,
+                mergedLineBreakGaps = emptySet(),
                 message = null,
                 isSaved = false,
             )
@@ -99,44 +106,22 @@ class QuoteCaptureViewModel(
         }
     }
 
-    fun recognize(bitmap: Bitmap, cropRect: Rect) {
-        if (cropRect.width() < 12 || cropRect.height() < 12) {
-            _uiState.update { it.copy(message = "인용할 영역을 조금 더 크게 표시해주세요.") }
-            return
-        }
-
+    /** Runs full-page OCR right after capture so words can be tapped for range selection. */
+    fun recognizeFullPage(bitmap: Bitmap) {
         viewModelScope.launch {
             _uiState.update { it.copy(isRecognizing = true, message = null, isSaved = false) }
-            runCatching { ocrProcessor.recognize(bitmap, cropRect) }
-                .onSuccess { text ->
+            runCatching { ocrProcessor.recognizeWords(bitmap) }
+                .onSuccess { words ->
                     _uiState.update { state ->
-                        if (text.isBlank()) {
-                            state.copy(
-                                isRecognizing = false,
-                                message = "텍스트를 찾지 못했어요. 영역을 다시 표시해주세요.",
-                            )
+                        if (words.isEmpty()) {
+                            state.copy(isRecognizing = false, message = "텍스트를 찾지 못했어요. 다시 촬영해주세요.")
                         } else {
-                            val editIndex = state.editingPageIndex
-                            val pages = if (editIndex != null && editIndex in state.capturedPages.indices) {
-                                state.capturedPages.toMutableList().also { list ->
-                                    list[editIndex] = list[editIndex].copy(
-                                        text = text,
-                                        pageText = state.currentPageText,
-                                    )
-                                }
-                            } else {
-                                state.capturedPages + CapturedQuotePage(
-                                    order = state.capturedPages.size + 1,
-                                    text = text,
-                                    pageText = state.currentPageText,
-                                )
-                            }
                             state.copy(
-                                capturedPages = pages,
-                                quoteText = joinQuotePages(pages),
-                                editingPageIndex = pages.lastIndex,
+                                recognizedWords = words,
+                                selectionStartIndex = null,
+                                selectionEndIndex = null,
+                                mergedLineBreakGaps = emptySet(),
                                 isRecognizing = false,
-                                message = null,
                             )
                         }
                     }
@@ -147,6 +132,59 @@ class QuoteCaptureViewModel(
                     }
                 }
         }
+    }
+
+    /** Tap a word on the photo: first tap sets the start, second sets the end (auto-ordered); a third restarts. */
+    fun selectWord(index: Int) {
+        _uiState.update { state ->
+            val start = state.selectionStartIndex
+            val end = state.selectionEndIndex
+            val (newStart, newEnd) = if (start == null || end != null) index to null else start to index
+            state.copy(
+                selectionStartIndex = newStart,
+                selectionEndIndex = newEnd,
+                mergedLineBreakGaps = emptySet(),
+            ).withRecomputedText()
+        }
+    }
+
+    /** Tap a line-break gap chip in the selected-range preview to toggle "이어붙이기" (drop the space). */
+    fun toggleLineBreakGap(gapIndex: Int) {
+        _uiState.update { state ->
+            val updated = state.mergedLineBreakGaps.toMutableSet().apply {
+                if (!add(gapIndex)) remove(gapIndex)
+            }
+            state.copy(mergedLineBreakGaps = updated).withRecomputedText()
+        }
+    }
+
+    /**
+     * Recomputes this capture's text from the current word selection and merges it into
+     * [QuoteCaptureUiState.capturedPages] — a fresh page is appended the first time a range is picked for
+     * this photo, subsequent taps (word or gap) on the same photo edit that same page entry in place.
+     */
+    private fun QuoteCaptureUiState.withRecomputedText(): QuoteCaptureUiState {
+        val start = selectionStartIndex
+        val end = selectionEndIndex
+        if (start == null || end == null) return this
+
+        val tokens = recognizedWords.map { WordToken(it.text, it.lineId) }
+        val text = joinWords(tokens, start, end, mergedLineBreakGaps)
+
+        val editIndex = editingPageIndex
+        val pages = if (editIndex != null && editIndex in capturedPages.indices) {
+            capturedPages.toMutableList().also { list ->
+                list[editIndex] = list[editIndex].copy(text = text, pageText = currentPageText)
+            }
+        } else {
+            capturedPages + CapturedQuotePage(order = capturedPages.size + 1, text = text, pageText = currentPageText)
+        }
+        return copy(
+            capturedPages = pages,
+            quoteText = joinQuotePages(pages),
+            editingPageIndex = pages.lastIndex,
+            message = null,
+        )
     }
 
     fun discardCurrentCaptureText() {
@@ -162,6 +200,10 @@ class QuoteCaptureViewModel(
                 quoteText = joinQuotePages(pages),
                 currentPageText = "",
                 editingPageIndex = null,
+                recognizedWords = emptyList(),
+                selectionStartIndex = null,
+                selectionEndIndex = null,
+                mergedLineBreakGaps = emptySet(),
                 message = null,
                 isSaved = false,
             )

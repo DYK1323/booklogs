@@ -8,23 +8,23 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,11 +47,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect as ComposeRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -77,7 +77,6 @@ fun QuoteCaptureScreen(
         )
     }
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var highlightRect by remember { mutableStateOf<ComposeRect?>(null) }
     var imageBounds by remember { mutableStateOf<ComposeRect?>(null) }
     var imageContainerSize by remember { mutableStateOf(IntSize.Zero) }
 
@@ -90,7 +89,6 @@ fun QuoteCaptureScreen(
 
     fun openCameraForNextCapture() {
         capturedBitmap = null
-        highlightRect = null
         imageBounds = null
         imageContainerSize = IntSize.Zero
     }
@@ -119,36 +117,25 @@ fun QuoteCaptureScreen(
                     captionText = "페이지를 맞춘 뒤 먼저 사진을 찍어주세요.",
                     onCaptured = { bitmap ->
                         capturedBitmap = bitmap
-                        highlightRect = null
                         imageBounds = null
                         viewModel.prefillPageNumber(bitmap)
+                        viewModel.recognizeFullPage(bitmap)
                     },
                     modifier = Modifier.fillMaxSize(),
                 )
-                else -> HighlightQuoteContent(
+                else -> WordSelectQuoteContent(
                     bitmap = capturedBitmap!!,
                     state = uiState,
-                    highlightRect = highlightRect,
                     imageBounds = imageBounds,
                     imageContainerSize = imageContainerSize,
                     onContainerSizeChanged = { size ->
                         imageContainerSize = size
                         imageBounds = computeImageBounds(size, capturedBitmap!!)
                     },
-                    onHighlightChanged = { highlightRect = it },
+                    onWordTap = viewModel::selectWord,
+                    onGapToggle = viewModel::toggleLineBreakGap,
                     onPageChanged = viewModel::updatePageText,
                     onQuoteChanged = viewModel::updateQuoteText,
-                    onRecognize = {
-                        val cropRect = highlightRect?.toBitmapRect(
-                            imageBounds = imageBounds,
-                            bitmap = capturedBitmap!!,
-                        )
-                        if (cropRect == null) {
-                            viewModel.updateQuoteText("")
-                        } else {
-                            viewModel.recognize(capturedBitmap!!, cropRect)
-                        }
-                    },
                     onRetake = {
                         viewModel.discardCurrentCaptureText()
                         openCameraForNextCapture()
@@ -189,27 +176,27 @@ private fun PermissionMessage() {
 }
 
 @Composable
-private fun HighlightQuoteContent(
+private fun WordSelectQuoteContent(
     bitmap: Bitmap,
     state: QuoteCaptureUiState,
-    highlightRect: ComposeRect?,
     imageBounds: ComposeRect?,
     imageContainerSize: IntSize,
     onContainerSizeChanged: (IntSize) -> Unit,
-    onHighlightChanged: (ComposeRect) -> Unit,
+    onWordTap: (Int) -> Unit,
+    onGapToggle: (Int) -> Unit,
     onPageChanged: (String) -> Unit,
     onQuoteChanged: (String) -> Unit,
-    onRecognize: () -> Unit,
     onRetake: () -> Unit,
     onNextPage: () -> Unit,
     onContinueAfterSave: () -> Unit,
     onSave: () -> Unit,
     onDone: () -> Unit,
 ) {
-    var dragStart by remember(bitmap) { mutableStateOf<Offset?>(null) }
+    val startIndex = state.selectionStartIndex
+    val endIndex = state.selectionEndIndex
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp)) {
-        Text(text = "인용할 문구 위를 손으로 드래그해 표시하세요.", style = MaterialTheme.typography.bodyMedium)
+        Text(text = "시작 단어와 끝 단어를 순서대로 탭하세요.", style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(10.dp))
         Box(
             modifier = Modifier
@@ -217,22 +204,14 @@ private fun HighlightQuoteContent(
                 .weight(1f)
                 .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                 .onSizeChanged(onContainerSizeChanged)
-                .pointerInput(bitmap, imageBounds) {
-                    detectDragGestures(
-                        onDragStart = { offset ->
-                            val bounds = imageBounds ?: return@detectDragGestures
-                            val start = offset.coerceIn(bounds)
-                            dragStart = start
-                            onHighlightChanged(ComposeRect(start, start))
+                .pointerInput(bitmap, imageBounds, state.recognizedWords) {
+                    detectTapGestures(
+                        onTap = { offset ->
+                            val bounds = imageBounds ?: return@detectTapGestures
+                            val bitmapPoint = offset.toBitmapPoint(bounds, bitmap)
+                            val index = state.recognizedWords.nearestWordIndex(bitmapPoint)
+                            if (index != null) onWordTap(index)
                         },
-                        onDrag = { change, _ ->
-                            val bounds = imageBounds ?: return@detectDragGestures
-                            val start = dragStart ?: change.position.coerceIn(bounds)
-                            val end = change.position.coerceIn(bounds)
-                            onHighlightChanged(ComposeRect(start, end).normalized())
-                        },
-                        onDragEnd = { dragStart = null },
-                        onDragCancel = { dragStart = null },
                     )
                 },
             contentAlignment = Alignment.Center,
@@ -245,22 +224,22 @@ private fun HighlightQuoteContent(
             )
             androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                 val bounds = imageBounds ?: computeImageBounds(imageContainerSize, bitmap)
-                drawRect(
-                    color = Color.Black.copy(alpha = 0.18f),
-                    topLeft = Offset(bounds.left, bounds.top),
-                    size = androidx.compose.ui.geometry.Size(bounds.width, bounds.height),
-                )
-                highlightRect?.let { rect ->
-                    drawRect(
-                        color = Color(0xFFFFD54F).copy(alpha = 0.36f),
-                        topLeft = Offset(rect.left, rect.top),
-                        size = androidx.compose.ui.geometry.Size(rect.width, rect.height),
-                    )
-                    drawRect(
-                        color = Color(0xFFFFC107),
-                        topLeft = Offset(rect.left, rect.top),
-                        size = androidx.compose.ui.geometry.Size(rect.width, rect.height),
-                        style = Stroke(width = 2.dp.toPx()),
+                state.recognizedWords.forEachIndexed { index, word ->
+                    val viewRect = word.boundingBox.toComposeRect(bounds, bitmap) ?: return@forEachIndexed
+                    val selected = startIndex != null && endIndex != null &&
+                        index in minOf(startIndex, endIndex)..maxOf(startIndex, endIndex)
+                    if (selected) {
+                        drawRect(
+                            color = Color(0xFFFFD54F).copy(alpha = 0.36f),
+                            topLeft = Offset(viewRect.left, viewRect.top),
+                            size = androidx.compose.ui.geometry.Size(viewRect.width, viewRect.height),
+                        )
+                    }
+                    drawLine(
+                        color = if (selected) Color(0xFFFFC107) else Color.Black.copy(alpha = 0.4f),
+                        start = Offset(viewRect.left, viewRect.bottom),
+                        end = Offset(viewRect.right, viewRect.bottom),
+                        strokeWidth = 2.dp.toPx(),
                     )
                 }
             }
@@ -270,17 +249,16 @@ private fun HighlightQuoteContent(
             TextButton(onClick = onRetake) {
                 Text(text = "다시 촬영")
             }
-            Button(
-                onClick = onRecognize,
-                enabled = !state.isRecognizing && highlightRect != null && !state.isSaved,
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                if (state.isRecognizing) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Text(text = "텍스트 인식")
-                }
-            }
+        }
+        if (startIndex != null && endIndex != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            SelectedRangeChips(
+                words = state.recognizedWords,
+                startIndex = startIndex,
+                endIndex = endIndex,
+                mergedLineBreakGaps = state.mergedLineBreakGaps,
+                onGapToggle = onGapToggle,
+            )
         }
         if (state.capturedPages.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -338,6 +316,53 @@ private fun HighlightQuoteContent(
     }
 }
 
+/** Shows the currently selected word range as chips; tappable gap chips sit at line-break boundaries. */
+@Composable
+private fun SelectedRangeChips(
+    words: List<RecognizedWord>,
+    startIndex: Int,
+    endIndex: Int,
+    mergedLineBreakGaps: Set<Int>,
+    onGapToggle: (Int) -> Unit,
+) {
+    val from = minOf(startIndex, endIndex).coerceIn(words.indices)
+    val to = maxOf(startIndex, endIndex).coerceIn(words.indices)
+    Column {
+        Text(
+            text = "줄바꿈 지점을 탭하면 공백을 없앨 수 있어요.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            for (i in from..to) {
+                Text(
+                    text = words[i].text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .background(Color(0xFFFFD54F).copy(alpha = 0.36f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                )
+                if (i < to && words[i].lineId != words[i + 1].lineId) {
+                    val merged = i in mergedLineBreakGaps
+                    Text(
+                        text = if (merged) "⌫" else "␣",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textDecoration = if (merged) TextDecoration.LineThrough else TextDecoration.None,
+                        color = if (merged) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clickable { onGapToggle(i) }
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun CapturedPagesSummary(pages: List<CapturedQuotePage>) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -370,30 +395,39 @@ private fun computeImageBounds(containerSize: IntSize, bitmap: Bitmap): ComposeR
     }
 }
 
-private fun ComposeRect.toBitmapRect(imageBounds: ComposeRect?, bitmap: Bitmap): Rect? {
-    val bounds = imageBounds ?: return null
-    val clipped = intersect(bounds).normalized()
-    if (clipped.width < 12f || clipped.height < 12f) return null
-
-    val scaleX = bitmap.width / bounds.width
-    val scaleY = bitmap.height / bounds.height
-    val left = ((clipped.left - bounds.left) * scaleX).toInt().coerceIn(0, bitmap.width - 1)
-    val top = ((clipped.top - bounds.top) * scaleY).toInt().coerceIn(0, bitmap.height - 1)
-    val right = ((clipped.right - bounds.left) * scaleX).toInt().coerceIn(left + 1, bitmap.width)
-    val bottom = ((clipped.bottom - bounds.top) * scaleY).toInt().coerceIn(top + 1, bitmap.height)
-    return Rect(left, top, right, bottom)
+/** Bitmap-space word box (from ML Kit) -> view-space rect within the displayed (letterboxed) image. */
+private fun Rect.toComposeRect(imageBounds: ComposeRect, bitmap: Bitmap): ComposeRect? {
+    if (imageBounds.width <= 0f || imageBounds.height <= 0f || bitmap.width <= 0 || bitmap.height <= 0) return null
+    val scaleX = imageBounds.width / bitmap.width
+    val scaleY = imageBounds.height / bitmap.height
+    return ComposeRect(
+        left = imageBounds.left + left * scaleX,
+        top = imageBounds.top + top * scaleY,
+        right = imageBounds.left + right * scaleX,
+        bottom = imageBounds.top + bottom * scaleY,
+    )
 }
 
-private fun ComposeRect.normalized(): ComposeRect =
-    ComposeRect(
-        left = minOf(left, right),
-        top = minOf(top, bottom),
-        right = maxOf(left, right),
-        bottom = maxOf(top, bottom),
-    )
+/** View-space tap -> bitmap-space point, clamped into the displayed image. */
+private fun Offset.toBitmapPoint(imageBounds: ComposeRect, bitmap: Bitmap): Offset {
+    val clampedX = x.coerceIn(imageBounds.left, imageBounds.right)
+    val clampedY = y.coerceIn(imageBounds.top, imageBounds.bottom)
+    val scaleX = if (imageBounds.width > 0f) bitmap.width / imageBounds.width else 1f
+    val scaleY = if (imageBounds.height > 0f) bitmap.height / imageBounds.height else 1f
+    return Offset((clampedX - imageBounds.left) * scaleX, (clampedY - imageBounds.top) * scaleY)
+}
 
-private fun Offset.coerceIn(bounds: ComposeRect): Offset =
-    Offset(
-        x = x.coerceIn(bounds.left, bounds.right),
-        y = y.coerceIn(bounds.top, bounds.bottom),
-    )
+/** Nearest word to a bitmap-space point: containment wins, otherwise the closest by center distance. */
+private fun List<RecognizedWord>.nearestWordIndex(point: Offset): Int? {
+    if (isEmpty()) return null
+    val contained = indexOfFirst { it.boundingBox.contains(point.x.toInt(), point.y.toInt()) }
+    if (contained >= 0) return contained
+    return indices.minByOrNull { i ->
+        val box = this[i].boundingBox
+        val centerX = (box.left + box.right) / 2f
+        val centerY = (box.top + box.bottom) / 2f
+        val dx = point.x - centerX
+        val dy = point.y - centerY
+        dx * dx + dy * dy
+    }
+}
