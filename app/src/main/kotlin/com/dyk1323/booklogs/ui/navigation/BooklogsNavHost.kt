@@ -3,12 +3,16 @@ package com.dyk1323.booklogs.ui.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.navigation.NavType
 import androidx.navigation.NavHostController
+import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dyk1323.booklogs.ui.dashboard.DashboardScreen
 import com.dyk1323.booklogs.ui.dashboard.DashboardViewModel
+import com.dyk1323.booklogs.ui.detail.BookDetailScreen
+import com.dyk1323.booklogs.ui.detail.BookDetailViewModel
 import com.dyk1323.booklogs.ui.registration.BarcodeScanScreen
 import com.dyk1323.booklogs.ui.registration.BookConfirmFormScreen
 import com.dyk1323.booklogs.ui.registration.BookRegistrationScreen
@@ -19,6 +23,7 @@ import com.dyk1323.booklogs.ui.registration.TitleSearchScreen
 fun BooklogsNavHost(
     dashboardViewModel: DashboardViewModel,
     registrationViewModel: BookRegistrationViewModel,
+    bookDetailViewModel: BookDetailViewModel,
     navController: NavHostController = rememberNavController(),
 ) {
     NavHost(navController = navController, startDestination = Destinations.DASHBOARD) {
@@ -29,6 +34,21 @@ fun BooklogsNavHost(
                     registrationViewModel.reset()
                     navController.navigate(Destinations.REGISTRATION_ENTRY)
                 },
+                onBookDetailClick = { bookId ->
+                    navController.navigate(Destinations.bookDetail(bookId))
+                },
+            )
+        }
+
+        composable(
+            route = Destinations.BOOK_DETAIL,
+            arguments = listOf(navArgument("bookId") { type = NavType.LongType }),
+        ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getLong("bookId") ?: return@composable
+            BookDetailScreen(
+                bookId = bookId,
+                viewModel = bookDetailViewModel,
+                onBack = { navController.popBackStack() },
             )
         }
 

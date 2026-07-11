@@ -1,0 +1,137 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1783751915538,
+  "projectRoot": "c:\\Users\\DAYOUNG\\booklogs",
+  "techStack": {
+    "languages": [
+      {
+        "name": "Kotlin",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "build.gradle.kts"
+        ]
+      }
+    ],
+    "frameworks": [],
+    "packageManager": "gradle",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "app",
+      "docs"
+    ],
+    "gitBranches": {
+      "defaultBranch": "claude/reading-tracker-android-eovrhb",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "app": {
+      "path": "app",
+      "purpose": "Application code",
+      "fileCount": 1,
+      "lastAccessed": 1783751915492,
+      "keyFiles": [
+        "build.gradle.kts"
+      ]
+    },
+    "build": {
+      "path": "build",
+      "purpose": "Build output",
+      "fileCount": 0,
+      "lastAccessed": 1783751915493,
+      "keyFiles": []
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 1,
+      "lastAccessed": 1783751915494,
+      "keyFiles": [
+        "PLAN.md"
+      ]
+    },
+    "domain": {
+      "path": "domain",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1783751915494,
+      "keyFiles": [
+        "build.gradle.kts"
+      ]
+    },
+    "gradle": {
+      "path": "gradle",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1783751915495,
+      "keyFiles": [
+        "libs.versions.toml"
+      ]
+    },
+    "licenses": {
+      "path": "licenses",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1783751915496,
+      "keyFiles": [
+        "PRETENDARD_LICENSE.txt"
+      ]
+    },
+    "app\\build": {
+      "path": "app\\build",
+      "purpose": "Build output",
+      "fileCount": 0,
+      "lastAccessed": 1783751915497,
+      "keyFiles": []
+    },
+    "app\\schemas": {
+      "path": "app\\schemas",
+      "purpose": "Schema definitions",
+      "fileCount": 0,
+      "lastAccessed": 1783751915497,
+      "keyFiles": []
+    },
+    "app\\src": {
+      "path": "app\\src",
+      "purpose": "Source code",
+      "fileCount": 0,
+      "lastAccessed": 1783751915498,
+      "keyFiles": []
+    },
+    "domain\\build": {
+      "path": "domain\\build",
+      "purpose": "Build output",
+      "fileCount": 0,
+      "lastAccessed": 1783751915499,
+      "keyFiles": []
+    },
+    "domain\\src": {
+      "path": "domain\\src",
+      "purpose": "Source code",
+      "fileCount": 0,
+      "lastAccessed": 1783751915500,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [],
+  "userDirectives": []
+}

@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTheme
 import com.dyk1323.booklogs.ui.dashboard.DashboardViewModel
+import com.dyk1323.booklogs.ui.detail.BookDetailViewModel
 import com.dyk1323.booklogs.ui.navigation.BooklogsNavHost
 import com.dyk1323.booklogs.ui.registration.BookRegistrationViewModel
 
@@ -19,7 +20,12 @@ class MainActivity : ComponentActivity() {
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =
-                DashboardViewModel(container.bookRepository, container.readingLogRepository) as T
+                DashboardViewModel(
+                    bookRepository = container.bookRepository,
+                    readingLogRepository = container.readingLogRepository,
+                    readingRoundRepository = container.readingRoundRepository,
+                    logProgressUseCase = container.logProgressUseCase,
+                ) as T
         }
     }
 
@@ -36,6 +42,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val bookDetailViewModel: BookDetailViewModel by viewModels {
+        val container = (application as BooklogsApplication).container
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =
+                BookDetailViewModel(
+                    bookRepository = container.bookRepository,
+                    readingLogRepository = container.readingLogRepository,
+                    readingRoundRepository = container.readingRoundRepository,
+                    quoteRepository = container.quoteRepository,
+                    reviewRepository = container.reviewRepository,
+                ) as T
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -43,6 +64,7 @@ class MainActivity : ComponentActivity() {
                 BooklogsNavHost(
                     dashboardViewModel = dashboardViewModel,
                     registrationViewModel = registrationViewModel,
+                    bookDetailViewModel = bookDetailViewModel,
                 )
             }
         }
