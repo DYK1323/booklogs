@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import com.dyk1323.booklogs.data.settings.ThemeMode
 
 private val LightColors = lightColorScheme(
     primary = AppleBlue,
@@ -30,12 +31,20 @@ private val DarkColors = darkColorScheme(
     error = StatusCriticalDark,
 )
 
-/** No Material 3 dynamic color — see docs/PLAN.md "비주얼 디자인 원칙" for why the palette is fixed. */
+/**
+ * No Material 3 dynamic color — see docs/PLAN.md "비주얼 디자인 원칙" for why the palette is fixed.
+ * [themeMode] is the user's 설정 > 화면 테마 choice (docs/PLAN.md 화면 흐름 #9); SYSTEM defers to the OS.
+ */
 @Composable
 fun BooklogsTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit,
 ) {
+    val darkTheme = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
     val colorScheme = if (darkTheme) DarkColors else LightColors
     MaterialTheme(
         colorScheme = colorScheme,

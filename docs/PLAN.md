@@ -316,6 +316,7 @@ com.dyk1323.booklogs/
   - 인용구: 책 상세의 인용구 카드에 수정 아이콘 추가 → 탭하면 상단 인라인 입력 폼에 텍스트/페이지를 채우고 "수정 저장" 모드로 전환(취소 가능). `pageNumberEnd`/`createdAt`은 원본 값을 유지한 채 텍스트/페이지만 갱신.
   - 독후감: `ReviewEditorViewModel.start()`가 이제 해당 책의 현재 라운드(열린 라운드, 없으면 최근 라운드)에 이미 독후감이 있는지 먼저 확인해 있으면 불러와 수정 모드로 시작(화면 타이틀 "독후감 수정", 버튼 "수정 저장"). 이전엔 "독후감 작성"을 다시 누를 때마다 무조건 새 행이 insert되어 같은 라운드에 독후감이 중복으로 쌓였음.
   - 수정 중 발견한 별개 버그도 같이 고침: `ReviewEditorViewModel.start()`에 있던 "같은 bookId면 재초기화 스킵" 가드가, 저장 후 `isSaved=true`가 남은 상태로 같은 책의 독후감 편집 화면을 다시 열면 `LaunchedEffect(uiState.isSaved)`가 열리자마자 바로 뒤로 튕겨버리는 문제를 만들고 있었음 — 가드를 제거해 매번 새로 초기화하도록 수정.
+- **설정 > 화면 테마(라이트/다크/시스템 설정) 추가 완료**: `AppSettingsDataStore`에 `ThemeMode`(SYSTEM/LIGHT/DARK, 기본 SYSTEM) 저장 필드 추가. `BooklogsTheme`이 기존엔 `isSystemInDarkTheme()`만 봤는데, 이제 `themeMode` 파라미터를 받아 SYSTEM일 때만 OS 설정을 따르고 LIGHT/DARK는 강제 고정. `MainActivity`가 `setContent{}` 최상단에서 `appSettingsDataStore.settings`를 구독해 `BooklogsTheme(themeMode = ...)`으로 전달하므로, 설정 화면에서 바꾸면 즉시(리컴포지션만으로) 앱 전체 테마가 갱신됨 — 재시작 불필요.
 - **미구현(다음 작업)**: 통계 화면(장르/작가/출판사/국가별), 설정의 백업/복원(SAF JSON 내보내기/가져오기), 런처 아이콘. CI가 `:app` 유닛테스트(`BookMetadataRepositoryImplTest`, `ReminderSchedulerTest`, `QuoteCaptureViewModelTest`, `QuoteOcrProcessorTest` 등)를 아직 실행하지 않음(`:domain:test`만 돎) — 워크플로에 스텝 추가 필요.
 
 ## 검증 계획

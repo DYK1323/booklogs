@@ -3,6 +3,7 @@ package com.dyk1323.booklogs.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dyk1323.booklogs.data.settings.AppSettingsDataStore
+import com.dyk1323.booklogs.data.settings.ThemeMode
 import com.dyk1323.booklogs.notification.ReminderScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,6 +17,7 @@ data class SettingsUiState(
     val reminderHour: Int = 21,
     val reminderMinute: Int = 0,
     val dailyGoalPagesText: String = "",
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val isLoading: Boolean = true,
 )
 
@@ -36,6 +38,7 @@ class SettingsViewModel(
             reminderHour = settings.reminderHour,
             reminderMinute = settings.reminderMinute,
             dailyGoalPagesText = draft ?: (settings.dailyGoalPages?.toString() ?: ""),
+            themeMode = settings.themeMode,
             isLoading = false,
         )
     }.stateIn(
@@ -75,6 +78,12 @@ class SettingsViewModel(
         viewModelScope.launch {
             appSettingsDataStore.setDailyGoalPages(pages)
             dailyGoalDraft.value = null
+        }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            appSettingsDataStore.setThemeMode(mode)
         }
     }
 }

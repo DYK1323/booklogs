@@ -5,12 +5,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
+import com.dyk1323.booklogs.data.settings.AppSettings
 import com.dyk1323.booklogs.notification.ReminderNotificationBuilder
 import com.dyk1323.booklogs.notification.ReminderScheduler
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTheme
@@ -122,8 +124,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         pendingReminderBookId = extractReminderBookId(intent)
+        val appSettingsDataStore = (application as BooklogsApplication).container.appSettingsDataStore
         setContent {
-            BooklogsTheme {
+            val settings by appSettingsDataStore.settings.collectAsState(initial = AppSettings())
+            BooklogsTheme(themeMode = settings.themeMode) {
                 BooklogsNavHost(
                     dashboardViewModel = dashboardViewModel,
                     registrationViewModel = registrationViewModel,

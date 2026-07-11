@@ -25,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -45,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.dyk1323.booklogs.data.settings.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,6 +140,27 @@ fun SettingsScreen(
                     Text(text = "저장")
                 }
             }
+
+            Spacer(modifier = Modifier.height(28.dp))
+            Text(text = "화면 테마", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ThemeModeOption(
+                    label = "시스템 설정",
+                    selected = uiState.themeMode == ThemeMode.SYSTEM,
+                    onClick = { viewModel.setThemeMode(ThemeMode.SYSTEM) },
+                )
+                ThemeModeOption(
+                    label = "라이트",
+                    selected = uiState.themeMode == ThemeMode.LIGHT,
+                    onClick = { viewModel.setThemeMode(ThemeMode.LIGHT) },
+                )
+                ThemeModeOption(
+                    label = "다크",
+                    selected = uiState.themeMode == ThemeMode.DARK,
+                    onClick = { viewModel.setThemeMode(ThemeMode.DARK) },
+                )
+            }
         }
     }
 
@@ -166,6 +189,19 @@ fun SettingsScreen(
             },
             text = { TimePicker(state = timePickerState) },
         )
+    }
+}
+
+@Composable
+private fun ThemeModeOption(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    if (selected) {
+        Button(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(percent = 50)) {
+            Text(label, style = MaterialTheme.typography.labelLarge)
+        }
+    } else {
+        OutlinedButton(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(percent = 50)) {
+            Text(label, style = MaterialTheme.typography.labelLarge)
+        }
     }
 }
 
