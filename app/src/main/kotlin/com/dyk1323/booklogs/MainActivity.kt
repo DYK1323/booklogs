@@ -12,6 +12,7 @@ import com.dyk1323.booklogs.ui.dashboard.DashboardViewModel
 import com.dyk1323.booklogs.ui.detail.BookDetailViewModel
 import com.dyk1323.booklogs.ui.library.LibraryViewModel
 import com.dyk1323.booklogs.ui.navigation.BooklogsNavHost
+import com.dyk1323.booklogs.ui.quote.QuoteCaptureViewModel
 import com.dyk1323.booklogs.ui.registration.BookRegistrationViewModel
 
 class MainActivity : ComponentActivity() {
@@ -73,6 +74,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val quoteCaptureViewModel: QuoteCaptureViewModel by viewModels {
+        val container = (application as BooklogsApplication).container
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =
+                QuoteCaptureViewModel(
+                    quoteRepository = container.quoteRepository,
+                ) as T
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -82,6 +94,7 @@ class MainActivity : ComponentActivity() {
                     registrationViewModel = registrationViewModel,
                     bookDetailViewModel = bookDetailViewModel,
                     libraryViewModel = libraryViewModel,
+                    quoteCaptureViewModel = quoteCaptureViewModel,
                 )
             }
         }

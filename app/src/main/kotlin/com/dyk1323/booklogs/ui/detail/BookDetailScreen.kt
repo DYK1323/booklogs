@@ -58,6 +58,7 @@ fun BookDetailScreen(
     viewModel: BookDetailViewModel,
     onBack: () -> Unit,
     onDeleted: () -> Unit,
+    onCaptureQuoteClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(bookId) {
@@ -142,6 +143,12 @@ fun BookDetailScreen(
             }
             item {
                 DetailSection(title = "인용구") {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = onCaptureQuoteClick) {
+                            Text(text = "촬영으로 추가")
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = uiState.quoteText,
                         onValueChange = viewModel::updateQuoteText,

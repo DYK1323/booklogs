@@ -15,6 +15,8 @@ import com.dyk1323.booklogs.ui.detail.BookDetailScreen
 import com.dyk1323.booklogs.ui.detail.BookDetailViewModel
 import com.dyk1323.booklogs.ui.library.LibraryScreen
 import com.dyk1323.booklogs.ui.library.LibraryViewModel
+import com.dyk1323.booklogs.ui.quote.QuoteCaptureScreen
+import com.dyk1323.booklogs.ui.quote.QuoteCaptureViewModel
 import com.dyk1323.booklogs.ui.registration.BarcodeScanScreen
 import com.dyk1323.booklogs.ui.registration.BookConfirmFormScreen
 import com.dyk1323.booklogs.ui.registration.BookRegistrationScreen
@@ -27,6 +29,7 @@ fun BooklogsNavHost(
     registrationViewModel: BookRegistrationViewModel,
     bookDetailViewModel: BookDetailViewModel,
     libraryViewModel: LibraryViewModel,
+    quoteCaptureViewModel: QuoteCaptureViewModel,
     navController: NavHostController = rememberNavController(),
 ) {
     NavHost(navController = navController, startDestination = Destinations.DASHBOARD) {
@@ -66,6 +69,21 @@ fun BooklogsNavHost(
                 onDeleted = {
                     navController.popBackStack()
                 },
+                onCaptureQuoteClick = {
+                    navController.navigate(Destinations.quoteCapture(bookId))
+                },
+            )
+        }
+
+        composable(
+            route = Destinations.QUOTE_CAPTURE,
+            arguments = listOf(navArgument("bookId") { type = NavType.LongType }),
+        ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getLong("bookId") ?: return@composable
+            QuoteCaptureScreen(
+                bookId = bookId,
+                viewModel = quoteCaptureViewModel,
+                onBack = { navController.popBackStack() },
             )
         }
 
