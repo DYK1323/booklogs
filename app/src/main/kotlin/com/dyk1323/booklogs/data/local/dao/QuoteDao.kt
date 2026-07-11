@@ -12,6 +12,9 @@ interface QuoteDao {
     @Query("SELECT * FROM quotes WHERE book_id = :bookId ORDER BY created_at DESC")
     fun observeForBook(bookId: Long): Flow<List<QuoteEntity>>
 
+    @Query("SELECT * FROM quotes")
+    suspend fun getAll(): List<QuoteEntity>
+
     @Insert
     suspend fun insert(quote: QuoteEntity): Long
 
@@ -20,4 +23,7 @@ interface QuoteDao {
 
     @Query("DELETE FROM quotes WHERE id = :quoteId")
     suspend fun deleteById(quoteId: Long)
+
+    @Query("DELETE FROM quotes")
+    suspend fun deleteAll()
 }

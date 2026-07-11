@@ -15,6 +15,9 @@ interface ReviewDao {
     @Query("SELECT * FROM reviews WHERE reading_round_id = :roundId ORDER BY created_at DESC")
     fun observeForRound(roundId: Long): Flow<List<ReviewEntity>>
 
+    @Query("SELECT * FROM reviews")
+    suspend fun getAll(): List<ReviewEntity>
+
     @Insert
     suspend fun insert(review: ReviewEntity): Long
 
@@ -23,4 +26,7 @@ interface ReviewDao {
 
     @Query("DELETE FROM reviews WHERE id = :reviewId")
     suspend fun deleteById(reviewId: Long)
+
+    @Query("DELETE FROM reviews")
+    suspend fun deleteAll()
 }

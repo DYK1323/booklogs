@@ -8,6 +8,9 @@ import com.dyk1323.booklogs.data.local.entity.ReadingRoundEntity
 
 @Dao
 interface ReadingRoundDao {
+    @Query("SELECT * FROM reading_rounds")
+    suspend fun getAll(): List<ReadingRoundEntity>
+
     @Query("SELECT * FROM reading_rounds WHERE id = :roundId")
     suspend fun getById(roundId: Long): ReadingRoundEntity?
 
@@ -22,4 +25,7 @@ interface ReadingRoundDao {
 
     @Update
     suspend fun update(round: ReadingRoundEntity)
+
+    @Query("DELETE FROM reading_rounds")
+    suspend fun deleteAll()
 }

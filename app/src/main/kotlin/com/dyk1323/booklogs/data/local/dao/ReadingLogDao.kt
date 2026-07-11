@@ -13,6 +13,9 @@ interface ReadingLogDao {
     @Query("SELECT * FROM reading_logs")
     fun observeAll(): Flow<List<ReadingLogEntity>>
 
+    @Query("SELECT * FROM reading_logs")
+    suspend fun getAll(): List<ReadingLogEntity>
+
     @Query("SELECT * FROM reading_logs WHERE reading_round_id = :roundId ORDER BY logged_at DESC LIMIT 1")
     fun observeLatestForRound(roundId: Long): Flow<ReadingLogEntity?>
 
@@ -30,4 +33,7 @@ interface ReadingLogDao {
 
     @Query("DELETE FROM reading_logs WHERE id = :logId")
     suspend fun deleteById(logId: Long)
+
+    @Query("DELETE FROM reading_logs")
+    suspend fun deleteAll()
 }

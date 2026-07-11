@@ -117,6 +117,8 @@ class MainActivity : ComponentActivity() {
                 SettingsViewModel(
                     appSettingsDataStore = container.appSettingsDataStore,
                     reminderScheduler = ReminderScheduler(applicationContext),
+                    backupExporter = container.backupExporter,
+                    backupImporter = container.backupImporter,
                 ) as T
         }
     }

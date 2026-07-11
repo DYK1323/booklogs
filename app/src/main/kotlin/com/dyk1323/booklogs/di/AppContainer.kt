@@ -3,6 +3,8 @@ package com.dyk1323.booklogs.di
 import android.content.Context
 import androidx.room.Room
 import com.dyk1323.booklogs.BuildConfig
+import com.dyk1323.booklogs.data.backup.BackupExporter
+import com.dyk1323.booklogs.data.backup.BackupImporter
 import com.dyk1323.booklogs.data.local.BooklogsDatabase
 import com.dyk1323.booklogs.data.settings.AppSettingsDataStore
 import com.dyk1323.booklogs.data.remote.GoogleBooksApi
@@ -53,6 +55,9 @@ class AppContainer(context: Context) {
     val reviewRepository: ReviewRepository = ReviewRepositoryImpl(database.reviewDao())
 
     val appSettingsDataStore = AppSettingsDataStore(context)
+
+    val backupExporter = BackupExporter(context.applicationContext, database)
+    val backupImporter = BackupImporter(context.applicationContext, database)
 
     private val json = Json { ignoreUnknownKeys = true }
 

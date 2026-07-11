@@ -14,6 +14,9 @@ interface BookDao {
     @Query("SELECT * FROM books ORDER BY created_at DESC")
     fun observeAll(): Flow<List<BookEntity>>
 
+    @Query("SELECT * FROM books")
+    suspend fun getAll(): List<BookEntity>
+
     @Query("SELECT * FROM books WHERE id = :bookId")
     suspend fun getById(bookId: Long): BookEntity?
 
@@ -28,6 +31,9 @@ interface BookDao {
 
     @Query("DELETE FROM books WHERE id = :bookId")
     suspend fun deleteById(bookId: Long)
+
+    @Query("DELETE FROM books")
+    suspend fun deleteAll()
 
     @Delete
     suspend fun delete(book: BookEntity)

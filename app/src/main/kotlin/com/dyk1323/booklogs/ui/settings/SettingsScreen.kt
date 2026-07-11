@@ -46,7 +46,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import android.net.Uri
 import com.dyk1323.booklogs.data.settings.ThemeMode
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,10 +61,19 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showTimePicker by remember { mutableStateOf(false) }
+    var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri -> uri?.let(viewModel::exportBackup) }
+
+    val importPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let { pendingImportUri = it } }
 
     Scaffold(
         topBar = {
@@ -161,6 +173,34 @@ fun SettingsScreen(
                     onClick = { viewModel.setThemeMode(ThemeMode.DARK) },
                 )
             }
+
+            Spacer(modifier = Modifier.height(28.dp))
+            Text(text = "데이터 백업", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { exportLauncher.launch(defaultBackupFileName()) },
+                    enabled = !uiState.isExportingBackup,
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(text = if (uiState.isExportingBackup) "내보내는 중" else "데이터 내보내기")
+                }
+                OutlinedButton(
+                    onClick = { importPickerLauncher.launch(arrayOf("*/*")) },
+                    enabled = !uiState.isImportingBackup,
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(text = if (uiState.isImportingBackup) "가져오는 중" else "데이터 가져오기")
+                }
+            }
+            uiState.backupMessage?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 
@@ -190,6 +230,29 @@ fun SettingsScreen(
             text = { TimePicker(state = timePickerState) },
         )
     }
+
+    pendingImportUri?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingImportUri = null },
+            title = { Text(text = "가져오기를 진행할까요?") },
+            text = { Text(text = "가져오기를 하면 현재 앱의 모든 데이터가 가져온 파일 내용으로 대체됩니다.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.importBackup(uri)
+                        pendingImportUri = null
+                    },
+                ) {
+                    Text(text = "가져오기", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImportUri = null }) {
+                    Text(text = "취소")
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -204,6 +267,9 @@ private fun ThemeModeOption(label: String, selected: Boolean, onClick: () -> Uni
         }
     }
 }
+
+private fun defaultBackupFileName(): String =
+    "booklogs_backup_${LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.json"
 
 private fun formatReminderTime(hour: Int, minute: Int): String {
     val period = if (hour < 12) "오전" else "오후"
