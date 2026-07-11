@@ -452,12 +452,16 @@ private fun deltaLabel(book: Book, delta: LogDelta): String {
     }
 }
 
+/** Tapping the card toggles between a 4-line preview and the full quote text. */
 @Composable
 private fun QuoteCard(quote: Quote, onEdit: () -> Unit, onDelete: () -> Unit) {
+    var expanded by remember(quote.id) { mutableStateOf(false) }
     Card(
+        onClick = { expanded = !expanded },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Row(
             modifier = Modifier
@@ -469,7 +473,7 @@ private fun QuoteCard(quote: Quote, onEdit: () -> Unit, onDelete: () -> Unit) {
                 Text(
                     text = quote.text,
                     style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 4,
+                    maxLines = if (expanded) Int.MAX_VALUE else 4,
                     overflow = TextOverflow.Ellipsis,
                 )
                 quotePageLabel(quote)?.let {
