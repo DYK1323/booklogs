@@ -41,6 +41,45 @@
 | 리마인더 | `AlarmManager`(비정확 알람, `setAndAllowWhileIdle`) + `NotificationManager` + DataStore Preferences(설정 저장) | 클라우드/서버 푸시 없이 기기 로컬 알람만으로 구현 가능. 분 단위 오차는 독서 리마인더 용도에 무해하다고 보고 정확 알람(Android 12+ `SCHEDULE_EXACT_ALARM` 권한 필요)은 피해 권한 요청 절차를 단순화 |
 | SDK | minSdk 26, target/compile SDK 35 | ML Kit 한글 인식·CameraX 안정 지원 범위 |
 
+## 비주얼 디자인 원칙 (AI 슬롭 방지)
+
+전형적인 "AI가 급조한 UI" 티가 나는 지점들을 미리 규칙으로 막아둔다. 원칙은 크게 두 갈래 — **차트/색상**은 데이터 시각화 스킬(`dataviz`)의 검증된 방법론을 그대로 적용하고, **UI 전반**은 별도로 정리한다.
+
+### 색상 시스템
+
+Material 3 기본 다이나믹 컬러(기기별 랜덤 보라/파랑)를 그대로 쓰지 않고, `dataviz` 스킬의 **검증된 기본 팔레트**(CVD 안전성·명도 밴드·대비 전부 스크립트로 통과 확인된 값)를 그대로 채택한다 — 이 앱만의 새 브랜드 컬러를 만들 이유가 없으므로 검증 비용을 아낀다.
+
+| 역할 | Light | Dark | 용도 |
+|---|---|---|---|
+| Primary accent (categorical slot 1, blue) | `#2a78d6` | `#3987e5` | 주요 버튼, 진행률 도넛 링, "오늘" 막대 강조, FAB |
+| Status "good" | `#0ca30c` | `#0ca30c` | **오직** 목표 달성/완독처럼 "성공" 의미가 있을 때만 — 다른 용도로 절대 재사용 안 함(예: 그냥 예쁜 초록 버튼으로 쓰지 않음) |
+| Chart/Page surface | `#fcfcfb` / `#f9f9f7` | `#1a1a19` / `#0d0d0d` | 카드·배경 |
+| Primary ink | `#0b0b0b` | `#ffffff` | 본문 텍스트 |
+| Secondary ink | `#52514e` | `#c3c2b7` | 보조 텍스트 |
+| Muted (축/라벨) | `#898781` | `#898781` | 차트 축, 캡션 |
+| Gridline/hairline | `#e1e0d9` | `#2c2c2a` | 구분선, 차트 그리드 |
+
+이 값들을 `ui/common/theme/Color.kt`에 Compose `ColorScheme`로 직접 매핑하고, `MaterialTheme.colorScheme`의 기본 시드 컬러 생성(dynamicColor)은 끈다.
+
+### 차트 색상 규칙 (`dataviz` 스킬 적용)
+
+- **`DailyPagesBarChart`(일별 합산 막대)**: 단일 시리즈이므로 막대는 전부 **primary accent 한 가지 색**만 쓰고, "오늘" 막대만 진하게/나머지는 흐리게(Emphasis) — 요일마다 다른 색을 칠하지 않는다. 목표 달성한 날의 막대만 **status "good"**로 전환(성공이라는 의미가 실제로 있는 경우에만 상태색 사용, categorical accent와 절대 혼용 안 함). 목표선은 임계값(threshold) 표시라 점선이 맞음 — dataviz 안티패턴의 "장식성 점선 그리드" 금지 규칙은 일반 그리드에 해당하고, 목표처럼 의미 있는 단일 기준선은 관례적으로 점선이 맞으므로 예외.
+- **통계 화면 `AttributeBarChart`(장르/작가/출판사/국가별)**: **절대 카테고리마다 다른 색을 칠하지 않는다** — 흔한 AI 슬롭 실수가 "장르별로 무지개색 막대"인데, 이건 각 막대 길이(=권수)가 이미 전달하는 정보를 색으로 이중 인코딩하는 것이라 오히려 정보가 없다(dataviz 안티패턴 "명목형 카테고리에 값-램프 색칠"). 모든 막대를 **primary accent 한 가지 색**으로 통일하고 길이(권수)만으로 비교하게 한다.
+- **진행률 도넛 링**: 카테고리 비교용 파이차트가 아니라 "이 책 하나의 진행률"이라는 단일 값 게이지이므로 도넛/파이 관련 안티패턴(근접값 비교용 파이 금지)은 해당 없음 — 그대로 유지.
+- **공통 마크 규칙**: 얇은 막대 + 막대 사이 여백(테두리로 구분하지 않음), 축/그리드는 hairline로 은은하게, 막대 위에 매번 숫자를 박지 않고 필요한 값만 선택적으로 직접 라벨링(예: 오늘 막대만 페이지 수 표시).
+- **스켈레톤 재검토**: "로딩/대기 상태 UX" 섹션의 원칙을 dataviz 안티패턴 "리페치할 때마다 스켈레톤 깜빡임"과 맞춰 재확인 — 스켈레톤은 **최초 컴포지션 1회만**, 이후 데이터가 갱신될 땐(예: 진행률 기록 저장 직후) 스켈레톤으로 되돌아가지 않고 이전 값을 유지한 채 새 값으로 자연스럽게 전환(레이아웃 점프 없음).
+
+### UI 전반 원칙
+
+- **카드 중첩 금지**: 바텀시트/카드 안에 또 카드, 그 안에 또 카드를 겹겹이 쌓지 않는다(전형적인 AI 생성 Compose UI의 티) — `BookQuickActionSheet`처럼 이미 elevated된 컨테이너 안의 하위 요소는 별도 `Card`로 감싸지 않고 여백과 구분선(hairline)만으로 구획.
+- **타이포그래피 절제**: Material 3 `Typography` 토큰 중 실제로 쓰는 것만 최소한으로 골라 고정(예: `titleLarge`/`titleMedium`/`bodyLarge`/`bodyMedium`/`labelSmall`) — 화면마다 임의로 새로운 크기/굵기를 만들지 않는다. 커스텀 디스플레이 폰트 없이 시스템 기본(Roboto) 그대로.
+- **간격 스케일 고정**: 4dp 배수(4/8/12/16/24/32)만 사용, 화면마다 다른 임의 padding 값 금지.
+- **아이콘 일관성**: Material Symbols(outlined) 한 세트만 사용, filled/outlined 혼용 안 함. **UI 크롬(버튼, 타이틀, 빈 상태)에 장식용 이모지 사용 안 함** — 흔한 AI 생성 앱 티. 아이콘은 의미 전달용으로만.
+- **카피 톤**: 마케팅 어투·느낌표 남발 금지("시작해보세요!", "환영합니다 🎉" 금지). 이미 정의한 오류 메시지들("책 정보를 찾지 못했어요, 직접 입력해주세요")처럼 평서문 + 다음 행동 안내로 통일.
+- **빈 상태(EmptyState)**: 마스코트 일러스트 없이 텍스트 + 필요하면 아이콘 하나만("아직 읽는 중인 책이 없어요" + 책 등록 버튼).
+- **모션 절제**: 의미 있는 전환에만 애니메이션 사용(진행률 링이 값 변경 시 자연스럽게 채워짐, 표지 이미지 crossfade) — 통통 튀는 스프링/과장된 화면 전환 효과 없음, 시스템 기본 모션 우선.
+- **일관된 컴포넌트 재사용**: `BookCoverImage`/`SkeletonBox`/`LoadingOverlay`/`EmptyState`/`AttributeBarChart`처럼 이미 설계된 공용 컴포넌트를 화면마다 새로 만들지 않고 그대로 재사용 — 코드 재사용이자 동시에 시각적 일관성 확보 수단.
+
 ## 데이터 모델 (Room)
 
 - **BookEntity** (`books`): id, isbn?, title, author?, publisher?, coverImageUrl?, totalPages?, status(READING/PAUSED/FINISHED/DROPPED/PLANNED), **format**(PHYSICAL/EBOOK, 기본 PHYSICAL), **genre?**, **country?**, createdAt
