@@ -57,7 +57,17 @@ class AppContainer(context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
 
     private val sharedHttpClient = OkHttpClient.Builder()
-        .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC })
+        .addInterceptor(
+            HttpLoggingInterceptor().apply {
+                // BODY so the raw Kakao/Google Books JSON is visible in logcat (filter tag "OkHttp")
+                // while debugging metadata lookup issues — e.g. totalPages coming back empty even
+                // though the book has page-count data on Google Books' own site (see docs/PLAN.md
+                // "메타데이터 연동"). Authorization is redacted so the Kakao REST key never lands in
+                // logs even at this level.
+                level = HttpLoggingInterceptor.Level.BODY
+                redactHeader("Authorization")
+            },
+        )
         .build()
 
     private val kakaoBooksApi = KakaoBooksApi(sharedHttpClient, BuildConfig.KAKAO_API_KEY, json)
