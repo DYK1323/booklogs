@@ -1,10 +1,16 @@
 package com.dyk1323.booklogs.ui.quote
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.graphics.Rect
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,6 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -97,6 +104,19 @@ fun QuoteCaptureScreen(
         imageContainerSize = IntSize.Zero
     }
 
+    fun onPhotoReady(bitmap: Bitmap) {
+        capturedBitmap = bitmap
+        imageBounds = null
+        viewModel.prefillPageNumber(bitmap)
+        viewModel.recognizeFullPage(bitmap)
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri != null) loadBitmapFromUri(context, uri)?.let(::onPhotoReady)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -107,7 +127,7 @@ fun QuoteCaptureScreen(
                     }
                 },
                 actions = {
-                    if (capturedBitmap != null) {
+                    if (capturedBitmap != null && uiState.editingPageIndex == null) {
                         TextButton(
                             onClick = {
                                 viewModel.discardCurrentCaptureText()
@@ -128,30 +148,8 @@ fun QuoteCaptureScreen(
                 .padding(innerPadding),
         ) {
             when {
-                !hasCameraPermission -> PermissionMessage()
-                capturedBitmap == null -> CameraCapturePreview(
-                    captionText = "페이지를 맞춘 뒤 먼저 사진을 찍어주세요.",
-                    onCaptured = { bitmap ->
-                        capturedBitmap = bitmap
-                        imageBounds = null
-                        viewModel.prefillPageNumber(bitmap)
-                        viewModel.recognizeFullPage(bitmap)
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
-                else -> WordSelectQuoteContent(
-                    bitmap = capturedBitmap!!,
+                uiState.editingPageIndex != null -> FinalTextContent(
                     state = uiState,
-                    imageBounds = imageBounds,
-                    imageContainerSize = imageContainerSize,
-                    onContainerSizeChanged = { size ->
-                        imageContainerSize = size
-                        imageBounds = computeImageBounds(size, capturedBitmap!!)
-                    },
-                    onWordTap = viewModel::selectWord,
-                    onGapToggle = viewModel::toggleLineBreakGap,
-                    onCancelSelection = viewModel::cancelSelection,
-                    onConfirmSelection = viewModel::confirmSelection,
                     onPageChanged = viewModel::updatePageText,
                     onQuoteChanged = viewModel::updateQuoteText,
                     onNextPage = {
@@ -165,6 +163,46 @@ fun QuoteCaptureScreen(
                     onSave = viewModel::save,
                     onDone = onBack,
                 )
+                capturedBitmap != null -> WordSelectPhotoContent(
+                    bitmap = capturedBitmap!!,
+                    state = uiState,
+                    imageBounds = imageBounds,
+                    imageContainerSize = imageContainerSize,
+                    onContainerSizeChanged = { size ->
+                        imageContainerSize = size
+                        imageBounds = computeImageBounds(size, capturedBitmap!!)
+                    },
+                    onWordTap = viewModel::selectWord,
+                    onGapToggle = viewModel::toggleLineBreakGap,
+                    onCancelSelection = viewModel::cancelSelection,
+                    onConfirmSelection = viewModel::confirmSelection,
+                )
+                else -> Box(modifier = Modifier.fillMaxSize()) {
+                    if (hasCameraPermission) {
+                        CameraCapturePreview(
+                            captionText = "페이지를 맞춘 뒤 먼저 사진을 찍어주세요.",
+                            onCaptured = ::onPhotoReady,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        PermissionMessage()
+                    }
+                    TextButton(
+                        onClick = {
+                            galleryLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                            )
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(8.dp)),
+                    ) {
+                        Icon(Icons.Outlined.PhotoLibrary, contentDescription = null, tint = Color.White)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = "앨범에서 선택", color = Color.White)
+                    }
+                }
             }
             if (uiState.isRecognizing) {
                 LoadingOverlay(message = "텍스트 인식 중…")
@@ -172,6 +210,17 @@ fun QuoteCaptureScreen(
         }
     }
 }
+
+/** Decodes a gallery-picked image, honoring EXIF orientation (handled automatically by ImageDecoder). */
+private fun loadBitmapFromUri(context: Context, uri: Uri): Bitmap? = runCatching {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        val source = ImageDecoder.createSource(context.contentResolver, uri)
+        ImageDecoder.decodeBitmap(source).copy(Bitmap.Config.ARGB_8888, false)
+    } else {
+        @Suppress("DEPRECATION")
+        MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+    }
+}.getOrNull()
 
 @Composable
 private fun PermissionMessage() {
@@ -189,9 +238,10 @@ private fun PermissionMessage() {
     }
 }
 
+/** Step 2/3: full-screen photo for word-range tap selection, gap-adjustment sheet overlaid on top. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WordSelectQuoteContent(
+private fun WordSelectPhotoContent(
     bitmap: Bitmap,
     state: QuoteCaptureUiState,
     imageBounds: ComposeRect?,
@@ -201,12 +251,6 @@ private fun WordSelectQuoteContent(
     onGapToggle: (Int) -> Unit,
     onCancelSelection: () -> Unit,
     onConfirmSelection: () -> Unit,
-    onPageChanged: (String) -> Unit,
-    onQuoteChanged: (String) -> Unit,
-    onNextPage: () -> Unit,
-    onContinueAfterSave: () -> Unit,
-    onSave: () -> Unit,
-    onDone: () -> Unit,
 ) {
     val startIndex = state.selectionStartIndex
     val endIndex = state.selectionEndIndex
@@ -271,62 +315,6 @@ private fun WordSelectQuoteContent(
                 }
             }
         }
-        // Kept out of the way while picking words so the photo can use nearly the whole screen —
-        // there's nothing to review/save yet until at least one range has been confirmed.
-        if (state.capturedPages.isNotEmpty()) {
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                CapturedPagesSummary(pages = state.capturedPages)
-                Spacer(modifier = Modifier.height(10.dp))
-                OutlinedTextField(
-                    value = state.currentPageText,
-                    onValueChange = onPageChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(text = "현재 페이지") },
-                    singleLine = true,
-                    enabled = !state.isSaved,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = state.quoteText,
-                    onValueChange = onQuoteChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(text = "최종 인용구") },
-                    minLines = 2,
-                    maxLines = 4,
-                    enabled = !state.isSaved,
-                )
-                state.message?.let {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (state.isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                    )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                if (state.isSaved) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = onContinueAfterSave) {
-                            Text(text = "계속 촬영")
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(onClick = onDone, shape = RoundedCornerShape(8.dp)) {
-                            Text(text = "완료")
-                        }
-                    }
-                } else {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = onNextPage) {
-                            Text(text = "다음 페이지 이어서 촬영")
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(onClick = onSave, enabled = !state.isSaving, shape = RoundedCornerShape(8.dp)) {
-                            Text(text = if (state.isSaving) "저장 중" else "저장")
-                        }
-                    }
-                }
-            }
-        }
     }
 
     if (startIndex != null && endIndex != null) {
@@ -340,6 +328,75 @@ private fun WordSelectQuoteContent(
                 onReselect = onCancelSelection,
                 onConfirm = onConfirmSelection,
             )
+        }
+    }
+}
+
+/** Step 4: shown once a range has been confirmed for the current photo — no photo here, just review/save. */
+@Composable
+private fun FinalTextContent(
+    state: QuoteCaptureUiState,
+    onPageChanged: (String) -> Unit,
+    onQuoteChanged: (String) -> Unit,
+    onNextPage: () -> Unit,
+    onContinueAfterSave: () -> Unit,
+    onSave: () -> Unit,
+    onDone: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+    ) {
+        CapturedPagesSummary(pages = state.capturedPages)
+        Spacer(modifier = Modifier.height(10.dp))
+        OutlinedTextField(
+            value = state.currentPageText,
+            onValueChange = onPageChanged,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(text = "현재 페이지") },
+            singleLine = true,
+            enabled = !state.isSaved,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = state.quoteText,
+            onValueChange = onQuoteChanged,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            label = { Text(text = "최종 인용구") },
+            enabled = !state.isSaved,
+        )
+        state.message?.let {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (state.isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+            )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        if (state.isSaved) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onContinueAfterSave) {
+                    Text(text = "계속 촬영")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = onDone, shape = RoundedCornerShape(8.dp)) {
+                    Text(text = "완료")
+                }
+            }
+        } else {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onNextPage) {
+                    Text(text = "다음 페이지 이어서 촬영")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = onSave, enabled = !state.isSaving, shape = RoundedCornerShape(8.dp)) {
+                    Text(text = if (state.isSaving) "저장 중" else "저장")
+                }
+            }
         }
     }
 }

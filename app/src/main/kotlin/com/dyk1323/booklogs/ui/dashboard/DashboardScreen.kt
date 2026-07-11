@@ -461,9 +461,18 @@ private fun QuickLogSheet(
 ) {
     val focusRequester = remember { FocusRequester() }
     var fieldValue by remember { mutableStateOf(TextFieldValue(state.inputText)) }
+    // Book-cover tap is the highest-frequency action in the app — popping the keyboard the instant the
+    // sheet opens is disruptive when the user just wants to glance at progress or tap another action.
+    // Only steal focus for prefill events that happen *after* the sheet is already open (editing the
+    // latest log, a camera-OCR prefill) — those are clearly "the user wants to type now" moments.
+    var previousBookId by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(state.book.id, state.prefillNonce) {
+        val isInitialOpen = state.book.id != previousBookId
         fieldValue = TextFieldValue(text = state.inputText, selection = TextRange(0, state.inputText.length))
-        focusRequester.requestFocus()
+        if (!isInitialOpen) {
+            focusRequester.requestFocus()
+        }
+        previousBookId = state.book.id
     }
 
     Column(
