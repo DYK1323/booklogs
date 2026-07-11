@@ -126,6 +126,15 @@ fun BookConfirmFormScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                supportingText = {
+                    // Lookup finishing successfully doesn't guarantee this field is filled — Google
+                    // Books (the only source for page count) often has no data for a given book,
+                    // especially Korean titles. Say so explicitly instead of leaving it silently
+                    // blank, which otherwise reads as "loading never finished."
+                    if (lookupState != LookupUiState.Loading && formState.totalPagesText.isBlank()) {
+                        Text("책 정보 API에서 페이지 수를 찾지 못했어요. 직접 입력해주세요.")
+                    }
+                },
             )
             OutlinedTextField(
                 value = formState.genre,
