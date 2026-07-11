@@ -1,5 +1,6 @@
 package com.dyk1323.booklogs.ui.dashboard
 
+import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dyk1323.booklogs.data.settings.AppSettingsDataStore
@@ -14,6 +15,7 @@ import com.dyk1323.booklogs.domain.usecase.DayPageTotal
 import com.dyk1323.booklogs.domain.usecase.LogProgressUseCase
 import com.dyk1323.booklogs.domain.usecase.aggregateDailyPages
 import com.dyk1323.booklogs.domain.usecase.computeBookProgress
+import com.dyk1323.booklogs.ui.quote.QuoteOcrProcessor
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +51,10 @@ data class QuickLogSheetUiState(
         if (book.format == BookFormat.EBOOK) "현재 진행률" else "현재 페이지"
     val inputSuffix: String =
         if (book.format == BookFormat.EBOOK) "%" else "p"
+
+    // EBOOK progress is a %, not a page number visible on a printed page — camera OCR doesn't apply.
+    val showPageCameraButton: Boolean =
+        book.format != BookFormat.EBOOK
 }
 
 class DashboardViewModel(
@@ -59,6 +65,8 @@ class DashboardViewModel(
     appSettingsDataStore: AppSettingsDataStore,
     private val zoneId: ZoneId = ZoneId.systemDefault(),
 ) : ViewModel() {
+
+    private val ocrProcessor = QuoteOcrProcessor()
 
     private val selectedQuickLogBookId = MutableStateFlow<Long?>(null)
     private val quickLogInputText = MutableStateFlow("")
@@ -152,6 +160,18 @@ class DashboardViewModel(
         quickLogErrorMessage.value = null
     }
 
+    /** docs/PLAN.md "빠른 기록 UX" — PHYSICAL 책의 카메라 아이콘: 찍은 페이지 사진에서 코너의 숫자를 OCR로 프리필한다. */
+    fun prefillQuickLogFromCapture(bitmap: Bitmap) {
+        if (selectedQuickLogBookId.value == null) return
+        viewModelScope.launch {
+            val page = runCatching { ocrProcessor.detectPageNumber(bitmap) }.getOrNull()
+            if (page != null) {
+                quickLogInputText.value = page.toString().take(4)
+                quickLogErrorMessage.value = null
+            }
+        }
+    }
+
     fun saveQuickLog() {
         val sheet = quickLogSheetState.value ?: return
         val inputValue = sheet.inputText.toIntOrNull()
@@ -202,5 +222,10 @@ class DashboardViewModel(
                 inputValue
             }
         }
+    }
+
+    override fun onCleared() {
+        ocrProcessor.close()
+        super.onCleared()
     }
 }

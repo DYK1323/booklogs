@@ -1,5 +1,9 @@
 package com.dyk1323.booklogs.ui.dashboard
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,6 +28,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,6 +46,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +58,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -57,8 +66,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.dyk1323.booklogs.domain.usecase.DayPageTotal
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
+import com.dyk1323.booklogs.ui.common.components.CameraCapturePreview
 import com.dyk1323.booklogs.ui.common.components.EmptyState
 import com.dyk1323.booklogs.ui.common.theme.StatusGoodLight
 import java.time.LocalDate
@@ -144,23 +155,77 @@ fun DashboardScreen(
         }
     }
 
+    var isCapturingPage by remember { mutableStateOf(false) }
+    LaunchedEffect(quickLogSheetState == null) {
+        if (quickLogSheetState == null) isCapturingPage = false
+    }
+
     quickLogSheetState?.let { sheetState ->
-        ModalBottomSheet(onDismissRequest = viewModel::closeQuickLog) {
-            QuickLogSheet(
-                state = sheetState,
-                onInputChanged = viewModel::updateQuickLogInput,
-                onSave = viewModel::saveQuickLog,
-                onDismiss = viewModel::closeQuickLog,
-                onOpenDetail = {
-                    val bookId = sheetState.book.id
-                    viewModel.closeQuickLog()
-                    onBookDetailClick(bookId)
-                },
-                onCaptureQuote = {
-                    val bookId = sheetState.book.id
-                    viewModel.closeQuickLog()
-                    onCaptureQuoteClick(bookId)
-                },
+        ModalBottomSheet(
+            onDismissRequest = {
+                isCapturingPage = false
+                viewModel.closeQuickLog()
+            },
+        ) {
+            if (isCapturingPage) {
+                PageCameraCapture(
+                    onCaptured = { bitmap ->
+                        viewModel.prefillQuickLogFromCapture(bitmap)
+                        isCapturingPage = false
+                    },
+                    modifier = Modifier.fillMaxWidth().height(480.dp),
+                )
+            } else {
+                QuickLogSheet(
+                    state = sheetState,
+                    onInputChanged = viewModel::updateQuickLogInput,
+                    onSave = viewModel::saveQuickLog,
+                    onDismiss = viewModel::closeQuickLog,
+                    onOpenDetail = {
+                        val bookId = sheetState.book.id
+                        viewModel.closeQuickLog()
+                        onBookDetailClick(bookId)
+                    },
+                    onCaptureQuote = {
+                        val bookId = sheetState.book.id
+                        viewModel.closeQuickLog()
+                        onCaptureQuoteClick(bookId)
+                    },
+                    onCapturePage = { isCapturingPage = true },
+                )
+            }
+        }
+    }
+}
+
+/** Camera permission gate for the quick-log page-photo flow, then delegates to the shared preview. */
+@Composable
+private fun PageCameraCapture(onCaptured: (android.graphics.Bitmap) -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasCameraPermission = granted
+    }
+    LaunchedEffect(Unit) {
+        if (!hasCameraPermission) permissionLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    if (hasCameraPermission) {
+        CameraCapturePreview(
+            captionText = "페이지를 맞춘 뒤 사진을 찍어주세요.",
+            onCaptured = onCaptured,
+            modifier = modifier,
+        )
+    } else {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            Text(
+                text = "페이지 사진을 찍으려면 카메라 권한이 필요해요.",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(24.dp),
             )
         }
     }
@@ -346,6 +411,7 @@ private fun QuickLogSheet(
     onDismiss: () -> Unit,
     onOpenDetail: () -> Unit,
     onCaptureQuote: () -> Unit,
+    onCapturePage: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
     LaunchedEffect(state.book.id) {
@@ -372,23 +438,30 @@ private fun QuickLogSheet(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
         )
         Spacer(modifier = Modifier.height(18.dp))
-        OutlinedTextField(
-            value = state.inputText,
-            onValueChange = onInputChanged,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(state.inputLabel) },
-            suffix = { Text(state.inputSuffix) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Done,
-            ),
-            keyboardActions = KeyboardActions(onDone = { onSave() }),
-            isError = state.errorMessage != null,
-            supportingText = {
-                Text(state.errorMessage ?: "지금 도달한 위치를 입력해주세요.")
-            },
-        )
+        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = state.inputText,
+                onValueChange = onInputChanged,
+                modifier = Modifier.weight(1f),
+                label = { Text(state.inputLabel) },
+                suffix = { Text(state.inputSuffix) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(onDone = { onSave() }),
+                isError = state.errorMessage != null,
+                supportingText = {
+                    Text(state.errorMessage ?: "지금 도달한 위치를 입력해주세요.")
+                },
+            )
+            if (state.showPageCameraButton) {
+                IconButton(onClick = onCapturePage) {
+                    Icon(Icons.Outlined.PhotoCamera, contentDescription = "사진으로 페이지 인식")
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(18.dp))
         TextButton(onClick = onCaptureQuote, modifier = Modifier.fillMaxWidth()) {
             Text(text = "인용구 촬영")

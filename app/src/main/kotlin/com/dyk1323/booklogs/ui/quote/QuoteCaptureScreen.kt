@@ -6,10 +6,6 @@ import android.graphics.Bitmap
 import android.graphics.Rect
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -27,7 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,7 +35,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -58,11 +52,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.dyk1323.booklogs.ui.common.components.CameraCapturePreview
 import com.dyk1323.booklogs.ui.common.components.LoadingOverlay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -122,7 +115,8 @@ fun QuoteCaptureScreen(
         ) {
             when {
                 !hasCameraPermission -> PermissionMessage()
-                capturedBitmap == null -> QuoteCameraPreview(
+                capturedBitmap == null -> CameraCapturePreview(
+                    captionText = "페이지를 맞춘 뒤 먼저 사진을 찍어주세요.",
                     onCaptured = { bitmap ->
                         capturedBitmap = bitmap
                         highlightRect = null
@@ -191,81 +185,6 @@ private fun PermissionMessage() {
             text = "책 페이지를 촬영하려면 카메라 권한이 필요해요.",
             style = MaterialTheme.typography.bodyLarge,
         )
-    }
-}
-
-@Composable
-private fun QuoteCameraPreview(
-    onCaptured: (Bitmap) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var previewView by remember { mutableStateOf<PreviewView?>(null) }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            val cameraProvider = ProcessCameraProvider.getInstance(context).get()
-            cameraProvider.unbindAll()
-        }
-    }
-
-    Box(modifier = modifier) {
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = { ctx ->
-                PreviewView(ctx).also { view ->
-                    view.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-                    previewView = view
-                    val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-                    cameraProviderFuture.addListener(
-                        {
-                            val cameraProvider = cameraProviderFuture.get()
-                            val preview = Preview.Builder().build().also {
-                                it.setSurfaceProvider(view.surfaceProvider)
-                            }
-                            runCatching {
-                                cameraProvider.unbindAll()
-                                cameraProvider.bindToLifecycle(
-                                    lifecycleOwner,
-                                    CameraSelector.DEFAULT_BACK_CAMERA,
-                                    preview,
-                                )
-                            }
-                        },
-                        ContextCompat.getMainExecutor(ctx),
-                    )
-                }
-            },
-        )
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.56f))
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = "페이지를 맞춘 뒤 먼저 사진을 찍어주세요.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Button(
-                onClick = {
-                    previewView?.bitmap
-                        ?.copy(Bitmap.Config.ARGB_8888, false)
-                        ?.let(onCaptured)
-                },
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "촬영")
-            }
-        }
     }
 }
 

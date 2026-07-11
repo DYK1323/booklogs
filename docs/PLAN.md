@@ -309,7 +309,9 @@ com.dyk1323.booklogs/
 
 - **책 등록(화면 흐름 #2) 구현 완료**: 진입 선택(스캔/제목검색/직접입력) → 바코드 스캔(CameraX+ML Kit EAN-13, ISBN 유효성 검사) 또는 제목 검색(카카오 우선, 0건일 때만 Google Books 폴백) → 확인/수정 폼(중복 등록 배너, 종이책/전자책 토글, 바로 읽기 시작 스위치) → `RegisterBookUseCase` 저장. 5-분기 메타데이터 실패 처리 매트릭스(`resolveBookMetadata`)와 병합 로직(`mergeBookMetadata`)은 :domain에 순수 함수로 구현해 전수 단위테스트 완료. Compose Navigation으로 대시보드 FAB → 등록 플로우 4화면을 연결(단일 `BookRegistrationViewModel` 인스턴스를 플로우 전체가 공유, 진입 시 `reset()`).
   - 간소화한 부분: 계획 문서의 "확인 폼이 즉시 열리고 totalPages/genre 칸만 개별 스켈레톤"이 아니라, 폼 화면 전체에 `LoadingOverlay`를 잠깐(병렬 호출이라 최악 5초) 띄운 뒤 완성된 폼을 보여주는 방식으로 구현(필드별 스켈레톤보다 구현이 단순하고 UX 차이는 미미). "카카오만 성공했을 때 Google Books만 재시도"도 전체 재조회(`lookupByIsbn` 재호출)로 단순화.
-  - 미구현(다음 작업): 진행률 빠른 기록 시트, 책 상세, 인용구 캡처, 독후감, 라이브러리, 통계, 설정, 리마인더 실동작, 대시보드 책장 그리드(도넛 오버레이)/7일 막대그래프, 런처 아이콘.
+- **대시보드/책 상세/인용구 캡처/독후감/라이브러리/설정 구현 완료**(다른 세션에서 진행): 책장 그리드(도넛 오버레이)+7일 막대그래프+일일 목표선, 진행률 빠른 기록 시트, 책 상세(진행 이력·상태 전이·삭제), 인용구 캡처(드래그 크롭 OCR 방식으로 계획 변경 — 위 "OCR" 항목 참고), 독후감 작성, 라이브러리, 설정(리마인더 on/off+시각, 일일 목표, `AlarmManager` 연동까지 실제 동작).
+  - **빠른 기록 시트의 카메라 아이콘 버튼**(PHYSICAL 책만, "빠른 기록 UX" 섹션 참고)이 누락되어 있던 걸 추가 완료: 입력창 옆 카메라 아이콘 탭 → 시트 내에서 카메라 미리보기로 전환 → 촬영 → `QuoteOcrProcessor.detectPageNumber`(인용구 캡처와 동일 로직, 코너 숫자 후보 스코어링)로 페이지 번호를 인식해 입력창에 프리필 → 시트로 복귀해 확인 후 저장. 카메라 미리보기 자체는 `CameraCapturePreview`(공용 컴포저블)로 추출해 인용구 캡처 화면과 공유.
+- **미구현(다음 작업)**: 통계 화면(장르/작가/출판사/국가별), 설정의 백업/복원(SAF JSON 내보내기/가져오기), 런처 아이콘. CI가 `:app` 유닛테스트(`BookMetadataRepositoryImplTest`, `ReminderSchedulerTest`, `QuoteCaptureViewModelTest`, `QuoteOcrProcessorTest` 등)를 아직 실행하지 않음(`:domain:test`만 돎) — 워크플로에 스텝 추가 필요.
 
 ## 검증 계획
 
