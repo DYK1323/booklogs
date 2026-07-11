@@ -1,0 +1,7 @@
+<resources>
+    <!-- Minimal window theme — actual UI theming (colors, typography, shapes) is Compose MaterialTheme
+         in ui/common/theme/Theme.kt. This just sets the window background before Compose content loads. -->
+    <style name="Theme.Booklogs" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>

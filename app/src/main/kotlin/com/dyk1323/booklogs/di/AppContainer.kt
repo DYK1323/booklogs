@@ -1,0 +1,54 @@
+package com.dyk1323.booklogs.di
+
+import android.content.Context
+import androidx.room.Room
+import com.dyk1323.booklogs.data.local.BooklogsDatabase
+import com.dyk1323.booklogs.data.repository.BookRepositoryImpl
+import com.dyk1323.booklogs.data.repository.QuoteRepositoryImpl
+import com.dyk1323.booklogs.data.repository.ReadingLogRepositoryImpl
+import com.dyk1323.booklogs.data.repository.ReadingRoundRepositoryImpl
+import com.dyk1323.booklogs.data.repository.ReviewRepositoryImpl
+import com.dyk1323.booklogs.data.repository.RoomTransactionRunner
+import com.dyk1323.booklogs.domain.repository.BookRepository
+import com.dyk1323.booklogs.domain.repository.QuoteRepository
+import com.dyk1323.booklogs.domain.repository.ReadingLogRepository
+import com.dyk1323.booklogs.domain.repository.ReadingRoundRepository
+import com.dyk1323.booklogs.domain.repository.ReviewRepository
+import com.dyk1323.booklogs.domain.repository.TransactionRunner
+import com.dyk1323.booklogs.domain.usecase.ChangeBookStatusUseCase
+import com.dyk1323.booklogs.domain.usecase.DeleteBookUseCase
+import com.dyk1323.booklogs.domain.usecase.DeleteLogUseCase
+import com.dyk1323.booklogs.domain.usecase.EditLogUseCase
+import com.dyk1323.booklogs.domain.usecase.LogProgressUseCase
+import com.dyk1323.booklogs.domain.usecase.PickReminderBookUseCase
+
+/**
+ * Manual DI container (no Hilt — see docs/PLAN.md "DI" row: a handful of repositories doesn't
+ * justify KSP annotation-processing overhead). Everything is lazily constructed once per process.
+ */
+class AppContainer(context: Context) {
+
+    private val database: BooklogsDatabase = Room.databaseBuilder(
+        context.applicationContext,
+        BooklogsDatabase::class.java,
+        BooklogsDatabase.DATABASE_NAME,
+    ).build()
+
+    val transactionRunner: TransactionRunner = RoomTransactionRunner(database)
+
+    val bookRepository: BookRepository = BookRepositoryImpl(database.bookDao())
+    val readingRoundRepository: ReadingRoundRepository = ReadingRoundRepositoryImpl(database.readingRoundDao())
+    val readingLogRepository: ReadingLogRepository = ReadingLogRepositoryImpl(database.readingLogDao())
+    val quoteRepository: QuoteRepository = QuoteRepositoryImpl(database.quoteDao())
+    val reviewRepository: ReviewRepository = ReviewRepositoryImpl(database.reviewDao())
+
+    val logProgressUseCase = LogProgressUseCase(readingLogRepository)
+    val editLogUseCase = EditLogUseCase(readingLogRepository)
+    val deleteLogUseCase = DeleteLogUseCase(readingLogRepository)
+    val changeBookStatusUseCase = ChangeBookStatusUseCase(bookRepository, readingRoundRepository, transactionRunner)
+    val deleteBookUseCase = DeleteBookUseCase(bookRepository)
+    val pickReminderBookUseCase = PickReminderBookUseCase()
+
+    // AggregateDailyPagesUseCase, AggregateBooksByAttributeUseCase, ComputeBookProgressUseCase,
+    // ConvertPagePercentUseCase are plain top-level functions (see :domain/usecase) — no instance needed.
+}

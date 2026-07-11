@@ -5,6 +5,7 @@ import com.dyk1323.booklogs.domain.model.ReadingRound
 import com.dyk1323.booklogs.domain.model.RoundEndReason
 import com.dyk1323.booklogs.domain.repository.BookRepository
 import com.dyk1323.booklogs.domain.repository.ReadingRoundRepository
+import com.dyk1323.booklogs.domain.repository.TransactionRunner
 
 /**
  * Handles every book status transition and its round side effect:
@@ -14,51 +15,53 @@ import com.dyk1323.booklogs.domain.repository.ReadingRoundRepository
  * - PLANNED -> READING: the book's first round is created (roundNumber = 1) — same mechanism as
  *   FINISHED/DROPPED -> READING, just starting from zero rounds instead of restarting.
  *
- * The two repository calls per transition (round + book) must be wrapped in a single transaction by
- * the concrete repository implementations in the :app module — this use case only sequences the calls.
+ * The round + book writes for a single transition are wrapped in [transactionRunner] so they always
+ * commit together (the :app implementation backs this with `RoomDatabase.withTransaction`).
  */
 class ChangeBookStatusUseCase(
     private val bookRepository: BookRepository,
     private val roundRepository: ReadingRoundRepository,
+    private val transactionRunner: TransactionRunner,
 ) {
-    suspend operator fun invoke(bookId: Long, newStatus: BookStatus, now: Long): Result<Unit> {
-        val book = bookRepository.getById(bookId)
-            ?: return Result.failure(NoSuchElementException("Book $bookId not found"))
-        val from = book.status
+    suspend operator fun invoke(bookId: Long, newStatus: BookStatus, now: Long): Result<Unit> =
+        transactionRunner.run {
+            val book = bookRepository.getById(bookId)
+                ?: return@run Result.failure(NoSuchElementException("Book $bookId not found"))
+            val from = book.status
 
-        when {
-            from == BookStatus.READING && newStatus == BookStatus.PAUSED -> {
-                bookRepository.update(book.copy(status = newStatus))
+            when {
+                from == BookStatus.READING && newStatus == BookStatus.PAUSED -> {
+                    bookRepository.update(book.copy(status = newStatus))
+                }
+
+                from == BookStatus.READING && (newStatus == BookStatus.FINISHED || newStatus == BookStatus.DROPPED) -> {
+                    val openRound = roundRepository.getOpenRound(bookId)
+                        ?: return@run Result.failure(IllegalStateException("Book $bookId is READING but has no open round"))
+                    val endReason = if (newStatus == BookStatus.FINISHED) RoundEndReason.COMPLETED else RoundEndReason.DROPPED
+                    roundRepository.update(openRound.copy(finishedAt = now, endReason = endReason))
+                    bookRepository.update(book.copy(status = newStatus))
+                }
+
+                from == BookStatus.PAUSED && newStatus == BookStatus.READING -> {
+                    bookRepository.update(book.copy(status = newStatus))
+                }
+
+                (from == BookStatus.FINISHED || from == BookStatus.DROPPED) && newStatus == BookStatus.READING -> {
+                    startNewRound(bookId, now)
+                    bookRepository.update(book.copy(status = newStatus))
+                }
+
+                from == BookStatus.PLANNED && newStatus == BookStatus.READING -> {
+                    startNewRound(bookId, now)
+                    bookRepository.update(book.copy(status = newStatus))
+                }
+
+                else -> return@run Result.failure(
+                    IllegalArgumentException("Unsupported status transition from $from to $newStatus"),
+                )
             }
-
-            from == BookStatus.READING && (newStatus == BookStatus.FINISHED || newStatus == BookStatus.DROPPED) -> {
-                val openRound = roundRepository.getOpenRound(bookId)
-                    ?: return Result.failure(IllegalStateException("Book $bookId is READING but has no open round"))
-                val endReason = if (newStatus == BookStatus.FINISHED) RoundEndReason.COMPLETED else RoundEndReason.DROPPED
-                roundRepository.update(openRound.copy(finishedAt = now, endReason = endReason))
-                bookRepository.update(book.copy(status = newStatus))
-            }
-
-            from == BookStatus.PAUSED && newStatus == BookStatus.READING -> {
-                bookRepository.update(book.copy(status = newStatus))
-            }
-
-            (from == BookStatus.FINISHED || from == BookStatus.DROPPED) && newStatus == BookStatus.READING -> {
-                startNewRound(bookId, now)
-                bookRepository.update(book.copy(status = newStatus))
-            }
-
-            from == BookStatus.PLANNED && newStatus == BookStatus.READING -> {
-                startNewRound(bookId, now)
-                bookRepository.update(book.copy(status = newStatus))
-            }
-
-            else -> return Result.failure(
-                IllegalArgumentException("Unsupported status transition from $from to $newStatus"),
-            )
+            Result.success(Unit)
         }
-        return Result.success(Unit)
-    }
 
     private suspend fun startNewRound(bookId: Long, now: Long) {
         val rounds = roundRepository.getRoundsForBook(bookId)

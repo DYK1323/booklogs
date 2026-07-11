@@ -2,6 +2,7 @@ package com.dyk1323.booklogs.domain.usecase
 
 import com.dyk1323.booklogs.domain.fake.FakeBookRepository
 import com.dyk1323.booklogs.domain.fake.FakeReadingRoundRepository
+import com.dyk1323.booklogs.domain.fake.NoopTransactionRunner
 import com.dyk1323.booklogs.domain.model.Book
 import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.domain.model.BookStatus
@@ -27,7 +28,7 @@ class ChangeBookStatusUseCaseTest {
         val rounds = FakeReadingRoundRepository(
             listOf(ReadingRound(id = 1, bookId = 1, roundNumber = 1, startedAt = 0, finishedAt = null, endReason = null)),
         )
-        val useCase = ChangeBookStatusUseCase(books, rounds)
+        val useCase = ChangeBookStatusUseCase(books, rounds, NoopTransactionRunner())
 
         val result = useCase(bookId = 1, newStatus = BookStatus.PAUSED, now = 1000)
 
@@ -43,7 +44,7 @@ class ChangeBookStatusUseCaseTest {
         val rounds = FakeReadingRoundRepository(
             listOf(ReadingRound(id = 1, bookId = 1, roundNumber = 1, startedAt = 0, finishedAt = null, endReason = null)),
         )
-        val useCase = ChangeBookStatusUseCase(books, rounds)
+        val useCase = ChangeBookStatusUseCase(books, rounds, NoopTransactionRunner())
 
         useCase(bookId = 1, newStatus = BookStatus.READING, now = 1000)
 
@@ -57,7 +58,7 @@ class ChangeBookStatusUseCaseTest {
         val rounds = FakeReadingRoundRepository(
             listOf(ReadingRound(id = 1, bookId = 1, roundNumber = 1, startedAt = 0, finishedAt = null, endReason = null)),
         )
-        val useCase = ChangeBookStatusUseCase(books, rounds)
+        val useCase = ChangeBookStatusUseCase(books, rounds, NoopTransactionRunner())
 
         useCase(bookId = 1, newStatus = BookStatus.FINISHED, now = 5000)
 
@@ -73,7 +74,7 @@ class ChangeBookStatusUseCaseTest {
         val rounds = FakeReadingRoundRepository(
             listOf(ReadingRound(id = 1, bookId = 1, roundNumber = 1, startedAt = 0, finishedAt = null, endReason = null)),
         )
-        val useCase = ChangeBookStatusUseCase(books, rounds)
+        val useCase = ChangeBookStatusUseCase(books, rounds, NoopTransactionRunner())
 
         useCase(bookId = 1, newStatus = BookStatus.DROPPED, now = 5000)
 
@@ -88,7 +89,7 @@ class ChangeBookStatusUseCaseTest {
         val rounds = FakeReadingRoundRepository(
             listOf(ReadingRound(id = 1, bookId = 1, roundNumber = 1, startedAt = 0, finishedAt = 100, endReason = RoundEndReason.COMPLETED)),
         )
-        val useCase = ChangeBookStatusUseCase(books, rounds)
+        val useCase = ChangeBookStatusUseCase(books, rounds, NoopTransactionRunner())
 
         useCase(bookId = 1, newStatus = BookStatus.READING, now = 9000)
 
@@ -105,7 +106,7 @@ class ChangeBookStatusUseCaseTest {
         val rounds = FakeReadingRoundRepository(
             listOf(ReadingRound(id = 1, bookId = 1, roundNumber = 1, startedAt = 0, finishedAt = 100, endReason = RoundEndReason.DROPPED)),
         )
-        val useCase = ChangeBookStatusUseCase(books, rounds)
+        val useCase = ChangeBookStatusUseCase(books, rounds, NoopTransactionRunner())
 
         useCase(bookId = 1, newStatus = BookStatus.READING, now = 9000)
 
@@ -117,7 +118,7 @@ class ChangeBookStatusUseCaseTest {
     fun `PLANNED to READING creates the book's first round`() = runTest {
         val books = FakeBookRepository(listOf(book(status = BookStatus.PLANNED)))
         val rounds = FakeReadingRoundRepository() // no rounds yet
-        val useCase = ChangeBookStatusUseCase(books, rounds)
+        val useCase = ChangeBookStatusUseCase(books, rounds, NoopTransactionRunner())
 
         val result = useCase(bookId = 1, newStatus = BookStatus.READING, now = 9000)
 
@@ -132,7 +133,7 @@ class ChangeBookStatusUseCaseTest {
     fun `an unsupported transition fails without mutating state`() = runTest {
         val books = FakeBookRepository(listOf(book(status = BookStatus.PLANNED)))
         val rounds = FakeReadingRoundRepository()
-        val useCase = ChangeBookStatusUseCase(books, rounds)
+        val useCase = ChangeBookStatusUseCase(books, rounds, NoopTransactionRunner())
 
         val result = useCase(bookId = 1, newStatus = BookStatus.DROPPED, now = 9000)
 
