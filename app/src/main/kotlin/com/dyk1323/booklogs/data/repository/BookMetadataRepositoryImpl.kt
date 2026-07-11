@@ -42,9 +42,8 @@ class BookMetadataRepositoryImpl(
     override suspend fun searchByTitle(query: String): ApiLookupResult<List<BookMetadata>> {
         val kakaoResult = queryKakaoByTitle(query)
         if (kakaoResult is ApiLookupResult.Success && kakaoResult.data.isNotEmpty()) return kakaoResult
-        if (kakaoResult is ApiLookupResult.NetworkError) return kakaoResult
 
-        // Kakao returned zero results (or an empty success list) — retry with Google Books.
+        // Kakao can fail locally when the REST API key is absent; Google Books keeps search usable.
         return when (val google = queryGoogleByTitle(query)) {
             is ApiLookupResult.Success -> google
             is ApiLookupResult.NotFound -> ApiLookupResult.NotFound

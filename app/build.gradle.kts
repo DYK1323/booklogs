@@ -1,9 +1,18 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
+}
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.isFile) {
+        file.inputStream().use(::load)
+    }
 }
 
 android {
@@ -23,6 +32,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val kakaoApiKey = (project.findProperty("KAKAO_API_KEY") as String?)
+            ?: localProperties.getProperty("KAKAO_API_KEY")
             ?: System.getenv("KAKAO_API_KEY")
             ?: ""
         buildConfigField("String", "KAKAO_API_KEY", "\"$kakaoApiKey\"")
