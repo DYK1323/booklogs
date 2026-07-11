@@ -5,6 +5,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -21,10 +25,16 @@ import com.dyk1323.booklogs.domain.model.Book
  * 흐름 #1) are follow-up work — this proves the data flow end to end.
  */
 @Composable
-fun DashboardScreen(viewModel: DashboardViewModel, modifier: Modifier = Modifier) {
+fun DashboardScreen(viewModel: DashboardViewModel, onRegisterBookClick: () -> Unit, modifier: Modifier = Modifier) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Scaffold { innerPadding ->
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = onRegisterBookClick) {
+                Icon(Icons.Outlined.Add, contentDescription = "책 등록")
+            }
+        },
+    ) { innerPadding ->
         Column(modifier = modifier.fillMaxSize().padding(innerPadding).padding(16.dp)) {
             Text(
                 text = "오늘 ${uiState.todayPages}p",

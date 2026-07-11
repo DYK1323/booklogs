@@ -305,6 +305,12 @@ com.dyk1323.booklogs/
 - `AndroidManifest.xml`: `CAMERA`, `INTERNET`, **`POST_NOTIFICATIONS`(API 33+ 런타임 권한), `RECEIVE_BOOT_COMPLETED`** 권한, `<uses-feature android:name="android.hardware.camera" required="true"/>`, `ReminderReceiver`/`BootReceiver`를 `<receiver>`로 등록
 - 카카오 REST API 키: `local.properties`에 `KAKAO_API_KEY=...` 추가 → `app/build.gradle.kts`에서 `buildConfigField`로 주입, `local.properties`는 이미 `.gitignore` 대상이므로 키가 커밋되지 않음을 확인. 사용자가 카카오 디벨로퍼스(https://developers.kakao.com)에서 앱을 등록하고 키를 발급받아야 하는 단계는 구현 완료 후 별도 안내
 
+## 구현 현황
+
+- **책 등록(화면 흐름 #2) 구현 완료**: 진입 선택(스캔/제목검색/직접입력) → 바코드 스캔(CameraX+ML Kit EAN-13, ISBN 유효성 검사) 또는 제목 검색(카카오 우선, 0건일 때만 Google Books 폴백) → 확인/수정 폼(중복 등록 배너, 종이책/전자책 토글, 바로 읽기 시작 스위치) → `RegisterBookUseCase` 저장. 5-분기 메타데이터 실패 처리 매트릭스(`resolveBookMetadata`)와 병합 로직(`mergeBookMetadata`)은 :domain에 순수 함수로 구현해 전수 단위테스트 완료. Compose Navigation으로 대시보드 FAB → 등록 플로우 4화면을 연결(단일 `BookRegistrationViewModel` 인스턴스를 플로우 전체가 공유, 진입 시 `reset()`).
+  - 간소화한 부분: 계획 문서의 "확인 폼이 즉시 열리고 totalPages/genre 칸만 개별 스켈레톤"이 아니라, 폼 화면 전체에 `LoadingOverlay`를 잠깐(병렬 호출이라 최악 5초) 띄운 뒤 완성된 폼을 보여주는 방식으로 구현(필드별 스켈레톤보다 구현이 단순하고 UX 차이는 미미). "카카오만 성공했을 때 Google Books만 재시도"도 전체 재조회(`lookupByIsbn` 재호출)로 단순화.
+  - 미구현(다음 작업): 진행률 빠른 기록 시트, 책 상세, 인용구 캡처, 독후감, 라이브러리, 통계, 설정, 리마인더 실동작, 대시보드 책장 그리드(도넛 오버레이)/7일 막대그래프, 런처 아이콘.
+
 ## 검증 계획
 
 샌드박스에 Android SDK/에뮬레이터가 없으므로:
