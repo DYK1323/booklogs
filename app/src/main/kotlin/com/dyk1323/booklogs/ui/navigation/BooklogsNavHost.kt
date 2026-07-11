@@ -10,6 +10,8 @@ import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.dyk1323.booklogs.ui.bookedit.BookEditScreen
+import com.dyk1323.booklogs.ui.bookedit.BookEditViewModel
 import com.dyk1323.booklogs.ui.dashboard.DashboardScreen
 import com.dyk1323.booklogs.ui.dashboard.DashboardViewModel
 import com.dyk1323.booklogs.ui.detail.BookDetailScreen
@@ -34,6 +36,7 @@ fun BooklogsNavHost(
     dashboardViewModel: DashboardViewModel,
     registrationViewModel: BookRegistrationViewModel,
     bookDetailViewModel: BookDetailViewModel,
+    bookEditViewModel: BookEditViewModel,
     libraryViewModel: LibraryViewModel,
     quoteCaptureViewModel: QuoteCaptureViewModel,
     reviewEditorViewModel: ReviewEditorViewModel,
@@ -104,6 +107,22 @@ fun BooklogsNavHost(
                 onWriteReviewClick = {
                     navController.navigate(Destinations.reviewEditor(bookId))
                 },
+                onEditClick = {
+                    navController.navigate(Destinations.bookEdit(bookId))
+                },
+            )
+        }
+
+        composable(
+            route = Destinations.BOOK_EDIT,
+            arguments = listOf(navArgument("bookId") { type = NavType.LongType }),
+        ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getLong("bookId") ?: return@composable
+            BookEditScreen(
+                bookId = bookId,
+                viewModel = bookEditViewModel,
+                onBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() },
             )
         }
 
@@ -188,6 +207,10 @@ fun BooklogsNavHost(
                     navController.popBackStack(Destinations.DASHBOARD, inclusive = false)
                 },
                 onBack = { navController.popBackStack() },
+                onGoToDuplicateBook = { bookId ->
+                    navController.popBackStack(Destinations.DASHBOARD, inclusive = false)
+                    navController.navigate(Destinations.bookDetail(bookId))
+                },
             )
         }
     }

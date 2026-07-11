@@ -11,6 +11,7 @@ import com.dyk1323.booklogs.domain.model.MetadataLookupResult
 import com.dyk1323.booklogs.domain.repository.BookMetadataRepository
 import com.dyk1323.booklogs.domain.repository.BookRepository
 import com.dyk1323.booklogs.domain.usecase.RegisterBookUseCase
+import com.dyk1323.booklogs.domain.usecase.validateBookForm
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,7 @@ data class BookFormState(
     val format: BookFormat = BookFormat.PHYSICAL,
     val startReadingImmediately: Boolean = true,
     val duplicateOfTitle: String? = null,
+    val duplicateOfBookId: Long? = null,
 )
 
 sealed interface LookupUiState {
@@ -151,7 +153,7 @@ class BookRegistrationViewModel(
     private suspend fun checkDuplicate(isbn: String?) {
         if (isbn == null) return
         val duplicate = bookRepository.findByIsbn(isbn) ?: return
-        _formState.update { it.copy(duplicateOfTitle = duplicate.title) }
+        _formState.update { it.copy(duplicateOfTitle = duplicate.title, duplicateOfBookId = duplicate.id) }
     }
 
     fun updateTitle(value: String) = _formState.update { it.copy(title = value) }
@@ -169,6 +171,11 @@ class BookRegistrationViewModel(
             _saveState.value = SaveUiState.Error("제목을 입력해주세요.")
             return
         }
+        val totalPages = form.totalPagesText.toIntOrNull()
+        validateBookForm(form.format, totalPages)?.let { message ->
+            _saveState.value = SaveUiState.Error(message)
+            return
+        }
         _saveState.value = SaveUiState.Saving
         viewModelScope.launch {
             val now = System.currentTimeMillis()
@@ -179,7 +186,7 @@ class BookRegistrationViewModel(
                 author = form.author.trim().ifBlank { null },
                 publisher = form.publisher.trim().ifBlank { null },
                 coverImageUrl = form.coverImageUrl,
-                totalPages = form.totalPagesText.toIntOrNull(),
+                totalPages = totalPages,
                 status = BookStatus.PLANNED,
                 format = form.format,
                 genre = form.genre.trim().ifBlank { null },

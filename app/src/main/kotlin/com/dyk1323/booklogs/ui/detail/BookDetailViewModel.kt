@@ -3,6 +3,7 @@ package com.dyk1323.booklogs.ui.detail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dyk1323.booklogs.domain.model.Book
+import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.domain.model.BookStatus
 import com.dyk1323.booklogs.domain.model.Quote
 import com.dyk1323.booklogs.domain.model.ReadingLog
@@ -12,18 +13,25 @@ import com.dyk1323.booklogs.domain.repository.QuoteRepository
 import com.dyk1323.booklogs.domain.repository.ReadingLogRepository
 import com.dyk1323.booklogs.domain.repository.ReviewRepository
 import com.dyk1323.booklogs.domain.usecase.ChangeBookStatusUseCase
+import com.dyk1323.booklogs.domain.usecase.ConvertPagePercentUseCase
 import com.dyk1323.booklogs.domain.usecase.DeleteBookUseCase
 import com.dyk1323.booklogs.domain.usecase.DeleteLogUseCase
+import com.dyk1323.booklogs.domain.usecase.EditLogUseCase
 import com.dyk1323.booklogs.domain.usecase.LogDelta
+import com.dyk1323.booklogs.domain.usecase.ResolveLoggedPageResult
 import com.dyk1323.booklogs.domain.usecase.computeBookProgress
 import com.dyk1323.booklogs.domain.usecase.computeLogDeltas
+import com.dyk1323.booklogs.domain.usecase.resolveLoggedPage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -37,7 +45,23 @@ data class BookDetailUiState(
     val quoteText: String = "",
     val quotePageText: String = "",
     val editingQuoteId: Long? = null,
+    val expandedLogId: Long? = null,
+    val logEditInputText: String = "",
+    val logEditErrorMessage: String? = null,
     val message: String? = null,
+)
+
+private data class QuoteFormState(
+    val quoteText: String,
+    val quotePageText: String,
+    val editingQuoteId: Long?,
+    val message: String?,
+)
+
+private data class LogEditState(
+    val expandedLogId: Long?,
+    val logEditInputText: String,
+    val logEditErrorMessage: String?,
 )
 
 private data class BookDetailBaseState(
@@ -58,6 +82,7 @@ class BookDetailViewModel(
     private val changeBookStatusUseCase: ChangeBookStatusUseCase,
     private val deleteBookUseCase: DeleteBookUseCase,
     private val deleteLogUseCase: DeleteLogUseCase,
+    private val editLogUseCase: EditLogUseCase,
 ) : ViewModel() {
 
     private val selectedBookId = MutableStateFlow<Long?>(null)
@@ -65,6 +90,12 @@ class BookDetailViewModel(
     private val quotePageText = MutableStateFlow("")
     private val editingQuote = MutableStateFlow<Quote?>(null)
     private val message = MutableStateFlow<String?>(null)
+    private val expandedLogId = MutableStateFlow<Long?>(null)
+    private val logEditInputText = MutableStateFlow("")
+    private val logEditErrorMessage = MutableStateFlow<String?>(null)
+
+    private val _undoLogEvents = Channel<ReadingLog>(Channel.BUFFERED)
+    val undoLogEvents: Flow<ReadingLog> = _undoLogEvents.receiveAsFlow()
 
     private val quotes = selectedBookId.flatMapLatest { bookId ->
         if (bookId == null) flowOf(emptyList()) else quoteRepository.observeForBook(bookId)
@@ -95,13 +126,28 @@ class BookDetailViewModel(
         )
     }
 
-    val uiState: StateFlow<BookDetailUiState> = combine(
-        baseState,
+    private val quoteFormState: Flow<QuoteFormState> = combine(
         quoteText,
         quotePageText,
         editingQuote,
         message,
-    ) { base, quoteText, quotePageText, editingQuote, message ->
+    ) { quoteText, quotePageText, editingQuote, message ->
+        QuoteFormState(quoteText, quotePageText, editingQuote?.id, message)
+    }
+
+    private val logEditState: Flow<LogEditState> = combine(
+        expandedLogId,
+        logEditInputText,
+        logEditErrorMessage,
+    ) { expandedLogId, logEditInputText, logEditErrorMessage ->
+        LogEditState(expandedLogId, logEditInputText, logEditErrorMessage)
+    }
+
+    val uiState: StateFlow<BookDetailUiState> = combine(
+        baseState,
+        quoteFormState,
+        logEditState,
+    ) { base, quoteForm, logEdit ->
         BookDetailUiState(
             book = base.book,
             currentPage = base.currentPage,
@@ -109,10 +155,13 @@ class BookDetailViewModel(
             logDeltas = base.logDeltas,
             quotes = base.quotes,
             reviews = base.reviews,
-            quoteText = quoteText,
-            quotePageText = quotePageText,
-            editingQuoteId = editingQuote?.id,
-            message = message,
+            quoteText = quoteForm.quoteText,
+            quotePageText = quoteForm.quotePageText,
+            editingQuoteId = quoteForm.editingQuoteId,
+            expandedLogId = logEdit.expandedLogId,
+            logEditInputText = logEdit.logEditInputText,
+            logEditErrorMessage = logEdit.logEditErrorMessage,
+            message = quoteForm.message,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -214,10 +263,83 @@ class BookDetailViewModel(
         }
     }
 
+    fun toggleLogExpanded(logId: Long) {
+        if (expandedLogId.value == logId) {
+            expandedLogId.value = null
+            logEditInputText.value = ""
+            logEditErrorMessage.value = null
+            return
+        }
+        val book = uiState.value.book ?: return
+        val log = uiState.value.logDeltas.firstOrNull { it.log.id == logId }?.log ?: return
+        expandedLogId.value = logId
+        logEditInputText.value = inputTextFor(book, log.currentPage)
+        logEditErrorMessage.value = null
+    }
+
+    fun updateLogEditInput(value: String) {
+        logEditInputText.value = value.filter(Char::isDigit).take(4)
+        logEditErrorMessage.value = null
+    }
+
+    fun cancelLogEdit() {
+        expandedLogId.value = null
+        logEditInputText.value = ""
+        logEditErrorMessage.value = null
+    }
+
+    fun saveLogEdit() {
+        val logId = expandedLogId.value ?: return
+        val book = uiState.value.book ?: return
+        val inputValue = logEditInputText.value.toIntOrNull()
+        if (inputValue == null) {
+            logEditErrorMessage.value = "숫자로 입력해주세요."
+            return
+        }
+        val resolved = resolveLoggedPage(book.format, book.totalPages, inputValue)
+        val currentPage = when (resolved) {
+            is ResolveLoggedPageResult.Error -> {
+                logEditErrorMessage.value = resolved.message
+                return
+            }
+            is ResolveLoggedPageResult.Success -> resolved.currentPage
+        }
+        viewModelScope.launch {
+            editLogUseCase(logId, currentPage)
+            expandedLogId.value = null
+            logEditInputText.value = ""
+            logEditErrorMessage.value = null
+            message.value = "진행 기록을 수정했어요."
+        }
+    }
+
     fun deleteLog(logId: Long) {
+        val log = uiState.value.logDeltas.firstOrNull { it.log.id == logId }?.log ?: return
         viewModelScope.launch {
             deleteLogUseCase(logId)
+            if (expandedLogId.value == logId) {
+                expandedLogId.value = null
+                logEditInputText.value = ""
+                logEditErrorMessage.value = null
+            }
             message.value = "진행 기록을 삭제했어요."
+            _undoLogEvents.send(log)
+        }
+    }
+
+    fun undoDeleteLog(log: ReadingLog) {
+        viewModelScope.launch {
+            readingLogRepository.insert(log.copy(id = 0))
+        }
+    }
+
+    private fun inputTextFor(book: Book, currentPage: Int?): String {
+        val totalPages = book.totalPages
+        return when {
+            book.format == BookFormat.EBOOK && totalPages != null ->
+                ConvertPagePercentUseCase.pageToPercent(currentPage ?: 0, totalPages).toString()
+            currentPage != null -> currentPage.toString()
+            else -> ""
         }
     }
 

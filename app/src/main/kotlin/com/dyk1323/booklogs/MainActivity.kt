@@ -15,6 +15,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.dyk1323.booklogs.data.settings.AppSettings
 import com.dyk1323.booklogs.notification.ReminderNotificationBuilder
 import com.dyk1323.booklogs.notification.ReminderScheduler
+import com.dyk1323.booklogs.ui.bookedit.BookEditViewModel
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTheme
 import com.dyk1323.booklogs.ui.dashboard.DashboardViewModel
 import com.dyk1323.booklogs.ui.detail.BookDetailViewModel
@@ -39,6 +40,8 @@ class MainActivity : ComponentActivity() {
                     readingLogRepository = container.readingLogRepository,
                     readingRoundRepository = container.readingRoundRepository,
                     logProgressUseCase = container.logProgressUseCase,
+                    editLogUseCase = container.editLogUseCase,
+                    deleteLogUseCase = container.deleteLogUseCase,
                     appSettingsDataStore = container.appSettingsDataStore,
                 ) as T
         }
@@ -70,6 +73,18 @@ class MainActivity : ComponentActivity() {
                     changeBookStatusUseCase = container.changeBookStatusUseCase,
                     deleteBookUseCase = container.deleteBookUseCase,
                     deleteLogUseCase = container.deleteLogUseCase,
+                    editLogUseCase = container.editLogUseCase,
+                ) as T
+        }
+    }
+
+    private val bookEditViewModel: BookEditViewModel by viewModels {
+        val container = (application as BooklogsApplication).container
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =
+                BookEditViewModel(
+                    bookRepository = container.bookRepository,
                 ) as T
         }
     }
@@ -134,6 +149,7 @@ class MainActivity : ComponentActivity() {
                     dashboardViewModel = dashboardViewModel,
                     registrationViewModel = registrationViewModel,
                     bookDetailViewModel = bookDetailViewModel,
+                    bookEditViewModel = bookEditViewModel,
                     libraryViewModel = libraryViewModel,
                     quoteCaptureViewModel = quoteCaptureViewModel,
                     reviewEditorViewModel = reviewEditorViewModel,

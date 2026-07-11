@@ -16,7 +16,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -30,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dyk1323.booklogs.domain.model.BookFormat
+import com.dyk1323.booklogs.ui.common.components.FormatChoiceButton
 import com.dyk1323.booklogs.ui.common.components.LoadingOverlay
 
 /** docs/PLAN.md 화면 흐름 #2 확인/수정 폼 — 모든 진입 경로(스캔/검색/수동)가 마지막에 이 화면으로 모인다. */
@@ -51,6 +51,7 @@ fun BookConfirmFormScreen(
     onSave: () -> Unit,
     onSaved: () -> Unit,
     onBack: () -> Unit,
+    onGoToDuplicateBook: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(saveState) {
@@ -91,11 +92,18 @@ fun BookConfirmFormScreen(
             }
 
             if (formState.duplicateOfTitle != null) {
-                Text(
-                    text = "이미 등록된 책이에요 · 『${formState.duplicateOfTitle}』. 그래도 새로 등록할 수 있어요.",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Column {
+                    Text(
+                        text = "이미 등록된 책이에요 · 『${formState.duplicateOfTitle}』. 그래도 새로 등록할 수 있어요.",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    formState.duplicateOfBookId?.let { bookId ->
+                        TextButton(onClick = { onGoToDuplicateBook(bookId) }) {
+                            Text("그 책으로 이동")
+                        }
+                    }
+                }
             }
 
             OutlinedTextField(
@@ -208,19 +216,6 @@ fun BookConfirmFormScreen(
         if (lookupState == LookupUiState.Loading) {
             LoadingOverlay(message = "책 정보를 찾고 있어요")
         }
-        }
-    }
-}
-
-@Composable
-private fun FormatChoiceButton(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    if (selected) {
-        Button(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(percent = 50)) {
-            Text(label, style = MaterialTheme.typography.labelLarge)
-        }
-    } else {
-        OutlinedButton(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(percent = 50)) {
-            Text(label, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

@@ -319,6 +319,14 @@ com.dyk1323.booklogs/
 - **설정 > 화면 테마(라이트/다크/시스템 설정) 추가 완료**: `AppSettingsDataStore`에 `ThemeMode`(SYSTEM/LIGHT/DARK, 기본 SYSTEM) 저장 필드 추가. `BooklogsTheme`이 기존엔 `isSystemInDarkTheme()`만 봤는데, 이제 `themeMode` 파라미터를 받아 SYSTEM일 때만 OS 설정을 따르고 LIGHT/DARK는 강제 고정. `MainActivity`가 `setContent{}` 최상단에서 `appSettingsDataStore.settings`를 구독해 `BooklogsTheme(themeMode = ...)`으로 전달하므로, 설정 화면에서 바꾸면 즉시(리컴포지션만으로) 앱 전체 테마가 갱신됨 — 재시작 불필요.
 - **설정 > 데이터 백업/복원 구현 완료**: `BackupExporter`가 5개 DAO에 새로 추가한 `getAll()`로 전체 테이블을 읽어 `BackupEnvelope`(schemaVersion=1 + 5개 DTO 리스트)로 감싸 kotlinx.serialization JSON으로 직렬화, SAF `ActivityResultContracts.CreateDocument("application/json")`로 받은 `Uri`에 스트림으로 씀(기본 파일명 `booklogs_backup_YYYY-MM-DD.json`). `BackupImporter`는 `ActivityResultContracts.OpenDocument()`로 고른 파일을 역직렬화한 뒤 `database.withTransaction { }` 하나로 5개 테이블 전량 `deleteAll()` + JSON의 원본 PK 그대로 재삽입(Room은 id가 0이 아니면 자동생성하지 않고 그 값을 그대로 씀 — FK 관계가 깨지지 않음). 설정 화면에서 가져오기는 파일 선택 직후가 아니라 "가져오기를 하면 현재 데이터가 전부 대체됩니다" 블로킹 확인 다이얼로그를 거친 뒤에만 실행됨(계획 문서의 삭제 확인과 동일한 패턴).
 - **런처 아이콘 추가 완료**: 사용자가 제공한 어댑티브 아이콘 세트(밀도별 `ic_launcher.png`/`ic_launcher_adaptive_back.png`/`ic_launcher_adaptive_fore.png` 5벌 + `mipmap-anydpi-v26/ic_launcher.xml`)를 `res/mipmap-*`에 배치하고 매니페스트에 `android:icon="@mipmap/ic_launcher"` 지정. `android:roundIcon`은 별도 라운드 에셋이 없어 지정하지 않음(minSdk 26 이상이라 어댑티브 아이콘이 시스템에서 알아서 마스킹하므로 문제 없음).
+- **QA 개선 7건 완료** (계획 문서 의도와 실제 구현 사이의 격차를 코드 레벨에서 확인해 수정): `:domain`에 `resolveLoggedPage`/`validateBookForm` 공유 순수 함수를 신설해 대시보드·책 상세·책 정보 수정·등록 화면이 동일한 검증 로직을 쓰도록 통일.
+  1. 빠른 기록 시트: 입력창이 열릴 때 자동 포커스+전체 선택되도록 수정(기존엔 오히려 포커스를 해제했었음), 입력창 아래 "최근 기록: N p · N분 전" 캡션+연필/휴지통 아이콘 추가해 최근 로그를 인라인으로 수정/삭제 가능(연필 탭 시 저장 버튼이 "수정 저장"으로 전환).
+  2. 책 상세의 진행 이력 행이 탭하면 인라인으로 펼쳐져 수정/삭제 가능(이전엔 `EditLogUseCase`가 `AppContainer`에 있었지만 어디서도 쓰이지 않았음). 전자책은 델타를 페이지가 아닌 % 단위로 표시하도록 포맷 인지 분기 추가.
+  3. 로그 삭제에 실행취소 스낵바 추가(대시보드+책 상세 공통, `Channel` 기반 1회성 이벤트로 재구독 시 중복 표시 방지).
+  4. 책 정보(제목/저자/출판사/총 페이지/장르/국가/형식) 수정을 위한 별도 화면(`ui/bookedit`) 신설 — 이전엔 상태 변경 외엔 책 메타데이터를 수정할 방법이 전혀 없었음. 새 `EditBookUseCase`는 추가하지 않고 `BookRepository.update()`를 직접 호출.
+  5. 책 등록 시 전자책인데 총 페이지 수가 비어있으면 저장을 막고 안내 메시지 표시(비워두면 나중에 진행률 기록 자체가 불가능해지는 함정이었음).
+  6. 중복 등록 배너에 "그 책으로 이동" 버튼 추가 — 등록 플로우를 포기하는 것으로 간주해 대시보드까지 백스택을 정리한 뒤 해당 책 상세로 이동.
+  7. 빠른 기록 저장 성공 시 저장 버튼에 스프링 체크마크 애니메이션(약 300ms) 후 시트가 닫히도록 구현.
 - **미구현(다음 작업)**: 통계 화면(장르/작가/출판사/국가별). CI가 `:app` 유닛테스트(`BookMetadataRepositoryImplTest`, `ReminderSchedulerTest`, `QuoteCaptureViewModelTest`, `QuoteOcrProcessorTest` 등)를 아직 실행하지 않음(`:domain:test`만 돎) — 워크플로에 스텝 추가 필요.
 
 ## 검증 계획

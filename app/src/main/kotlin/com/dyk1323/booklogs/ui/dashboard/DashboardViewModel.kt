@@ -7,21 +7,29 @@ import com.dyk1323.booklogs.data.settings.AppSettingsDataStore
 import com.dyk1323.booklogs.domain.model.Book
 import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.domain.model.BookStatus
+import com.dyk1323.booklogs.domain.model.ReadingLog
 import com.dyk1323.booklogs.domain.repository.BookRepository
 import com.dyk1323.booklogs.domain.repository.ReadingLogRepository
 import com.dyk1323.booklogs.domain.repository.ReadingRoundRepository
 import com.dyk1323.booklogs.domain.usecase.ConvertPagePercentUseCase
 import com.dyk1323.booklogs.domain.usecase.DayPageTotal
+import com.dyk1323.booklogs.domain.usecase.DeleteLogUseCase
+import com.dyk1323.booklogs.domain.usecase.EditLogUseCase
 import com.dyk1323.booklogs.domain.usecase.LogProgressUseCase
+import com.dyk1323.booklogs.domain.usecase.ResolveLoggedPageResult
 import com.dyk1323.booklogs.domain.usecase.aggregateDailyPages
 import com.dyk1323.booklogs.domain.usecase.computeBookProgress
+import com.dyk1323.booklogs.domain.usecase.resolveLoggedPage
 import com.dyk1323.booklogs.ui.quote.QuoteOcrProcessor
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -37,15 +45,19 @@ data class BookShelfItemUi(
     val book: Book,
     val currentPage: Int?,
     val progress: Float?,
+    val latestLog: ReadingLog? = null,
 )
 
 data class QuickLogSheetUiState(
     val book: Book,
     val currentPage: Int?,
     val progress: Float?,
+    val latestLog: ReadingLog?,
     val inputText: String,
     val isSaving: Boolean,
     val errorMessage: String?,
+    val editingLogId: Long?,
+    val prefillNonce: Int,
 ) {
     val inputLabel: String =
         if (book.format == BookFormat.EBOOK) "현재 진행률" else "현재 페이지"
@@ -55,13 +67,32 @@ data class QuickLogSheetUiState(
     // EBOOK progress is a %, not a page number visible on a printed page — camera OCR doesn't apply.
     val showPageCameraButton: Boolean =
         book.format != BookFormat.EBOOK
+
+    val isEditingLog: Boolean = editingLogId != null
+
+    val saveButtonLabel: String = when {
+        isSaving && isEditingLog -> "수정하는 중"
+        isSaving -> "저장 중"
+        isEditingLog -> "수정 저장"
+        else -> "저장"
+    }
 }
+
+private data class QuickLogInputState(
+    val inputText: String,
+    val isSaving: Boolean,
+    val errorMessage: String?,
+    val editingLogId: Long?,
+    val prefillNonce: Int,
+)
 
 class DashboardViewModel(
     bookRepository: BookRepository,
-    readingLogRepository: ReadingLogRepository,
+    private val readingLogRepository: ReadingLogRepository,
     private val readingRoundRepository: ReadingRoundRepository,
     private val logProgressUseCase: LogProgressUseCase,
+    private val editLogUseCase: EditLogUseCase,
+    private val deleteLogUseCase: DeleteLogUseCase,
     appSettingsDataStore: AppSettingsDataStore,
     private val zoneId: ZoneId = ZoneId.systemDefault(),
 ) : ViewModel() {
@@ -72,6 +103,14 @@ class DashboardViewModel(
     private val quickLogInputText = MutableStateFlow("")
     private val quickLogSaving = MutableStateFlow(false)
     private val quickLogErrorMessage = MutableStateFlow<String?>(null)
+    private val editingLogId = MutableStateFlow<Long?>(null)
+    private val quickLogPrefillNonce = MutableStateFlow(0)
+
+    private val _undoLogEvents = Channel<ReadingLog>(Channel.BUFFERED)
+    val undoLogEvents: Flow<ReadingLog> = _undoLogEvents.receiveAsFlow()
+
+    private val _quickLogSaveSucceeded = Channel<Unit>(Channel.BUFFERED)
+    val quickLogSaveSucceeded: Flow<Unit> = _quickLogSaveSucceeded.receiveAsFlow()
 
     val uiState: StateFlow<DashboardUiState> = combine(
         bookRepository.observeAll(),
@@ -85,19 +124,20 @@ class DashboardViewModel(
             endEpochDay = today,
             dailyGoalPages = settings.dailyGoalPages,
         )
-        val latestPageByBook = logs
+        val latestLogByBook = logs
             .groupBy { it.bookId }
-            .mapValues { (_, bookLogs) -> bookLogs.maxByOrNull { it.loggedAt }?.currentPage }
+            .mapValues { (_, bookLogs) -> bookLogs.maxByOrNull { it.loggedAt } }
 
         DashboardUiState(
             readingBooks = books
                 .filter { it.status == BookStatus.READING }
                 .map { book ->
-                    val currentPage = latestPageByBook[book.id]
+                    val latestLog = latestLogByBook[book.id]
                     BookShelfItemUi(
                         book = book,
-                        currentPage = currentPage,
-                        progress = computeBookProgress(currentPage, book.totalPages),
+                        currentPage = latestLog?.currentPage,
+                        progress = computeBookProgress(latestLog?.currentPage, book.totalPages),
+                        latestLog = latestLog,
                     )
                 },
             weekTotals = weekTotals,
@@ -111,22 +151,33 @@ class DashboardViewModel(
         initialValue = DashboardUiState(),
     )
 
-    val quickLogSheetState: StateFlow<QuickLogSheetUiState?> = combine(
-        uiState,
-        selectedQuickLogBookId,
+    private val quickLogInputState: Flow<QuickLogInputState> = combine(
         quickLogInputText,
         quickLogSaving,
         quickLogErrorMessage,
-    ) { state, selectedBookId, inputText, isSaving, errorMessage ->
+        editingLogId,
+        quickLogPrefillNonce,
+    ) { inputText, isSaving, errorMessage, editingId, prefillNonce ->
+        QuickLogInputState(inputText, isSaving, errorMessage, editingId, prefillNonce)
+    }
+
+    val quickLogSheetState: StateFlow<QuickLogSheetUiState?> = combine(
+        uiState,
+        selectedQuickLogBookId,
+        quickLogInputState,
+    ) { state, selectedBookId, input ->
         val item = state.readingBooks.firstOrNull { it.book.id == selectedBookId }
         item?.let {
             QuickLogSheetUiState(
                 book = it.book,
                 currentPage = it.currentPage,
                 progress = it.progress,
-                inputText = inputText,
-                isSaving = isSaving,
-                errorMessage = errorMessage,
+                latestLog = it.latestLog,
+                inputText = input.inputText,
+                isSaving = input.isSaving,
+                errorMessage = input.errorMessage,
+                editingLogId = input.editingLogId,
+                prefillNonce = input.prefillNonce,
             )
         }
     }.stateIn(
@@ -139,13 +190,9 @@ class DashboardViewModel(
         val item = uiState.value.readingBooks.firstOrNull { it.book.id == bookId } ?: return
         selectedQuickLogBookId.value = bookId
         quickLogErrorMessage.value = null
-        val totalPages = item.book.totalPages
-        quickLogInputText.value = when {
-            item.book.format == BookFormat.EBOOK && totalPages != null ->
-                ConvertPagePercentUseCase.pageToPercent(item.currentPage ?: 0, totalPages).toString()
-            item.currentPage != null -> item.currentPage.toString()
-            else -> ""
-        }
+        editingLogId.value = null
+        quickLogInputText.value = inputTextFor(item.book, item.currentPage)
+        quickLogPrefillNonce.value++
     }
 
     fun closeQuickLog() {
@@ -153,6 +200,7 @@ class DashboardViewModel(
         quickLogInputText.value = ""
         quickLogSaving.value = false
         quickLogErrorMessage.value = null
+        editingLogId.value = null
     }
 
     fun updateQuickLogInput(value: String) {
@@ -168,7 +216,45 @@ class DashboardViewModel(
             if (page != null) {
                 quickLogInputText.value = page.toString().take(4)
                 quickLogErrorMessage.value = null
+                quickLogPrefillNonce.value++
             }
+        }
+    }
+
+    /** Loads the most recent log into the input so a mistaken entry can be corrected in place. */
+    fun startEditLatestLog() {
+        val sheet = quickLogSheetState.value ?: return
+        val log = sheet.latestLog ?: return
+        editingLogId.value = log.id
+        quickLogInputText.value = inputTextFor(sheet.book, log.currentPage)
+        quickLogErrorMessage.value = null
+        quickLogPrefillNonce.value++
+    }
+
+    fun cancelEditLatestLog() {
+        val sheet = quickLogSheetState.value ?: return
+        editingLogId.value = null
+        quickLogInputText.value = inputTextFor(sheet.book, sheet.currentPage)
+        quickLogErrorMessage.value = null
+        quickLogPrefillNonce.value++
+    }
+
+    fun deleteLatestLog() {
+        val sheet = quickLogSheetState.value ?: return
+        val log = sheet.latestLog ?: return
+        viewModelScope.launch {
+            deleteLogUseCase(log.id)
+            if (editingLogId.value == log.id) {
+                editingLogId.value = null
+                quickLogInputText.value = ""
+            }
+            _undoLogEvents.send(log)
+        }
+    }
+
+    fun undoDeleteLog(log: ReadingLog) {
+        viewModelScope.launch {
+            readingLogRepository.insert(log.copy(id = 0))
         }
     }
 
@@ -180,9 +266,26 @@ class DashboardViewModel(
             return
         }
 
-        val currentPage = resolveCurrentPage(sheet.book, inputValue) ?: return
+        val resolved = resolveLoggedPage(sheet.book.format, sheet.book.totalPages, inputValue)
+        val currentPage = when (resolved) {
+            is ResolveLoggedPageResult.Error -> {
+                quickLogErrorMessage.value = resolved.message
+                return
+            }
+            is ResolveLoggedPageResult.Success -> resolved.currentPage
+        }
+
+        val editingId = sheet.editingLogId
         viewModelScope.launch {
             quickLogSaving.value = true
+            if (editingId != null) {
+                editLogUseCase(editingId, currentPage)
+                quickLogSaving.value = false
+                editingLogId.value = null
+                _quickLogSaveSucceeded.send(Unit)
+                return@launch
+            }
+
             val openRound = readingRoundRepository.getOpenRound(sheet.book.id)
             if (openRound == null) {
                 quickLogSaving.value = false
@@ -198,29 +301,18 @@ class DashboardViewModel(
                 loggedAt = now,
                 logDateEpochDay = LocalDate.now(zoneId).toEpochDay(),
             )
-            closeQuickLog()
+            quickLogSaving.value = false
+            _quickLogSaveSucceeded.send(Unit)
         }
     }
 
-    private fun resolveCurrentPage(book: Book, inputValue: Int): Int? {
+    private fun inputTextFor(book: Book, currentPage: Int?): String {
         val totalPages = book.totalPages
-        return if (book.format == BookFormat.EBOOK) {
-            if (totalPages == null || totalPages <= 0) {
-                quickLogErrorMessage.value = "전자책은 전체 페이지 수가 필요해요."
-                null
-            } else if (inputValue !in 0..100) {
-                quickLogErrorMessage.value = "진행률은 0부터 100까지 입력해주세요."
-                null
-            } else {
-                ConvertPagePercentUseCase.percentToPage(inputValue, totalPages)
-            }
-        } else {
-            if (totalPages != null && inputValue > totalPages) {
-                quickLogErrorMessage.value = "전체 페이지보다 큰 값이에요."
-                null
-            } else {
-                inputValue
-            }
+        return when {
+            book.format == BookFormat.EBOOK && totalPages != null ->
+                ConvertPagePercentUseCase.pageToPercent(currentPage ?: 0, totalPages).toString()
+            currentPage != null -> currentPage.toString()
+            else -> ""
         }
     }
 

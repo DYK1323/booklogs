@@ -4,6 +4,11 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +33,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
@@ -40,6 +47,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -52,6 +63,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -59,11 +72,12 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -71,8 +85,10 @@ import com.dyk1323.booklogs.domain.usecase.DayPageTotal
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
 import com.dyk1323.booklogs.ui.common.components.CameraCapturePreview
 import com.dyk1323.booklogs.ui.common.components.EmptyState
+import com.dyk1323.booklogs.ui.common.formatRelativeTime
 import com.dyk1323.booklogs.ui.common.theme.StatusGoodLight
 import java.time.LocalDate
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,8 +103,21 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val quickLogSheetState by viewModel.quickLogSheetState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.undoLogEvents.collect { log ->
+            val result = snackbarHostState.showSnackbar(
+                message = "기록 삭제됨",
+                actionLabel = "실행취소",
+                duration = SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) viewModel.undoDeleteLog(log)
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = onRegisterBookClick) {
                 Icon(Icons.Outlined.Add, contentDescription = "책 등록")
@@ -156,8 +185,17 @@ fun DashboardScreen(
     }
 
     var isCapturingPage by remember { mutableStateOf(false) }
+    var showSuccessCheck by remember { mutableStateOf(false) }
     LaunchedEffect(quickLogSheetState == null) {
         if (quickLogSheetState == null) isCapturingPage = false
+    }
+    LaunchedEffect(Unit) {
+        viewModel.quickLogSaveSucceeded.collect {
+            showSuccessCheck = true
+            delay(300)
+            showSuccessCheck = false
+            viewModel.closeQuickLog()
+        }
     }
 
     quickLogSheetState?.let { sheetState ->
@@ -178,6 +216,7 @@ fun DashboardScreen(
             } else {
                 QuickLogSheet(
                     state = sheetState,
+                    showSuccessCheck = showSuccessCheck,
                     onInputChanged = viewModel::updateQuickLogInput,
                     onSave = viewModel::saveQuickLog,
                     onDismiss = viewModel::closeQuickLog,
@@ -192,6 +231,9 @@ fun DashboardScreen(
                         onCaptureQuoteClick(bookId)
                     },
                     onCapturePage = { isCapturingPage = true },
+                    onEditLatestLog = viewModel::startEditLatestLog,
+                    onCancelEditLatestLog = viewModel::cancelEditLatestLog,
+                    onDeleteLatestLog = viewModel::deleteLatestLog,
                 )
             }
         }
@@ -406,16 +448,22 @@ private fun ProgressDonut(progress: Float?, modifier: Modifier = Modifier) {
 @Composable
 private fun QuickLogSheet(
     state: QuickLogSheetUiState,
+    showSuccessCheck: Boolean,
     onInputChanged: (String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
     onOpenDetail: () -> Unit,
     onCaptureQuote: () -> Unit,
     onCapturePage: () -> Unit,
+    onEditLatestLog: () -> Unit,
+    onCancelEditLatestLog: () -> Unit,
+    onDeleteLatestLog: () -> Unit,
 ) {
-    val focusManager = LocalFocusManager.current
-    LaunchedEffect(state.book.id) {
-        focusManager.clearFocus()
+    val focusRequester = remember { FocusRequester() }
+    var fieldValue by remember { mutableStateOf(TextFieldValue(state.inputText)) }
+    LaunchedEffect(state.book.id, state.prefillNonce) {
+        fieldValue = TextFieldValue(text = state.inputText, selection = TextRange(0, state.inputText.length))
+        focusRequester.requestFocus()
     }
 
     Column(
@@ -440,9 +488,14 @@ private fun QuickLogSheet(
         Spacer(modifier = Modifier.height(18.dp))
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = state.inputText,
-                onValueChange = onInputChanged,
-                modifier = Modifier.weight(1f),
+                value = fieldValue,
+                onValueChange = {
+                    fieldValue = it
+                    onInputChanged(it.text)
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(focusRequester),
                 label = { Text(state.inputLabel) },
                 suffix = { Text(state.inputSuffix) },
                 singleLine = true,
@@ -462,6 +515,29 @@ private fun QuickLogSheet(
                 }
             }
         }
+        state.latestLog?.let { latestLog ->
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "최근 기록: ${latestLog.currentPage}p · ${formatRelativeTime(latestLog.loggedAt)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                )
+                Row {
+                    IconButton(onClick = onEditLatestLog, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Outlined.Edit, contentDescription = "최근 기록 수정", modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(onClick = onDeleteLatestLog, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Outlined.Delete, contentDescription = "최근 기록 삭제", modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(18.dp))
         TextButton(onClick = onCaptureQuote, modifier = Modifier.fillMaxWidth()) {
             Text(text = "인용구 촬영")
@@ -471,7 +547,13 @@ private fun QuickLogSheet(
             TextButton(onClick = onOpenDetail) {
                 Text(text = "상세 보기")
             }
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (state.isEditingLog) {
+                    TextButton(onClick = onCancelEditLatestLog) {
+                        Text(text = "수정 취소")
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
                 TextButton(onClick = onDismiss) {
                     Text(text = "취소")
                 }
@@ -482,9 +564,19 @@ private fun QuickLogSheet(
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 ) {
-                    Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = if (state.isSaving) "저장 중" else "저장")
+                    AnimatedVisibility(
+                        visible = showSuccessCheck,
+                        enter = scaleIn(
+                            spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+                        ) + fadeIn(),
+                    ) {
+                        Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
+                    if (!showSuccessCheck) {
+                        Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = state.saveButtonLabel)
+                    }
                 }
             }
         }
