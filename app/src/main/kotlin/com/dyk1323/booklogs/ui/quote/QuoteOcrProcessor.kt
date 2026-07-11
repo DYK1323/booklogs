@@ -10,6 +10,8 @@ import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 class QuoteOcrProcessor {
@@ -27,24 +29,36 @@ class QuoteOcrProcessor {
             cropRect.height(),
         )
         val image = InputImage.fromBitmap(cropped, 0)
-        val koreanText = koreanRecognizer.processText(image).toQuoteText()
-        if (koreanText.isNotBlank()) return koreanText
-
-        return latinRecognizer.processText(image).toQuoteText()
+        val (koreanText, latinText) = coroutineScope {
+            val korean = async { koreanRecognizer.processText(image).toQuoteText() }
+            val latin = async { latinRecognizer.processText(image).toQuoteText() }
+            korean.await() to latin.await()
+        }
+        return pickBetterQuoteText(koreanText, latinText)
     }
 
     suspend fun detectPageNumber(bitmap: Bitmap): Int? {
         val image = InputImage.fromBitmap(bitmap, 0)
-        val koreanNumber = koreanRecognizer.processText(image).findCornerPageNumber(bitmap.width, bitmap.height)
-        if (koreanNumber != null) return koreanNumber
-
-        return latinRecognizer.processText(image).findCornerPageNumber(bitmap.width, bitmap.height)
+        val (koreanResult, latinResult) = coroutineScope {
+            val korean = async { koreanRecognizer.processText(image) }
+            val latin = async { latinRecognizer.processText(image) }
+            korean.await() to latin.await()
+        }
+        return listOf(koreanResult, latinResult).findCornerPageNumber(bitmap.width, bitmap.height)
     }
 
     fun close() {
         koreanRecognizer.close()
         latinRecognizer.close()
     }
+}
+
+/** Both recognizers run in parallel; keep whichever produced the more complete transcription (ties favor Korean). */
+internal fun pickBetterQuoteText(koreanText: String, latinText: String): String = when {
+    koreanText.isBlank() -> latinText
+    latinText.isBlank() -> koreanText
+    koreanText.length >= latinText.length -> koreanText
+    else -> latinText
 }
 
 private suspend fun TextRecognizer.processText(image: InputImage): Text =
@@ -67,8 +81,8 @@ private fun Text.toQuoteText(): String =
         .joinToString("\n")
         .ifBlank { text.trim() }
 
-private fun Text.findCornerPageNumber(imageWidth: Int, imageHeight: Int): Int? =
-    textBlocks
+private fun List<Text>.findCornerPageNumber(imageWidth: Int, imageHeight: Int): Int? =
+    flatMap { it.textBlocks }
         .flatMap { block -> block.lines }
         .mapNotNull { line ->
             val value = line.text.trim()

@@ -17,6 +17,9 @@ data class CapturedQuotePage(
     val pageText: String,
 )
 
+/** Pure join of captured pages into the final quote text, in capture order. No Android deps — unit testable. */
+fun joinQuotePages(pages: List<CapturedQuotePage>): String = pages.joinToString("\n\n") { it.text }
+
 data class QuoteCaptureUiState(
     val bookId: Long? = null,
     val capturedPages: List<CapturedQuotePage> = emptyList(),
@@ -130,7 +133,7 @@ class QuoteCaptureViewModel(
                             }
                             state.copy(
                                 capturedPages = pages,
-                                quoteText = pages.joinToString("\n\n") { it.text },
+                                quoteText = joinQuotePages(pages),
                                 editingPageIndex = pages.lastIndex,
                                 isRecognizing = false,
                                 message = null,
@@ -156,7 +159,7 @@ class QuoteCaptureViewModel(
             }
             state.copy(
                 capturedPages = pages,
-                quoteText = pages.joinToString("\n\n") { it.text },
+                quoteText = joinQuotePages(pages),
                 currentPageText = "",
                 editingPageIndex = null,
                 message = null,

@@ -132,6 +132,91 @@
       "keyFiles": []
     }
   },
-  "hotPaths": [],
+  "hotPaths": [
+    {
+      "path": "docs\\PLAN.md",
+      "accessCount": 5,
+      "lastAccessed": 1783757700342,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\quote\\QuoteOcrProcessor.kt",
+      "accessCount": 4,
+      "lastAccessed": 1783757560844,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\quote\\QuoteCaptureViewModel.kt",
+      "accessCount": 4,
+      "lastAccessed": 1783757589603,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin",
+      "accessCount": 3,
+      "lastAccessed": 1783757533988,
+      "type": "directory"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\quote\\QuoteCaptureScreen.kt",
+      "accessCount": 3,
+      "lastAccessed": 1783757575051,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\detail\\BookDetailScreen.kt",
+      "accessCount": 2,
+      "lastAccessed": 1783757280359,
+      "type": "directory"
+    },
+    {
+      "path": "domain\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\domain\\model\\Quote.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783757261967,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\navigation\\BooklogsNavHost.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783757287469,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\dashboard\\DashboardScreen.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783757297975,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\common\\components\\LoadingOverlay.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783757495621,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\test\\kotlin\\com\\dyk1323\\booklogs\\data\\repository\\BookMetadataRepositoryImplTest.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783757496008,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\test\\kotlin\\com\\dyk1323\\booklogs\\ui\\quote\\QuoteCaptureViewModelTest.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783757598811,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\test\\kotlin\\com\\dyk1323\\booklogs\\ui\\quote\\QuoteOcrProcessorTest.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783757607102,
+      "type": "file"
+    },
+    {
+      "path": "local.properties",
+      "accessCount": 1,
+      "lastAccessed": 1783757725994,
+      "type": "file"
+    }
+  ],
   "userDirectives": []
 }

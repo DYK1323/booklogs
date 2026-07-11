@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.dyk1323.booklogs.ui.common.components.LoadingOverlay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -169,6 +170,9 @@ fun QuoteCaptureScreen(
                     onSave = viewModel::save,
                     onDone = onBack,
                 )
+            }
+            if (uiState.isRecognizing) {
+                LoadingOverlay(message = "텍스트 인식 중…")
             }
         }
     }
