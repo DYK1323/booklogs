@@ -27,6 +27,7 @@
 | 영역 | 선택 | 이유 |
 |---|---|---|
 | 언어/UI | Kotlin + Jetpack Compose + Material 3 | 단일 Activity, 최신 표준 |
+| 폰트 | Pretendard(OFL, `res/font/`에 정적 TTF 4종: Regular/Medium/SemiBold/Bold) | SF Pro는 Apple 독점 폰트라 Android 앱에 라이선스상 사용 불가. Pretendard는 한글 최적화 + 라틴 커버리지 양호해 앱 전체(한/영/숫자) 단일 폰트로 사용, 별도 라틴 대체 폰트 안 둠 |
 | 아키텍처 | MVVM: Compose UI → ViewModel → Repository → Room DAO | |
 | DI | 수동 DI (`AppContainer`, Hilt 미사용) | 단일 모듈, 리포지토리 5개 내외라 Hilt/KSP 애노테이션 프로세싱 오버헤드가 불필요. 에뮬레이터 없는 샌드박스에서 생성 코드 런타임 검증이 안 되므로 리스크 최소화 |
 | 로컬 DB | Room (KSP) | 유일한 데이터 저장소, 클라우드 없음 |
@@ -43,45 +44,96 @@
 | 백업/복원 | Storage Access Framework(`ACTION_CREATE_DOCUMENT`/`ACTION_OPEN_DOCUMENT`) + kotlinx.serialization JSON | 클라우드 없이도 사용자가 원하는 위치(구글드라이브 문서공급자 포함, SAF가 지원하는 곳 어디든)에 수동 백업 가능. 별도 저장소 권한 불필요(SAF가 스코프드 접근 제공) |
 | SDK | minSdk 26, target/compile SDK 35 | ML Kit 한글 인식·CameraX 안정 지원 범위 |
 
-## 비주얼 디자인 원칙 (AI 슬롭 방지)
+## 비주얼 디자인 원칙 (Apple HIG 스타일 + AI 슬롭 방지)
 
-전형적인 "AI가 급조한 UI" 티가 나는 지점들을 미리 규칙으로 막아둔다. 원칙은 크게 두 갈래 — **차트/색상**은 데이터 시각화 스킬(`dataviz`)의 검증된 방법론을 그대로 적용하고, **UI 전반**은 별도로 정리한다.
+사용자가 제공한 Apple 디자인 시스템(HIG 마케팅 사이트 기준, 검증된 토큰 문서)을 채택하되, **네이티브 Android 앱이라 웹 전용 요소는 Compose 등가물로 번역**한다. 색/타이포/컴포넌트 규칙은 Apple 문서를 따르고, "AI 슬롭 방지"에 관한 구조적 원칙(카드 중첩 금지, 이모지 금지 등)은 기존대로 유지 — 오히려 Apple 문서의 보이스/상태 가이드가 그 원칙들을 더 구체화해준다.
+
+**Android 번역 시 제약 3가지**:
+1. **SF Pro는 Apple 독점 폰트**라 라이선스상 Apple 플랫폼 외 앱에 번들 불가 — 한글은 물론 라틴 문자·숫자까지 앱 전체를 **Pretendard**(OFL 오픈소스, 한글 최적화 + 라틴 커버리지 양호)로 통일. `res/font/`에 정적 TTF(Regular/Medium/SemiBold/Bold, 실제 쓰는 4개 굵기만)를 번들링.
+2. 문서의 타이포 스케일은 apple.com **마케팅 웹사이트** 기준(56px 히어로 등)이라, 우리 앱(모바일 유틸리티 앱)엔 그대로 안 쓰고 Compose `Typography` 슬롯에 축소 매핑.
+3. `backdrop-filter: blur(20px)` 프로스트 글래스는 minSdk 26에서 일관 지원 안 됨(진짜 배경 블러는 API 31+ RenderEffect 필요) — 상단바는 반투명 단색으로 근사, 블러는 API 31+ 조건부 향상으로 남겨둠.
 
 ### 색상 시스템
 
-Material 3 기본 다이나믹 컬러(기기별 랜덤 보라/파랑)를 그대로 쓰지 않고, `dataviz` 스킬의 **검증된 기본 팔레트**(CVD 안전성·명도 밴드·대비 전부 스크립트로 통과 확인된 값)를 그대로 채택한다 — 이 앱만의 새 브랜드 컬러를 만들 이유가 없으므로 검증 비용을 아낀다.
-
 | 역할 | Light | Dark | 용도 |
 |---|---|---|---|
-| Primary accent (categorical slot 1, blue) | `#2a78d6` | `#3987e5` | 주요 버튼, 진행률 도넛 링, "오늘" 막대 강조, FAB |
-| Status "good" | `#0ca30c` | `#0ca30c` | **오직** 목표 달성/완독처럼 "성공" 의미가 있을 때만 — 다른 용도로 절대 재사용 안 함(예: 그냥 예쁜 초록 버튼으로 쓰지 않음) |
-| Chart/Page surface | `#fcfcfb` / `#f9f9f7` | `#1a1a19` / `#0d0d0d` | 카드·배경 |
-| Primary ink | `#0b0b0b` | `#ffffff` | 본문 텍스트 |
-| Secondary ink | `#52514e` | `#c3c2b7` | 보조 텍스트 |
-| Muted (축/라벨) | `#898781` | `#898781` | 차트 축, 캡션 |
-| Gridline/hairline | `#e1e0d9` | `#2c2c2a` | 구분선, 차트 그리드 |
+| Primary (Apple Blue) | `#0071e3` | `#0071e3` | 주 버튼, 링크, 진행률 도넛 링, "오늘" 강조, FAB, 포커스 링 — **유일한 유채색 액센트**(Apple 원칙: 한 화면엔 하나의 액센트 컬러만) |
+| On Primary | `#ffffff` | `#ffffff` | |
+| Background/Canvas | `#f5f5f7` | `#000000` | 화면 배경 — Apple의 binary 라이트그레이/블랙 리듬 |
+| Surface(카드/시트) | `#ffffff` | `#000000`(콘텐츠 카드는 대비용 `#1d1d1f`) | |
+| On Background/Surface | `#1d1d1f` | `#ffffff` | 본문 텍스트 |
+| Secondary text | `rgba(0,0,0,0.8)` | `rgba(255,255,255,0.8)` | 보조 텍스트 |
+| Muted/tertiary | `rgba(0,0,0,0.48)` | `rgba(255,255,255,0.48)` | 캡션, 비활성 |
+| Link | `#0066cc` | `#2997ff` | 인라인 텍스트 링크 |
+| Hairline/구분선 | `rgba(0,0,0,0.10)` | `rgba(255,255,255,0.10)` | 구분선(카드 테두리 대신 사용) |
+| **Status Good**(문서에 없어 iOS 시스템 컬러로 보강) | `#34C759` | `#30D158` | **오직** 목표 달성/완독처럼 "성공" 의미가 있을 때만 |
+| **Status Critical**(문서에 없어 iOS 시스템 컬러로 보강) | `#FF3B30` | `#FF453A` | 책 삭제/데이터 가져오기 같은 파괴적 확인 다이얼로그의 강조 텍스트 |
 
-이 값들을 `ui/common/theme/Color.kt`에 Compose `ColorScheme`로 직접 매핑하고, `MaterialTheme.colorScheme`의 기본 시드 컬러 생성(dynamicColor)은 끈다.
+이 값들을 `ui/common/theme/Color.kt`에 Compose `ColorScheme`로 직접 매핑하고, `MaterialTheme.colorScheme`의 다이나믹 컬러(기기별 랜덤 색)는 끈다.
 
-### 차트 색상 규칙 (`dataviz` 스킬 적용)
+### 타이포그래피 (Pretendard)
 
-- **`DailyPagesBarChart`(일별 합산 막대)**: 단일 시리즈이므로 막대는 전부 **primary accent 한 가지 색**만 쓰고, "오늘" 막대만 진하게/나머지는 흐리게(Emphasis) — 요일마다 다른 색을 칠하지 않는다. 목표 달성한 날의 막대만 **status "good"**로 전환(성공이라는 의미가 실제로 있는 경우에만 상태색 사용, categorical accent와 절대 혼용 안 함). 목표선은 임계값(threshold) 표시라 점선이 맞음 — dataviz 안티패턴의 "장식성 점선 그리드" 금지 규칙은 일반 그리드에 해당하고, 목표처럼 의미 있는 단일 기준선은 관례적으로 점선이 맞으므로 예외.
-- **통계 화면 `AttributeBarChart`(장르/작가/출판사/국가별)**: **절대 카테고리마다 다른 색을 칠하지 않는다** — 흔한 AI 슬롭 실수가 "장르별로 무지개색 막대"인데, 이건 각 막대 길이(=권수)가 이미 전달하는 정보를 색으로 이중 인코딩하는 것이라 오히려 정보가 없다(dataviz 안티패턴 "명목형 카테고리에 값-램프 색칠"). 모든 막대를 **primary accent 한 가지 색**으로 통일하고 길이(권수)만으로 비교하게 한다.
-- **진행률 도넛 링**: 카테고리 비교용 파이차트가 아니라 "이 책 하나의 진행률"이라는 단일 값 게이지이므로 도넛/파이 관련 안티패턴(근접값 비교용 파이 금지)은 해당 없음 — 그대로 유지.
-- **공통 마크 규칙**: 얇은 막대 + 막대 사이 여백(테두리로 구분하지 않음), 축/그리드는 hairline로 은은하게, 막대 위에 매번 숫자를 박지 않고 필요한 값만 선택적으로 직접 라벨링(예: 오늘 막대만 페이지 수 표시).
-- **스켈레톤 재검토**: "로딩/대기 상태 UX" 섹션의 원칙을 dataviz 안티패턴 "리페치할 때마다 스켈레톤 깜빡임"과 맞춰 재확인 — 스켈레톤은 **최초 컴포지션 1회만**, 이후 데이터가 갱신될 땐(예: 진행률 기록 저장 직후) 스켈레톤으로 되돌아가지 않고 이전 값을 유지한 채 새 값으로 자연스럽게 전환(레이아웃 점프 없음).
+Apple 문서의 마케팅 스케일(56px 히어로 등)을 모바일 앱 UI에 맞게 Compose `Typography` 슬롯으로 축소 매핑 — SF Pro Display/Text 구분 대신 Pretendard 하나로 전부 처리(굵기로 위계 표현).
 
-### UI 전반 원칙
+| Compose 슬롯 | 원본(Apple 역할) | size(sp) | weight | lineHeight | letterSpacing | 실제 용도 |
+|---|---|---|---|---|---|---|
+| displayLarge | Display Hero | 48 | SemiBold(600) | 1.07 | -0.28sp | 대시보드 "오늘 읽은 페이지" 히어로 숫자 |
+| headlineMedium | Nav Heading | 28 | SemiBold | 1.2 | -0.3sp | 화면 타이틀(설정/라이브러리/통계) |
+| titleLarge | Card Title | 21 | Bold(700) | 1.19 | 0.2sp | 책 상세 헤더(제목) |
+| titleMedium | Tile Heading | 17 | Medium(500, Apple 원본 400보다 한 단계 굵게 — Pretendard Regular가 SF Pro Text Regular보다 살짝 얇게 보여 보정) | 1.14 | 0.2sp | 책장 그리드 표지 아래 제목 |
+| bodyLarge | Body | 16 | Regular | 1.47 | -0.2sp | 본문 |
+| bodyMedium | Body Emphasis | 16 | SemiBold(600) | 1.24 | -0.2sp | 강조 라벨, 최근 기록 값 |
+| labelLarge | Button | 16 | Medium | — | 0 | 버튼 텍스트 |
+| labelMedium | Caption | 13 | Regular | 1.29 | -0.1sp | 보조 설명, 타임스탬프("3분 전") |
+| labelSmall | Micro | 11 | Regular | 1.33 | 0 | 캡션, 배지("?" 등) |
 
-- **카드 중첩 금지**: 바텀시트/카드 안에 또 카드, 그 안에 또 카드를 겹겹이 쌓지 않는다(전형적인 AI 생성 Compose UI의 티) — `BookQuickActionSheet`처럼 이미 elevated된 컨테이너 안의 하위 요소는 별도 `Card`로 감싸지 않고 여백과 구분선(hairline)만으로 구획.
-- **타이포그래피 절제**: Material 3 `Typography` 토큰 중 실제로 쓰는 것만 최소한으로 골라 고정(예: `titleLarge`/`titleMedium`/`bodyLarge`/`bodyMedium`/`labelSmall`) — 화면마다 임의로 새로운 크기/굵기를 만들지 않는다. 커스텀 디스플레이 폰트 없이 시스템 기본(Roboto) 그대로.
+원본 문서의 "Nano"(10px, 법률 고지용)는 우리 앱에 쓸 곳이 없어 제외. 화면마다 이 슬롯 밖의 임의 크기/굵기를 새로 만들지 않는다(기존 "타이포그래피 절제" 원칙 유지, 슬롯만 Apple 값으로 교체).
+
+### 컴포넌트 스타일 (Apple 레시피 적용)
+
+- **버튼**: 마케팅성 주 액션(책 등록 FAB, 온보딩)은 **필(pill) 모양**(`RoundedCornerShape(percent = 50)`, Apple의 980px radius와 동일 효과) + Primary 배경 + 흰 텍스트. 시트/폼 내부의 조밀한 액션(빠른 기록 시트 "저장", 확인 다이얼로그 버튼)은 Apple의 "Commerce Compact" 레시피를 따라 8dp 라운드 + 작은 패딩 — 문서에서도 마케팅 페이지와 결제 플로우가 서로 다른 버튼 지오메트리를 쓰는 것과 동일한 논리(화면 성격에 따라 둘 중 하나를 명확히 선택, 섞지 않음).
+- **카드**: 배경색 대비만으로 뜨는 스타일 — **테두리 없음, 그림자 없음(라이트 모드 제외)**, 반경 28dp. 라이트 모드에서만 Apple 카드 그림자(`rgba(0,0,0,0.22) 3px 5px 30px`)를 Compose `Modifier.shadow(elevation)`로 근사 적용(정확한 CSS box-shadow 복제는 아니고 근사치임을 인지). 다크 모드는 그림자 대신 카드가 배경(`#000000`)보다 살짝 밝은 표면색(`#1d1d1f`)으로 대비를 냄 — Apple 문서의 "다크 카드는 그림자가 아니라 표면색 대비로 뜬다" 원칙 그대로.
+- **인풋**: 배경 채움(라이트 `#e8e8ed` 상당의 `surfaceVariant`) + 테두리 없음, 포커스 시에만 2dp Primary 테두리.
+- **내비게이션(상단바)**: 반투명 배경(라이트 `rgba(250,250,252,0.8)`, 다크는 `rgba(0,0,0,0.8)`) — 진짜 블러는 위 제약 3번 참고, minSdk 26 기본은 단색 반투명, API 31+에서만 `Modifier.graphicsLayer`+`RenderEffect`로 블러 추가하는 조건부 향상.
+
+### 카피 톤 (Apple 보이스 원칙 반영)
+
+기존 "마케팅 어투 금지" 원칙을 Apple의 실제 보이스 가이드로 구체화:
+- 짧은 평서문, 마침표로 끝남(느낌표 없음). "책 정보를 찾지 못했어요, 직접 입력해주세요"처럼 **구체적 원인 + 구체적 다음 행동**.
+- 과장된 최상급 금지("최고의", "완벽한" 등 없음), 이모지 전면 금지(기존 원칙 유지).
+- 에러 메시지는 절대 "문제가 발생했습니다" 같은 뭉뚱그린 표현 안 씀 — 항상 원인이 구체적(오프라인/검색결과없음 등, 이미 설계된 실패 처리 매트릭스가 이 원칙에 부합).
+
+### 상태(States) — 기존 "로딩/대기 상태 UX"에 보강
+
+Apple 문서의 States 표를 우리 설계와 대조해 빠진 부분만 추가:
+- **성공(루틴 커밋)**: 빠른 기록 시트 저장처럼 일상적인 액션은 토스트/스낵바 없이 **저장 버튼 자리에 짧게(≈300ms) 체크마크가 스프링으로 나타났다 시트가 닫히는** 조용한 피드백으로 처리(기존 계획엔 "자동 닫힘"만 있었고 이 마이크로 피드백이 빠져있었음). 삭제처럼 되돌릴 수 있어야 하는 액션만 기존대로 스낵바+실행취소 유지(이건 예외적으로 여전히 필요 — Apple 문서엔 없는, 우리 앱 특유의 요구사항).
+- 나머지(스켈레톤 지오메트리 고정, 빈 상태에 일러스트 없음, 에러 메시지 구체성)는 기존 "로딩/대기 상태 UX" 섹션이 이미 Apple 문서와 같은 방향이라 변경 없음.
+
+### 모션 (Compose spring 매핑)
+
+Apple 문서의 스프링 물리 기반 모션은 Compose의 기본 애니메이션 철학과 정확히 일치 — Compose `spring()` API로 직접 매핑:
+- 표준 전환(시트 열림/닫힘, 화면 전환): `spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)` — Apple 문서가 명시적으로 경계하는 "만화 같은 오버슈트" 없이 자연스럽게 정착.
+- 진행률 도넛 링 값 변경, 표지 이미지 crossfade: `tween(300ms)` 또는 위와 동일한 spring — 의미 있는 상태 변화에만 사용(기존 "모션 절제" 원칙 유지).
+- **접근성**: 시스템 "애니메이션 사용 안 함" 설정(`Settings.Global.ANIMATOR_DURATION_SCALE == 0`) 감지 시 모든 spring 모션을 즉시 전환/크로스페이드로 대체 — Apple 문서의 Reduce Motion 요구사항과 동일한 취지.
+
+### UI 전반 원칙 (기존 유지)
+
+- **카드 중첩 금지**: 바텀시트/카드 안에 또 카드, 그 안에 또 카드를 겹겹이 쌓지 않는다 — `BookQuickActionSheet`처럼 이미 elevated된 컨테이너 안의 하위 요소는 별도 카드로 감싸지 않고 여백과 hairline 구분선만으로 구획.
 - **간격 스케일 고정**: 4dp 배수(4/8/12/16/24/32)만 사용, 화면마다 다른 임의 padding 값 금지.
-- **아이콘 일관성**: Material Symbols(outlined) 한 세트만 사용, filled/outlined 혼용 안 함. **UI 크롬(버튼, 타이틀, 빈 상태)에 장식용 이모지 사용 안 함** — 흔한 AI 생성 앱 티. 아이콘은 의미 전달용으로만.
-- **카피 톤**: 마케팅 어투·느낌표 남발 금지("시작해보세요!", "환영합니다 🎉" 금지). 이미 정의한 오류 메시지들("책 정보를 찾지 못했어요, 직접 입력해주세요")처럼 평서문 + 다음 행동 안내로 통일.
+- **아이콘 일관성**: Material Symbols(outlined) 한 세트만 사용, filled/outlined 혼용 안 함. **UI 크롬(버튼, 타이틀, 빈 상태)에 장식용 이모지 사용 안 함**. 아이콘은 의미 전달용으로만.
 - **빈 상태(EmptyState)**: 마스코트 일러스트 없이 텍스트 + 필요하면 아이콘 하나만("아직 읽는 중인 책이 없어요" + 책 등록 버튼).
-- **모션 절제**: 의미 있는 전환에만 애니메이션 사용(진행률 링이 값 변경 시 자연스럽게 채워짐, 표지 이미지 crossfade) — 통통 튀는 스프링/과장된 화면 전환 효과 없음, 시스템 기본 모션 우선.
-- **일관된 컴포넌트 재사용**: `BookCoverImage`/`SkeletonBox`/`LoadingOverlay`/`EmptyState`/`AttributeBarChart`처럼 이미 설계된 공용 컴포넌트를 화면마다 새로 만들지 않고 그대로 재사용 — 코드 재사용이자 동시에 시각적 일관성 확보 수단.
-- **접근성(TalkBack) 기본 원칙**: 도넛 진행률 링처럼 시각 정보만으로 전달되는 요소는 `Modifier.semantics { contentDescription = "$title, ${progress}% 진행" }`으로 스크린리더가 값을 읽게 함(이미 중앙에 퍼센트 텍스트가 있어 시각적으로는 커버되지만 TalkBack엔 별도 처리 필요). 아이콘 전용 버튼(카메라, 연필, 휴지통 등)엔 빠짐없이 `contentDescription` 지정. 터치 타깃은 최소 48dp 유지. 시스템 폰트 확대 설정 시 텍스트가 잘리지 않도록 고정 높이 `Box`에 텍스트를 강제로 욱여넣지 않고 `wrapContentHeight` 기본값 사용.
+- **일관된 컴포넌트 재사용**: `BookCoverImage`/`SkeletonBox`/`LoadingOverlay`/`EmptyState`/`AttributeBarChart`처럼 이미 설계된 공용 컴포넌트를 화면마다 새로 만들지 않고 그대로 재사용.
+- **접근성(TalkBack) 기본 원칙**: 도넛 진행률 링처럼 시각 정보만으로 전달되는 요소는 `Modifier.semantics { contentDescription = "$title, ${progress}% 진행" }`으로 스크린리더가 값을 읽게 함. 아이콘 전용 버튼(카메라, 연필, 휴지통 등)엔 빠짐없이 `contentDescription` 지정. 터치 타깃은 최소 48dp 유지. 시스템 폰트 확대 설정 시 텍스트가 잘리지 않도록 고정 높이 `Box`에 텍스트를 강제로 욱여넣지 않고 `wrapContentHeight` 기본값 사용.
+
+### 차트 색상 규칙 (`dataviz` 스킬 + Apple 팔레트)
+
+액센트가 Apple Blue(`#0071e3`) 하나뿐이라는 사실 자체가 `dataviz` 스킬의 "카테고리마다 다른 색 금지, 액센트는 하나" 원칙과 정확히 맞아떨어짐 — hex 값만 교체하고 규칙은 그대로 유지:
+
+- **`DailyPagesBarChart`(일별 합산 막대)**: 막대는 전부 **Primary(#0071e3) 한 가지 색**만 쓰고, "오늘" 막대만 진하게/나머지는 흐리게(Emphasis). 목표 달성한 날의 막대만 **Status Good**로 전환(성공 의미가 실제 있을 때만, Primary와 절대 혼용 안 함). 목표선은 임계값(threshold) 표시라 점선 유지(장식성 그리드 점선 금지 규칙과는 별개 — 의미 있는 단일 기준선은 관례적으로 점선이 맞음).
+- **통계 화면 `AttributeBarChart`(장르/작가/출판사/국가별)**: **절대 카테고리마다 다른 색을 칠하지 않는다** — 막대 길이(=권수)가 이미 전달하는 정보를 색으로 이중 인코딩하면 오히려 정보가 없어짐. 모든 막대를 **Primary 한 가지 색**으로 통일.
+- **진행률 도넛 링**: 카테고리 비교용 파이차트가 아니라 단일 값 게이지이므로 파이차트 관련 안티패턴은 해당 없음.
+- **공통 마크 규칙**: 얇은 막대 + 막대 사이 여백(테두리로 구분 안 함), 축/그리드는 hairline로 은은하게, 필요한 값만 선택적으로 직접 라벨링.
+- **스켈레톤**: "로딩/대기 상태 UX" 섹션대로 **최초 컴포지션 1회만**, 이후 리페치 시엔 스켈레톤으로 되돌아가지 않고 이전 값 유지한 채 자연스럽게 전환.
 
 ## 데이터 모델 (Room)
 
@@ -248,6 +300,7 @@ com.dyk1323.booklogs/
 ## Gradle 설정
 
 - Version Catalog(`gradle/libs.versions.toml`)에 Compose BOM, Room(+KSP), CameraX, ML Kit(barcode-scanning, text-recognition, text-recognition-korean), Retrofit+OkHttp, Coil, Navigation-Compose, Coroutines, DataStore Preferences, **kotlinx.serialization**(+ Retrofit용 컨버터) 추가
+- **Pretendard 폰트 번들링**: [Pretendard GitHub 릴리즈](https://github.com/orioncactus/pretendard)에서 정적 TTF(Regular/Medium/SemiBold/Bold 4종)를 받아 `app/src/main/res/font/pretendard_regular.ttf` 등으로 배치(파일명은 Android 리소스 규칙상 소문자+언더스코어만 허용) → `ui/common/theme/Type.kt`에서 `FontFamily(Font(R.font.pretendard_regular, FontWeight.Normal), Font(R.font.pretendard_medium, FontWeight.Medium), ...)`로 `FontFamily` 구성 후 Compose `Typography`의 모든 슬롯에 지정. OFL 라이선스 고지 파일(`LICENSE` 사본)을 레포에 함께 커밋. 별도 Gradle 의존성 불필요(리소스 번들링이라 라이브러리 추가 아님).
 - 백업/복원(SAF `ACTION_CREATE_DOCUMENT`/`ACTION_OPEN_DOCUMENT`)은 별도 매니페스트 권한이나 의존성 불필요 — `Intent`만으로 동작, `READ/WRITE_EXTERNAL_STORAGE` 등 저장소 권한 일체 불필요(스코프드 SAF 접근이라 안전).
 - `AndroidManifest.xml`: `CAMERA`, `INTERNET`, **`POST_NOTIFICATIONS`(API 33+ 런타임 권한), `RECEIVE_BOOT_COMPLETED`** 권한, `<uses-feature android:name="android.hardware.camera" required="true"/>`, `ReminderReceiver`/`BootReceiver`를 `<receiver>`로 등록
 - 카카오 REST API 키: `local.properties`에 `KAKAO_API_KEY=...` 추가 → `app/build.gradle.kts`에서 `buildConfigField`로 주입, `local.properties`는 이미 `.gitignore` 대상이므로 키가 커밋되지 않음을 확인. 사용자가 카카오 디벨로퍼스(https://developers.kakao.com)에서 앱을 등록하고 키를 발급받아야 하는 단계는 구현 완료 후 별도 안내
