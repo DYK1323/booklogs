@@ -25,7 +25,18 @@ class BookMetadataRepositoryImpl(
     override suspend fun lookupByIsbn(isbn: String): MetadataLookupResult = coroutineScope {
         val kakaoDeferred = async { queryKakaoByIsbn(isbn) }
         val googleDeferred = async { queryGoogleByIsbn(isbn) }
-        resolveBookMetadata(kakaoDeferred.await(), googleDeferred.await())
+        val kakao = kakaoDeferred.await()
+        val google = googleDeferred.await()
+        val resolved = resolveBookMetadata(kakao, google)
+
+        if (resolved is MetadataLookupResult.Found &&
+            resolved.metadata.totalPages == null &&
+            kakao is ApiLookupResult.Success
+        ) {
+            return@coroutineScope supplementPagesFromGoogleTitle(resolved.metadata, isbn)
+        }
+
+        resolved
     }
 
     override suspend fun searchByTitle(query: String): ApiLookupResult<List<BookMetadata>> {
@@ -46,8 +57,20 @@ class BookMetadataRepositoryImpl(
         if (isbn != null) return lookupByIsbn(isbn)
 
         return when (val google = queryGoogleByTitle("${candidate.title} ${candidate.author.orEmpty()}".trim())) {
-            is ApiLookupResult.Success -> MetadataLookupResult.Found(mergeBookMetadata(candidate, google.data.firstOrNull()))
+            is ApiLookupResult.Success -> MetadataLookupResult.Found(mergeBookMetadata(candidate, selectBestGoogleMetadata(google.data)))
             else -> MetadataLookupResult.Found(candidate)
+        }
+    }
+
+    private suspend fun supplementPagesFromGoogleTitle(metadata: BookMetadata, preferredIsbn: String): MetadataLookupResult {
+        val query = "${metadata.title} ${metadata.author.orEmpty()}".trim()
+        if (query.isBlank()) return MetadataLookupResult.Found(metadata)
+
+        return when (val google = queryGoogleByTitle(query)) {
+            is ApiLookupResult.Success -> MetadataLookupResult.Found(
+                mergeBookMetadata(metadata, selectBestGoogleMetadata(google.data, preferredIsbn)),
+            )
+            else -> MetadataLookupResult.Found(metadata)
         }
     }
 
@@ -61,8 +84,9 @@ class BookMetadataRepositoryImpl(
     }
 
     private suspend fun queryGoogleByIsbn(isbn: String): ApiLookupResult<BookMetadata> = safeCall {
-        googleApi.searchVolumes(query = "isbn:$isbn", maxResults = 1)
-            .items.firstOrNull()?.volumeInfo?.toBookMetadata()
+        googleApi.searchVolumes(query = "isbn:$isbn", maxResults = 10)
+            .items.map { it.volumeInfo.toBookMetadata() }
+            .let { selectBestGoogleMetadata(it, isbn) }
     }
 
     private suspend fun queryGoogleByTitle(query: String): ApiLookupResult<List<BookMetadata>> = safeCall {
@@ -87,4 +111,17 @@ class BookMetadataRepositoryImpl(
     } catch (e: IOException) {
         ApiLookupResult.NetworkError
     }
+}
+
+internal fun selectBestGoogleMetadata(
+    candidates: List<BookMetadata>,
+    preferredIsbn: String? = null,
+): BookMetadata? {
+    if (candidates.isEmpty()) return null
+    val isbnMatched = preferredIsbn?.let { isbn -> candidates.filter { it.isbn == isbn } }.orEmpty()
+    val pool = isbnMatched.ifEmpty { candidates }
+
+    return pool.firstOrNull { it.totalPages != null }
+        ?: candidates.firstOrNull { it.totalPages != null }
+        ?: pool.firstOrNull()
 }

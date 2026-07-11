@@ -20,7 +20,7 @@ fun KakaoBookDto.toBookMetadata(): BookMetadata = BookMetadata(
 )
 
 fun GoogleVolumeInfoDto.toBookMetadata(): BookMetadata = BookMetadata(
-    isbn = null,
+    isbn = googleIsbn(),
     title = title.orEmpty(),
     author = authors.takeIf { it.isNotEmpty() }?.joinToString(", "),
     publisher = publisher,
@@ -32,3 +32,7 @@ fun GoogleVolumeInfoDto.toBookMetadata(): BookMetadata = BookMetadata(
 /** Kakao's `isbn` field holds a space-separated "{ISBN-10} {ISBN-13}" (or just one of the two). */
 internal fun extractIsbn13(rawIsbn: String?): String? =
     rawIsbn?.split(" ")?.map { it.trim() }?.firstOrNull { it.length == 13 }
+
+private fun GoogleVolumeInfoDto.googleIsbn(): String? =
+    industryIdentifiers.firstOrNull { it.type == "ISBN_13" }?.identifier
+        ?: industryIdentifiers.firstOrNull { it.type == "ISBN_10" }?.identifier

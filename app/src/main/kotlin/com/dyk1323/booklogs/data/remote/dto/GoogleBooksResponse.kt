@@ -19,9 +19,16 @@ data class GoogleVolumeInfoDto(
     @SerialName("title") val title: String? = null,
     @SerialName("authors") val authors: List<String> = emptyList(),
     @SerialName("publisher") val publisher: String? = null,
+    @SerialName("industryIdentifiers") val industryIdentifiers: List<GoogleIndustryIdentifierDto> = emptyList(),
     @SerialName("pageCount") val pageCount: Int? = null,
     @SerialName("categories") val categories: List<String> = emptyList(),
     @SerialName("imageLinks") val imageLinks: GoogleImageLinksDto? = null,
+)
+
+@Serializable
+data class GoogleIndustryIdentifierDto(
+    @SerialName("type") val type: String? = null,
+    @SerialName("identifier") val identifier: String? = null,
 )
 
 @Serializable
