@@ -1,7 +1,10 @@
 package com.dyk1323.booklogs.ui.dashboard
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings as AndroidSettings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -27,10 +30,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
@@ -114,74 +119,6 @@ fun DashboardScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onRegisterBookClick) {
-                Icon(Icons.Outlined.Add, contentDescription = "책 등록")
-            }
-        },
-    ) { innerPadding ->
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-        ) {
-            TodayPagesHero(todayPages = uiState.todayPages, dailyGoalPages = uiState.dailyGoalPages)
-            Spacer(modifier = Modifier.height(20.dp))
-            DailyPagesBarChart(
-                totals = uiState.weekTotals,
-                dailyGoalPages = uiState.dailyGoalPages,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(116.dp),
-            )
-            Spacer(modifier = Modifier.height(28.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(text = "읽는 중", style = MaterialTheme.typography.headlineMedium)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${uiState.readingBooks.size}권",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(onClick = onLibraryClick) {
-                        Text(text = "라이브러리")
-                    }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Outlined.Settings, contentDescription = "설정")
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(14.dp))
-            if (uiState.readingBooks.isEmpty() && !uiState.isLoading) {
-                EmptyState(
-                    message = "아직 읽는 중인 책이 없어요.",
-                    actionLabel = "책 등록",
-                    onActionClick = onRegisterBookClick,
-                )
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 132.dp),
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
-                ) {
-                    items(uiState.readingBooks, key = { it.book.id }) { item ->
-                        BookShelfTile(item = item, onClick = { viewModel.openQuickLog(item.book.id) })
-                    }
-                }
-            }
-        }
-    }
-
     var isCapturingPage by remember { mutableStateOf(false) }
     var showSuccessCheck by remember { mutableStateOf(false) }
     LaunchedEffect(quickLogSheetState == null) {
@@ -196,43 +133,117 @@ fun DashboardScreen(
         }
     }
 
-    quickLogSheetState?.let { sheetState ->
-        ModalBottomSheet(
-            onDismissRequest = {
-                isCapturingPage = false
-                viewModel.closeQuickLog()
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            floatingActionButton = {
+                FloatingActionButton(onClick = onRegisterBookClick) {
+                    Icon(Icons.Outlined.Add, contentDescription = "책 등록")
+                }
             },
-        ) {
-            if (isCapturingPage) {
-                PageCameraCapture(
-                    onCaptured = { bitmap ->
-                        viewModel.prefillQuickLogFromCapture(bitmap)
-                        isCapturingPage = false
-                    },
-                    modifier = Modifier.fillMaxWidth().height(480.dp),
+        ) { innerPadding ->
+            Column(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+            ) {
+                TodayPagesHero(todayPages = uiState.todayPages, dailyGoalPages = uiState.dailyGoalPages)
+                Spacer(modifier = Modifier.height(20.dp))
+                DailyPagesBarChart(
+                    totals = uiState.weekTotals,
+                    dailyGoalPages = uiState.dailyGoalPages,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(116.dp),
                 )
-            } else {
-                QuickLogSheet(
-                    state = sheetState,
-                    showSuccessCheck = showSuccessCheck,
-                    onInputChanged = viewModel::updateQuickLogInput,
-                    onSave = viewModel::saveQuickLog,
-                    onDismiss = viewModel::closeQuickLog,
-                    onOpenDetail = {
-                        val bookId = sheetState.book.id
-                        viewModel.closeQuickLog()
-                        onBookDetailClick(bookId)
-                    },
-                    onCaptureQuote = {
-                        val bookId = sheetState.book.id
-                        viewModel.closeQuickLog()
-                        onCaptureQuoteClick(bookId)
-                    },
-                    onCapturePage = { isCapturingPage = true },
-                    onEditLatestLog = viewModel::startEditLatestLog,
-                    onCancelEditLatestLog = viewModel::cancelEditLatestLog,
-                    onDeleteLatestLog = viewModel::deleteLatestLog,
-                )
+                Spacer(modifier = Modifier.height(28.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(text = "읽는 중", style = MaterialTheme.typography.headlineMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "${uiState.readingBooks.size}권",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TextButton(onClick = onLibraryClick) {
+                            Text(text = "라이브러리")
+                        }
+                        IconButton(onClick = onSettingsClick) {
+                            Icon(Icons.Outlined.Settings, contentDescription = "설정")
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+                if (uiState.readingBooks.isEmpty() && !uiState.isLoading) {
+                    EmptyState(
+                        message = "아직 읽는 중인 책이 없어요.",
+                        actionLabel = "책 등록",
+                        onActionClick = onRegisterBookClick,
+                    )
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 132.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(18.dp),
+                    ) {
+                        items(uiState.readingBooks, key = { it.book.id }) { item ->
+                            BookShelfTile(item = item, onClick = { viewModel.openQuickLog(item.book.id) })
+                        }
+                    }
+                }
+            }
+        }
+
+        // Rendered as a plain full-screen overlay, NOT nested inside the ModalBottomSheet below —
+        // CameraX's PreviewView (a SurfaceView) hosted inside a ModalBottomSheet's own Popup/Dialog
+        // window rendered blank with no visible capture button on real devices, while the identical
+        // preview works fine as a plain top-level composable elsewhere (QuoteCaptureScreen). Closing the
+        // sheet first and showing the camera as a normal screen sidesteps that SurfaceView-in-Dialog
+        // interop issue.
+        if (isCapturingPage) {
+            PageCameraCapture(
+                onCaptured = { bitmap ->
+                    viewModel.prefillQuickLogFromCapture(bitmap)
+                    isCapturingPage = false
+                },
+                onCancel = { isCapturingPage = false },
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            quickLogSheetState?.let { sheetState ->
+                ModalBottomSheet(
+                    onDismissRequest = { viewModel.closeQuickLog() },
+                ) {
+                    QuickLogSheet(
+                        state = sheetState,
+                        showSuccessCheck = showSuccessCheck,
+                        onInputChanged = viewModel::updateQuickLogInput,
+                        onSave = viewModel::saveQuickLog,
+                        onDismiss = viewModel::closeQuickLog,
+                        onOpenDetail = {
+                            val bookId = sheetState.book.id
+                            viewModel.closeQuickLog()
+                            onBookDetailClick(bookId)
+                        },
+                        onCaptureQuote = {
+                            val bookId = sheetState.book.id
+                            viewModel.closeQuickLog()
+                            onCaptureQuoteClick(bookId)
+                        },
+                        onCapturePage = { isCapturingPage = true },
+                        onEditLatestLog = viewModel::startEditLatestLog,
+                        onCancelEditLatestLog = viewModel::cancelEditLatestLog,
+                        onDeleteLatestLog = viewModel::deleteLatestLog,
+                    )
+                }
             }
         }
     }
@@ -240,7 +251,11 @@ fun DashboardScreen(
 
 /** Camera permission gate for the quick-log page-photo flow, then delegates to the shared preview. */
 @Composable
-private fun PageCameraCapture(onCaptured: (android.graphics.Bitmap) -> Unit, modifier: Modifier = Modifier) {
+private fun PageCameraCapture(
+    onCaptured: (android.graphics.Bitmap) -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -254,19 +269,46 @@ private fun PageCameraCapture(onCaptured: (android.graphics.Bitmap) -> Unit, mod
         if (!hasCameraPermission) permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
-    if (hasCameraPermission) {
-        CameraCapturePreview(
-            captionText = "페이지를 맞춘 뒤 사진을 찍어주세요.",
-            onCaptured = onCaptured,
-            modifier = modifier,
-        )
-    } else {
-        Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            Text(
-                text = "페이지 사진을 찍으려면 카메라 권한이 필요해요.",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(24.dp),
+    Box(modifier = modifier.background(MaterialTheme.colorScheme.background)) {
+        if (hasCameraPermission) {
+            CameraCapturePreview(
+                captionText = "페이지를 맞춘 뒤 사진을 찍어주세요.",
+                onCaptured = onCaptured,
+                modifier = Modifier.fillMaxSize(),
             )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = "페이지 사진을 찍으려면 카메라 권한이 필요해요.",
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        val intent = Intent(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                        }
+                        context.startActivity(intent)
+                    },
+                ) {
+                    Text(text = "설정에서 권한 허용")
+                }
+            }
+        }
+        IconButton(
+            onClick = onCancel,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(12.dp)
+                .background(Color.Black.copy(alpha = 0.4f), CircleShape),
+        ) {
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "취소", tint = Color.White)
         }
     }
 }

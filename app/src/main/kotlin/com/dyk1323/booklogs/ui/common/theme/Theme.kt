@@ -14,7 +14,7 @@ private val LightColors = lightColorScheme(
     onBackground = OnSurfaceLight,
     surface = SurfaceLight,
     onSurface = OnSurfaceLight,
-    surfaceVariant = CanvasLight,
+    surfaceVariant = SurfaceVariantLight,
     outline = HairlineLight,
     error = StatusCriticalLight,
 )
@@ -26,7 +26,7 @@ private val DarkColors = darkColorScheme(
     onBackground = OnSurfaceDark,
     surface = SurfaceCardDark,
     onSurface = OnSurfaceDark,
-    surfaceVariant = SurfaceDark,
+    surfaceVariant = SurfaceVariantDark,
     outline = HairlineDark,
     error = StatusCriticalDark,
 )

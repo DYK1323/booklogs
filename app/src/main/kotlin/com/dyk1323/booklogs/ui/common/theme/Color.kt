@@ -16,6 +16,12 @@ val SurfaceLight = Color(0xFFFFFFFF)
 val SurfaceDark = Color(0xFF000000)
 val SurfaceCardDark = Color(0xFF1D1D1F) // dark-mode cards lift via this tone, not shadow
 
+// iOS systemGray5 — a visibly distinct fill tone for placeholders/chips/photo-box backgrounds. Was
+// previously mapped to the same value as `background` in Theme.kt, making anything using it (book
+// cover placeholders, library filter chips, the quote-capture photo box) invisible against the screen.
+val SurfaceVariantLight = Color(0xFFE5E5EA)
+val SurfaceVariantDark = Color(0xFF3A3A3C)
+
 val OnSurfaceLight = Color(0xFF1D1D1F)
 val OnSurfaceDark = Color(0xFFFFFFFF)
 
