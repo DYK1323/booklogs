@@ -20,15 +20,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -51,7 +55,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -134,6 +137,8 @@ fun QuoteCaptureScreen(
                     },
                     onWordTap = viewModel::selectWord,
                     onGapToggle = viewModel::toggleLineBreakGap,
+                    onCancelSelection = viewModel::cancelSelection,
+                    onConfirmSelection = viewModel::confirmSelection,
                     onPageChanged = viewModel::updatePageText,
                     onQuoteChanged = viewModel::updateQuoteText,
                     onRetake = {
@@ -175,6 +180,7 @@ private fun PermissionMessage() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WordSelectQuoteContent(
     bitmap: Bitmap,
@@ -184,6 +190,8 @@ private fun WordSelectQuoteContent(
     onContainerSizeChanged: (IntSize) -> Unit,
     onWordTap: (Int) -> Unit,
     onGapToggle: (Int) -> Unit,
+    onCancelSelection: () -> Unit,
+    onConfirmSelection: () -> Unit,
     onPageChanged: (String) -> Unit,
     onQuoteChanged: (String) -> Unit,
     onRetake: () -> Unit,
@@ -196,7 +204,14 @@ private fun WordSelectQuoteContent(
     val endIndex = state.selectionEndIndex
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp)) {
-        Text(text = "시작 단어와 끝 단어를 순서대로 탭하세요.", style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = when {
+                startIndex == null -> "시작 단어를 터치해주세요."
+                endIndex == null -> "끝 단어를 터치해주세요."
+                else -> "다른 단어를 탭하면 범위를 다시 고를 수 있어요."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+        )
         Spacer(modifier = Modifier.height(10.dp))
         Box(
             modifier = Modifier
@@ -249,16 +264,6 @@ private fun WordSelectQuoteContent(
             TextButton(onClick = onRetake) {
                 Text(text = "다시 촬영")
             }
-        }
-        if (startIndex != null && endIndex != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            SelectedRangeChips(
-                words = state.recognizedWords,
-                startIndex = startIndex,
-                endIndex = endIndex,
-                mergedLineBreakGaps = state.mergedLineBreakGaps,
-                onGapToggle = onGapToggle,
-            )
         }
         if (state.capturedPages.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -314,11 +319,79 @@ private fun WordSelectQuoteContent(
             }
         }
     }
+
+    if (startIndex != null && endIndex != null) {
+        ModalBottomSheet(onDismissRequest = onCancelSelection) {
+            GapAdjustmentSheetContent(
+                words = state.recognizedWords,
+                startIndex = startIndex,
+                endIndex = endIndex,
+                mergedLineBreakGaps = state.mergedLineBreakGaps,
+                onGapToggle = onGapToggle,
+                onReselect = onCancelSelection,
+                onConfirm = onConfirmSelection,
+            )
+        }
+    }
 }
 
-/** Shows the currently selected word range as chips; tappable gap chips sit at line-break boundaries. */
+/** "제거할 공백을 터치하세요" step: the selected range shown as flowing text, gap pairs tappable. */
 @Composable
-private fun SelectedRangeChips(
+private fun GapAdjustmentSheetContent(
+    words: List<RecognizedWord>,
+    startIndex: Int,
+    endIndex: Int,
+    mergedLineBreakGaps: Set<Int>,
+    onGapToggle: (Int) -> Unit,
+    onReselect: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 24.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = "제거할 공백을 터치하세요.", style = MaterialTheme.typography.titleMedium)
+            TextButton(onClick = onReselect) {
+                Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = "단어 다시 선택하기")
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(16.dp))
+        GapAdjustableText(
+            words = words,
+            startIndex = startIndex,
+            endIndex = endIndex,
+            mergedLineBreakGaps = mergedLineBreakGaps,
+            onGapToggle = onGapToggle,
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        Button(
+            onClick = onConfirm,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Text(text = "사용하기")
+        }
+    }
+}
+
+/**
+ * Renders the selected words as flowing prose. Ordinary words are plain text; each line-break gap is
+ * rendered as ONE shared highlighted unit covering both flanking words (matching how the space actually
+ * reads), and tapping that unit toggles whether the space between them is kept or removed.
+ */
+@Composable
+private fun GapAdjustableText(
     words: List<RecognizedWord>,
     startIndex: Int,
     endIndex: Int,
@@ -327,37 +400,33 @@ private fun SelectedRangeChips(
 ) {
     val from = minOf(startIndex, endIndex).coerceIn(words.indices)
     val to = maxOf(startIndex, endIndex).coerceIn(words.indices)
-    Column {
-        Text(
-            text = "줄바꿈 지점을 탭하면 공백을 없앨 수 있어요.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            for (i in from..to) {
-                Text(
-                    text = words[i].text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier
-                        .background(Color(0xFFFFD54F).copy(alpha = 0.36f), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                )
-                if (i < to && words[i].lineId != words[i + 1].lineId) {
-                    val merged = i in mergedLineBreakGaps
-                    Text(
-                        text = if (merged) "⌫" else "␣",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textDecoration = if (merged) TextDecoration.LineThrough else TextDecoration.None,
-                        color = if (merged) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .clickable { onGapToggle(i) }
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                    )
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        var i = from
+        while (i <= to) {
+            val hasGapAfter = i < to && words[i].lineId != words[i + 1].lineId
+            if (hasGapAfter) {
+                val gapIndex = i
+                val merged = gapIndex in mergedLineBreakGaps
+                val pairText = if (merged) {
+                    words[i].text + words[i + 1].text
+                } else {
+                    "${words[i].text} ${words[i + 1].text}"
                 }
+                Text(
+                    text = pairText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
+                        .clickable { onGapToggle(gapIndex) }
+                        .padding(horizontal = 3.dp, vertical = 1.dp),
+                )
+                i += 2
+            } else {
+                Text(text = words[i].text, style = MaterialTheme.typography.bodyLarge)
+                i += 1
             }
         }
     }

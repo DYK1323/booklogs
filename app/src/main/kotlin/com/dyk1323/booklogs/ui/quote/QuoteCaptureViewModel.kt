@@ -134,7 +134,11 @@ class QuoteCaptureViewModel(
         }
     }
 
-    /** Tap a word on the photo: first tap sets the start, second sets the end (auto-ordered); a third restarts. */
+    /**
+     * Tap a word on the photo: first tap sets the start, second sets the end (auto-ordered); a third
+     * restarts. Once both are set, the screen opens the gap-adjustment bottom sheet — nothing is
+     * committed to [QuoteCaptureUiState.capturedPages] yet, that only happens on [confirmSelection].
+     */
     fun selectWord(index: Int) {
         _uiState.update { state ->
             val start = state.selectionStartIndex
@@ -144,47 +148,61 @@ class QuoteCaptureViewModel(
                 selectionStartIndex = newStart,
                 selectionEndIndex = newEnd,
                 mergedLineBreakGaps = emptySet(),
-            ).withRecomputedText()
+            )
         }
     }
 
-    /** Tap a line-break gap chip in the selected-range preview to toggle "이어붙이기" (drop the space). */
+    /** Tap a line-break gap in the bottom sheet's preview to toggle "이어붙이기" (drop the space). */
     fun toggleLineBreakGap(gapIndex: Int) {
         _uiState.update { state ->
             val updated = state.mergedLineBreakGaps.toMutableSet().apply {
                 if (!add(gapIndex)) remove(gapIndex)
             }
-            state.copy(mergedLineBreakGaps = updated).withRecomputedText()
+            state.copy(mergedLineBreakGaps = updated)
+        }
+    }
+
+    /** "단어 다시 선택하기" — closes the sheet without saving anything, back to tapping words on the photo. */
+    fun cancelSelection() {
+        _uiState.update {
+            it.copy(selectionStartIndex = null, selectionEndIndex = null, mergedLineBreakGaps = emptySet())
         }
     }
 
     /**
-     * Recomputes this capture's text from the current word selection and merges it into
-     * [QuoteCaptureUiState.capturedPages] — a fresh page is appended the first time a range is picked for
-     * this photo, subsequent taps (word or gap) on the same photo edit that same page entry in place.
+     * "사용하기" — commits the current word selection (with whatever gaps were merged) into
+     * [QuoteCaptureUiState.capturedPages]. A fresh page is appended the first time a range is confirmed
+     * for this photo; confirming again for the same photo (after "단어 다시 선택하기") edits that same
+     * page entry in place rather than adding a new one.
      */
-    private fun QuoteCaptureUiState.withRecomputedText(): QuoteCaptureUiState {
-        val start = selectionStartIndex
-        val end = selectionEndIndex
-        if (start == null || end == null) return this
+    fun confirmSelection() {
+        _uiState.update { state ->
+            val start = state.selectionStartIndex
+            val end = state.selectionEndIndex
+            if (start == null || end == null) return@update state
 
-        val tokens = recognizedWords.map { WordToken(it.text, it.lineId) }
-        val text = joinWords(tokens, start, end, mergedLineBreakGaps)
+            val tokens = state.recognizedWords.map { WordToken(it.text, it.lineId) }
+            val text = joinWords(tokens, start, end, state.mergedLineBreakGaps)
 
-        val editIndex = editingPageIndex
-        val pages = if (editIndex != null && editIndex in capturedPages.indices) {
-            capturedPages.toMutableList().also { list ->
-                list[editIndex] = list[editIndex].copy(text = text, pageText = currentPageText)
+            val editIndex = state.editingPageIndex
+            val pages = if (editIndex != null && editIndex in state.capturedPages.indices) {
+                state.capturedPages.toMutableList().also { list ->
+                    list[editIndex] = list[editIndex].copy(text = text, pageText = state.currentPageText)
+                }
+            } else {
+                state.capturedPages +
+                    CapturedQuotePage(order = state.capturedPages.size + 1, text = text, pageText = state.currentPageText)
             }
-        } else {
-            capturedPages + CapturedQuotePage(order = capturedPages.size + 1, text = text, pageText = currentPageText)
+            state.copy(
+                capturedPages = pages,
+                quoteText = joinQuotePages(pages),
+                editingPageIndex = pages.lastIndex,
+                selectionStartIndex = null,
+                selectionEndIndex = null,
+                mergedLineBreakGaps = emptySet(),
+                message = null,
+            )
         }
-        return copy(
-            capturedPages = pages,
-            quoteText = joinQuotePages(pages),
-            editingPageIndex = pages.lastIndex,
-            message = null,
-        )
     }
 
     fun discardCurrentCaptureText() {
