@@ -28,7 +28,22 @@ android {
         buildConfigField("String", "KAKAO_API_KEY", "\"$kakaoApiKey\"")
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // Stable development key so GitHub Actions debug APKs can update over previous
+            // GitHub Actions debug APKs. This is not a release/distribution signing key.
+            storeFile = rootProject.file("app/booklogs-dev.keystore")
+            storePassword = "android"
+            keyAlias = "booklogs-dev"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
+
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
