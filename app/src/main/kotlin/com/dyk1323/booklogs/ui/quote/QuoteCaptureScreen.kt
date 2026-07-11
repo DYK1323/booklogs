@@ -13,6 +13,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -390,6 +391,7 @@ private fun GapAdjustmentSheetContent(
  * rendered as ONE shared highlighted unit covering both flanking words (matching how the space actually
  * reads), and tapping that unit toggles whether the space between them is kept or removed.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GapAdjustableText(
     words: List<RecognizedWord>,
