@@ -304,6 +304,7 @@ com.dyk1323.booklogs/
 - 백업/복원(SAF `ACTION_CREATE_DOCUMENT`/`ACTION_OPEN_DOCUMENT`)은 별도 매니페스트 권한이나 의존성 불필요 — `Intent`만으로 동작, `READ/WRITE_EXTERNAL_STORAGE` 등 저장소 권한 일체 불필요(스코프드 SAF 접근이라 안전).
 - `AndroidManifest.xml`: `CAMERA`, `INTERNET`, **`POST_NOTIFICATIONS`(API 33+ 런타임 권한), `RECEIVE_BOOT_COMPLETED`** 권한, `<uses-feature android:name="android.hardware.camera" required="true"/>`, `ReminderReceiver`/`BootReceiver`를 `<receiver>`로 등록
 - 카카오 REST API 키: `local.properties`에 `KAKAO_API_KEY=...` 추가 → `app/build.gradle.kts`에서 `buildConfigField`로 주입, `local.properties`는 이미 `.gitignore` 대상이므로 키가 커밋되지 않음을 확인. 사용자가 카카오 디벨로퍼스(https://developers.kakao.com)에서 앱을 등록하고 키를 발급받아야 하는 단계는 구현 완료 후 별도 안내
+- **Google Books API 키(필수로 변경)**: 원래 계획에선 "API 키 불필요"였으나, 실제로 키 없는 요청이 전부 공용 기본 프로젝트로 묶여 일일 쿼터가 0으로 고정된 채 429가 떨어지는 걸 확인(개발 샌드박스와 실제 사용자 기기 양쪽에서 동일한 `project_number:624717413613` 쿼터 초과 응답 재현 — 네트워크/프록시 문제가 아니라 Google 쪽 정책). Kakao와 동일한 패턴으로 `local.properties`에 `GOOGLE_BOOKS_API_KEY=...` 추가 → `buildConfigField`로 주입, `GoogleBooksApi`가 요청마다 `key` 쿼리 파라미터로 붙임. 사용자가 Google Cloud Console(https://console.cloud.google.com)에서 프로젝트를 만들고 "Books API"를 사용 설정한 뒤 API 키를 발급받아야 함(키를 "Books API"로 제한해두는 걸 권장). CI에서 쓰려면 GitHub 레포 Settings → Secrets에 `GOOGLE_BOOKS_API_KEY`도 등록 필요.
 
 ## 구현 현황
 

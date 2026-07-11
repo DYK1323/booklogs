@@ -71,7 +71,7 @@ class AppContainer(context: Context) {
         .build()
 
     private val kakaoBooksApi = KakaoBooksApi(sharedHttpClient, BuildConfig.KAKAO_API_KEY, json)
-    private val googleBooksApi = GoogleBooksApi(sharedHttpClient, json)
+    private val googleBooksApi = GoogleBooksApi(sharedHttpClient, BuildConfig.GOOGLE_BOOKS_API_KEY, json)
 
     val bookMetadataRepository: BookMetadataRepository = BookMetadataRepositoryImpl(kakaoBooksApi, googleBooksApi)
 

@@ -36,6 +36,14 @@ android {
             ?: System.getenv("KAKAO_API_KEY")
             ?: ""
         buildConfigField("String", "KAKAO_API_KEY", "\"$kakaoApiKey\"")
+
+        // Google Books API now 429s every keyless request (buckets them into a shared,
+        // permanently-zero-quota default project) — a key is required, not optional.
+        val googleBooksApiKey = (project.findProperty("GOOGLE_BOOKS_API_KEY") as String?)
+            ?: localProperties.getProperty("GOOGLE_BOOKS_API_KEY")
+            ?: System.getenv("GOOGLE_BOOKS_API_KEY")
+            ?: ""
+        buildConfigField("String", "GOOGLE_BOOKS_API_KEY", "\"$googleBooksApiKey\"")
     }
 
     signingConfigs {
