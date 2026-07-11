@@ -43,12 +43,13 @@
 
 ## 데이터 모델 (Room)
 
-- **BookEntity** (`books`): id, isbn?, title, author?, publisher?, coverImageUrl?, totalPages?, status(READING/PAUSED/FINISHED/DROPPED/PLANNED), createdAt
+- **BookEntity** (`books`): id, isbn?, title, author?, publisher?, coverImageUrl?, totalPages?, status(READING/PAUSED/FINISHED/DROPPED/PLANNED), **format**(PHYSICAL/EBOOK, 기본 PHYSICAL), createdAt
   - READING: 대시보드 책장에 노출, 진행 중
   - PAUSED: 일시중지 — 나중에 재개할 생각 있음. 같은 라운드를 유지한 채 책장에서만 빠짐
   - FINISHED: 완독
   - **DROPPED**: 중단 — 재개할 생각 없음. FINISHED와 마찬가지로 "라운드 종료"이지만 종료 사유가 다름(아래 참고)
   - PLANNED: 아직 시작 전
+  - **format**: 전자책은 페이지 대신 %로 진행률을 표시하는 매체 특성 반영. 단, `ReadingLogEntity.currentPage`는 형식에 상관없이 항상 페이지 기준으로 저장(아래 "빠른 기록 UX" 참고) — 델타 계산/일별 합산/진행률 도넛 등 핵심 로직은 종이책·전자책 구분 없이 동일하게 동작하고, 입력창과 이력 표시만 format에 따라 %/페이지로 갈라짐
 - **ReadingRoundEntity** (`reading_rounds`): id, bookId(FK), roundNumber, startedAt, finishedAt?, **endReason?**(COMPLETED/DROPPED, 라운드가 끝났을 때만 값이 들어가고 진행/일시중지 중엔 null) — 재독마다 새 라운드 생성. 책 하나에 독후감이 여러 개 쌓이는 요구사항을 라운드 단위로 깔끔하게 표현(라운드별 진행 이력 + 독후감 그룹핑). 재독 시작 시 새 라운드를 만들면 페이지 델타 계산도 라운드 내에서만 비교하므로 "재독으로 페이지가 1로 돌아갈 때 음수 델타" 같은 엣지케이스가 자연히 해결됨.
   - **완독과 중단은 같은 메커니즘**(라운드 종료, `finishedAt` 기록)이고 `endReason`만 다름. 일시중지(PAUSED)는 라운드를 종료하지 않고 그대로 열어둔 채 책 상태만 바꾸는 것이라 서로 구분됨.
   - FINISHED/DROPPED 상태에서 다시 읽기 시작하면(재독/재도전) 기존 라운드는 그대로 두고 `roundNumber`가 1 증가한 **새 라운드**를 생성 — 1차 시도의 진행 이력·독후감은 보존되고 2차 시도가 새로 쌓임. PAUSED에서 재개하면 라운드를 새로 만들지 않고 열려있던 라운드를 그대로 이어감.
@@ -76,6 +77,7 @@ com.dyk1323.booklogs/
       EditLogUseCase.kt               ← 임의 로그의 currentPage 수정(단순 update, 이웃 로그 재계산 불필요 — 델타가 저장되지 않으므로)
       DeleteLogUseCase.kt             ← 임의 로그 삭제(단순 delete, 이웃 로그 재계산 불필요)
       ComputeBookProgressUseCase.kt   ← 진행률 %
+      ConvertPagePercentUseCase.kt    ← 순수 함수, 양방향 변환: `percentToPage(percent, totalPages)`(EBOOK 입력 저장 시, round 처리)와 `pageToPercent(currentPage, totalPages)`(EBOOK 이력 표시 시). totalPages가 null이면 변환 불가 예외/Result로 처리 → 호출부(빠른 기록 시트)가 먼저 총 페이지 입력을 유도
       ChangeBookStatusUseCase.kt      ← 상태 전이 처리(READING↔PAUSED는 라운드 유지, →FINISHED/DROPPED는 현재 라운드 종료+endReason 기록, FINISHED/DROPPED→READING은 새 라운드 생성). 전이 종류별 라운드 부수효과를 한 곳에 모아 화면(책 상세)에서는 단순 호출만 하도록 함
       PickReminderBookUseCase.kt      ← 순수 함수: READING 상태 책 목록을 받아 무작위로 1권 선택(빈 목록이면 null 반환 → 리시버가 알림을 건너뜀)
   ui/
@@ -102,10 +104,11 @@ com.dyk1323.booklogs/
 책 등록은 저빈도 작업이라 여러 단계를 거쳐도 되지만, **진행률 체크와 인용구 등록은 거의 매일 반복**되므로 화면 전환 자체를 없애는 방향으로 설계한다.
 
 - **책장 표지 탭 → 화면 전환 없이 바텀시트**가 즉시 열림. 이 시트가 진행률 체크·인용구 추가·상세보기 세 가지 진입점을 모두 담당하며, "책 상세" 화면을 거치지 않는다.
-  - 시트를 열면 **진행률 입력이 바로 최상단에 노출**된다: 숫자 입력창에 마지막으로 기록한 페이지 번호가 **전체 선택된 상태**로 프리필되고 숫자 키패드가 자동으로 뜬다. 사용자는 지금 책에서 보고 있는 페이지 번호를 그대로 타이핑해서 덮어쓰기만 하면 됨 — 마지막 기록과의 차이를 암산할 필요가 없다(이전 버전의 `+5/+10/+20/+50` 델타 칩은 "지금 보는 페이지"가 아니라 "마지막 기록 대비 얼마나 더 읽었는지"를 계산하게 만들어 오히려 번거로워서 폐기). 델타는 저장되지 않고 필요할 때 파생되므로 사용자는 신경 쓸 필요 없음.
-    - 입력창 바로 옆에 카메라 아이콘 버튼을 동급 옵션으로 배치: 탭하면 카메라가 열리고 페이지 사진을 찍어 OCR로 추출한 숫자를 같은 입력창에 채워준 뒤 확인/저장 흐름으로 복귀. 타이핑도 촬영도 둘 다 "암산 없이 보이는 숫자 그대로"라는 점에서 동등한 주 경로이므로, 촬영을 보조 링크로 숨기지 않고 나란히 노출한다. 사용자는 그때그때 더 편한 쪽을 선택.
-    - 입력창 아래에 **"최근 기록: 245p · 3분 전"**처럼 그 책의 가장 최근 로그를 작게 보여주고, 옆에 연필(수정)·휴지통(삭제) 아이콘을 둔다. 방금 낸 오타를 새 로그를 또 쌓지 않고 바로 잡기 위한 용도(가장 흔한 실수 케이스라 대시보드에서 화면 전환 없이 처리).
-      - 연필 탭 → 입력창이 그 로그의 `currentPage`로 채워지고 "저장" 버튼이 "수정 저장"으로 바뀜 → 저장 시 새 로그를 추가하지 않고 기존 로그의 `currentPage`만 갱신(`EditLogUseCase`, 델타가 저장되지 않으므로 이웃 로그를 건드릴 필요 없음).
+  - 시트를 열면 **진행률 입력이 바로 최상단에 노출**된다: 숫자 입력창에 마지막으로 기록한 값이 **전체 선택된 상태**로 프리필되고 숫자 키패드가 자동으로 뜬다. 사용자는 지금 보고 있는 값을 그대로 타이핑해서 덮어쓰기만 하면 됨 — 마지막 기록과의 차이를 암산할 필요가 없다(이전 버전의 `+5/+10/+20/+50` 델타 칩은 "지금 보는 페이지"가 아니라 "마지막 기록 대비 얼마나 더 읽었는지"를 계산하게 만들어 오히려 번거로워서 폐기). 델타는 저장되지 않고 필요할 때 파생되므로 사용자는 신경 쓸 필요 없음.
+    - **책 형식(`format`)에 따라 입력 단위가 다름**: PHYSICAL(종이책)이면 "현재 페이지"(절대 페이지 번호) 입력, EBOOK(전자책)이면 "현재 몇 %"(0~100 정수) 입력 — 전자책은 대개 페이지가 아니라 %로 진행률이 표시되기 때문. 저장 시 EBOOK은 내부적으로 `currentPage = round(퍼센트 / 100 × totalPages)`로 환산해 `ReadingLogEntity`에 페이지로 저장하므로, 이후 델타/합산/도넛 로직은 종이책과 완전히 동일하게 동작(입력창만 다름).
+    - PHYSICAL 책은 입력창 바로 옆에 카메라 아이콘 버튼을 동급 옵션으로 배치: 탭하면 카메라가 열리고 페이지 사진을 찍어 OCR로 추출한 숫자를 같은 입력창에 채워준 뒤 확인/저장 흐름으로 복귀. 타이핑도 촬영도 둘 다 "암산 없이 보이는 숫자 그대로"라는 점에서 동등한 주 경로이므로, 촬영을 보조 링크로 숨기지 않고 나란히 노출한다. **EBOOK은 이 카메라 옵션을 숨김**(전자책 화면 캡처로 % OCR을 시도할 이유가 없어 스코프에서 제외).
+    - 입력창 아래에 **"최근 기록: 245p · 3분 전"**(PHYSICAL) 또는 **"최근 기록: 62% · 3분 전"**(EBOOK, `currentPage/totalPages`를 %로 재환산해 표시)처럼 그 책의 가장 최근 로그를 작게 보여주고, 옆에 연필(수정)·휴지통(삭제) 아이콘을 둔다. 방금 낸 오타를 새 로그를 또 쌓지 않고 바로 잡기 위한 용도(가장 흔한 실수 케이스라 대시보드에서 화면 전환 없이 처리).
+      - 연필 탭 → 입력창이 그 로그 값(PHYSICAL은 `currentPage`, EBOOK은 그 페이지를 다시 %로 환산한 값)으로 채워지고 "저장" 버튼이 "수정 저장"으로 바뀜 → 저장 시 새 로그를 추가하지 않고 기존 로그의 `currentPage`만 갱신(`EditLogUseCase`, 델타가 저장되지 않으므로 이웃 로그를 건드릴 필요 없음).
       - 휴지통 탭 → 확인 다이얼로그 없이 즉시 삭제하고 하단에 "기록 삭제됨 · 실행취소" 스낵바를 몇 초간 노출(`DeleteLogUseCase`) — 빠른 기록이라는 원칙에 맞게 모달 확인 대신 실행취소로 되돌릴 수 있게 함.
       - **과거 날짜의 로그는 이 시트가 아니라 책 상세의 진행 이력 목록에서 수정/삭제**(아래 4번 참고) — 대시보드 시트는 "방금 기록한 것 즉시 정정"용으로 최근 1건만 인라인 노출하고, 여러 날짜에 걸친 로그를 훑어보며 고치는 건 빈도가 낮은 딥다이브 작업이라 책 상세로 위치시킴. 스키마상 제약은 없으므로(델타 비저장) 언제든 어떤 로그든 같은 `EditLogUseCase`/`DeleteLogUseCase`로 처리.
   - 시트 내 "인용구 추가" 버튼: 탭하면 책 상세를 거치지 않고 곧바로 카메라(인용구 캡처)로 진입 — **대시보드 → 카메라 1홉**. 인용구 저장 후에는 "계속 촬영" / "완료"를 선택하게 해, 한 번에 여러 인용구를 찍을 때마다 대시보드로 돌아왔다 다시 들어가지 않아도 되게 한다.
@@ -119,9 +122,9 @@ com.dyk1323.booklogs/
    - **최근 7일 합산 페이지 막대그래프**(걷기 그래프 스타일): 오늘 막대는 강조색, 나머지는 흐린 색. 위 "오늘 읽은 페이지"와 이 그래프는 같은 데이터 소스(`AggregateDailyPagesUseCase`가 만드는 일자별 합산 배열) — 배열의 마지막(오늘) 항목을 숫자로 뽑아 보여주고 배열 전체를 막대로 그리는 것뿐, 별도 계산 불필요. 일일 목표가 설정돼 있으면 목표값 높이에 **점선 기준선**을 그려 넣어 날짜별로 목표 달성 여부를 한눈에 비교(목표를 넘긴 날의 막대는 성공 컬러로 표시).
    - **책장 그리드**: 진행 중인(`BookEntity.status == READING`) 책들을 표지로 배치 — 각 표지 이미지에 dim 오버레이(반투명 검정)를 씌우고, 그 위에 원형(도넛) 진행률 링을 겹쳐 그림(진행률 = currentPage/totalPages, `ComputeBookProgressUseCase` 재사용). **도넛 중앙에 퍼센트 텍스트("62%")를 함께 표시**해 시각적 링만으로 정확한 값을 가늠하기 어려운 문제를 보완 — 정확한 페이지 수(185/320p)는 표지 탭 시 열리는 빠른 기록 시트/책 상세에서 확인.
    - 표지 탭 → 위 "빠른 기록 UX"의 바텀시트가 열림(화면 전환 없음). 별도 FAB로 책 등록 화면 진입, 상단바 아이콘으로 라이브러리(전체 목록) 화면 진입.
-2. **책 등록**: 스캔/제목검색/수동입력 선택 → 스캔은 CameraX+ML Kit 바코드 인식 → ISBN으로 카카오 책 검색 API 조회(실패 시 Google Books 폴백) → 확인/수정 폼(둘 다 실패 시 빈 폼+수동입력 안내) → 저장(상태 READING이면 첫 라운드 자동 생성). 제목 검색도 동일하게 카카오 우선 조회. 저빈도 작업이므로 기존의 다단계 절차를 그대로 유지.
-3. **진행률 빠른 기록 시트**: 위 "빠른 기록 UX" 참고. 대시보드 표지 탭으로 진입하는 것이 기본 경로이며, 책 상세 화면에서도 동일한 시트를 재사용해 진입 가능(어떤 경로든 "책 선택" 단계가 별도로 필요 없음 — 이미 어떤 책인지 알고 진입하므로). 사진 인식 모드는 인용구 캡처와 동일한 카메라+OCR 파이프라인을 재사용, 코너의 독립된 숫자 토큰을 페이지 후보로 추출해 프리필하되 항상 사용자 확인 후 저장.
-4. **책 상세**: 메타데이터, 진행률, 라운드별 진행 이력/독후감, 인용구 목록. 딥다이브용 화면이며 빠른 기록 시트에서 "상세보기"로 진입하거나, 검색/목록에서 직접 진입. **진행 이력 목록의 각 로그 행은 탭하면 인라인으로 펼쳐져 수정/삭제 가능**(대시보드 빠른 기록 시트와 동일한 `EditLogUseCase`/`DeleteLogUseCase` 재사용) — 과거 특정 날짜의 기록을 고치는 것은 이 화면이 담당.
+2. **책 등록**: 스캔/제목검색/수동입력 선택 → 스캔은 CameraX+ML Kit 바코드 인식 → ISBN으로 카카오 책 검색 API 조회(실패 시 Google Books 폴백) → 확인/수정 폼(둘 다 실패 시 빈 폼+수동입력 안내) → 저장(상태 READING이면 첫 라운드 자동 생성). 제목 검색도 동일하게 카카오 우선 조회. **확인/수정 폼에 "종이책/전자책" 토글**을 추가(기본값 종이책, 메타데이터 API로는 형식을 알 수 없어 항상 수동 선택) — 전자책을 선택하면 이후 그 책의 빠른 기록 시트가 %입력 모드로 동작. 저빈도 작업이므로 기존의 다단계 절차를 그대로 유지.
+3. **진행률 빠른 기록 시트**: 위 "빠른 기록 UX" 참고. 대시보드 표지 탭으로 진입하는 것이 기본 경로이며, 책 상세 화면에서도 동일한 시트를 재사용해 진입 가능(어떤 경로든 "책 선택" 단계가 별도로 필요 없음 — 이미 어떤 책인지 알고 진입하므로). PHYSICAL 책의 사진 인식 모드는 인용구 캡처와 동일한 카메라+OCR 파이프라인을 재사용, 코너의 독립된 숫자 토큰을 페이지 후보로 추출해 프리필하되 항상 사용자 확인 후 저장. EBOOK 책은 % 직접 입력만 지원.
+4. **책 상세**: 메타데이터, 진행률, 라운드별 진행 이력/독후감, 인용구 목록. 딥다이브용 화면이며 빠른 기록 시트에서 "상세보기"로 진입하거나, 검색/목록에서 직접 진입. **진행 이력 목록의 각 로그 행은 탭하면 인라인으로 펼쳐져 수정/삭제 가능**(대시보드 빠른 기록 시트와 동일한 `EditLogUseCase`/`DeleteLogUseCase` 재사용) — 과거 특정 날짜의 기록을 고치는 것은 이 화면이 담당. 이력의 각 행은 책 `format`에 따라 "245p" 또는 "62%"로 표시(저장된 값은 항상 페이지, 표시만 환산).
    - **상태 변경 액션**(`BookStatusActions`, `ChangeBookStatusUseCase` 호출): READING 중엔 "다 읽음" / "중단" / "일시중지" 세 버튼을 노출. "일시중지"는 라운드를 유지한 채 상태만 바꾸고, "다 읽음"/"중단"은 현재 라운드를 종료(각각 `endReason = COMPLETED`/`DROPPED`)하고 책 상태를 FINISHED/DROPPED로 바꿈. FINISHED/DROPPED/PAUSED 상태에선 "다시 읽기 시작" 버튼 하나로 재개(PAUSED는 같은 라운드 이어감, FINISHED/DROPPED는 새 라운드 시작). 등록/상태변경처럼 저빈도 작업이라 책 상세에 위치, 확인 다이얼로그 없이 즉시 적용 후 스낵바로 되돌리기 제공.
    - → 독후감작성 등 저빈도 작업으로 이동
 5. **인용구 캡처**: 대시보드 빠른 기록 시트 또는 책 상세에서 진입(둘 다 책 컨텍스트를 이미 알고 있어 책 선택 단계 없음). 단발 촬영(연속 프레임 아님, 정확도 우선) → Latin+Korean 인식기 동시 실행 → 인식된 줄(line) 단위 리스트를 체크박스로 선택("전체 선택" 토글도 제공, 문단 전체를 인용하는 경우가 많음).
@@ -144,7 +147,7 @@ com.dyk1323.booklogs/
 - **도넛 진행률 오버레이**: `DashboardScreen`의 책장 그리드 아이템은 `Box`로 표지(Coil `AsyncImage`) + 반투명 검정 `Box`(dim) + `Canvas`로 그리는 도넛(진행률 arc, `drawArc(startAngle=-90, sweepAngle=360*progress)`) + 도넛 중앙에 `Text("${(progress*100).roundToInt()}%")`를 겹쳐 그림. 진행률 계산은 기존 `ComputeBookProgressUseCase` 재사용. `totalPages`가 없으면 도넛/퍼센트 대신 "?" 배지로 대체(이미 앞서 정의됨).
 - **오늘 읽은 페이지 히어로 숫자 + 주간 막대그래프**: `DashboardViewModel`이 `AggregateDailyPagesUseCase`의 결과(`List<DayPageTotal>`, 최근 7일)를 한 번만 계산해 `DailyPagesBarChart`(전체 배열)와 `TodayPagesHero`(마지막 원소, `Text`로 큰 숫자) 두 컴포저블에 그대로 전달 — 별도 쿼리/계산 중복 없음.
 - **일일 목표선**: `AppSettingsDataStore.dailyGoalPages`를 `DashboardViewModel`이 `AggregateDailyPagesUseCase` 결과와 `combine`해 구독. `dailyGoalPages`가 null이 아니면 `DailyPagesBarChart`가 목표값 위치에 `drawLine`으로 점선을 긋고, 각 막대는 `dayTotal >= goal` 여부로 성공/일반 컬러를 분기(간단한 불리언 비교라 별도 usecase 없이 컴포저블에서 직접 처리). `TodayPagesHero`도 같은 비교로 "128 / 150p" 텍스트와 색상을 결정.
-- **빠른 기록 시트(`BookQuickActionSheet`)**: `ModalBottomSheet`로 구현, 열릴 때 해당 책의 마지막 `ReadingLog.currentPage`를 조회해 입력창에 프리필하고 `TextFieldValue`의 selection을 전체 범위로 설정해 즉시 타이핑하면 덮어써지도록 함(`LocalFocusRequester`로 자동 포커스 + 키패드 자동 표시). 저장 시 `LogProgressUseCase`가 단순 insert(델타 계산 없음). 시트는 화면 전환이 아니라 대시보드 위에 오버레이되므로 저장 후 자동 닫힘 + 진행률 링 애니메이션 갱신.
+- **빠른 기록 시트(`BookQuickActionSheet`)**: `ModalBottomSheet`로 구현, 열릴 때 해당 책의 마지막 `ReadingLog.currentPage`를 조회해 입력창에 프리필하고 `TextFieldValue`의 selection을 전체 범위로 설정해 즉시 타이핑하면 덮어써지도록 함(`LocalFocusRequester`로 자동 포커스 + 키패드 자동 표시). PHYSICAL 책은 프리필 값이 곧 `currentPage`이고, EBOOK 책은 `ConvertPagePercentUseCase.pageToPercent`로 환산한 %를 프리필. 저장 시 PHYSICAL은 `LogProgressUseCase`에 입력값을 그대로, EBOOK은 `percentToPage`로 환산한 값을 전달 — 둘 다 결과적으로 `ReadingLogEntity.currentPage`에 페이지가 저장되는 단순 insert(델타 계산 없음). EBOOK인데 `totalPages`가 아직 없으면 %입력 대신 총 페이지 수(대략치) 입력을 먼저 요구(기존 "?" 배지 흐름 재사용). 시트는 화면 전환이 아니라 대시보드 위에 오버레이되므로 저장 후 자동 닫힘 + 진행률 링 애니메이션 갱신.
 - **인용구 "계속 촬영" 흐름**: `QuoteCaptureViewModel`이 저장 성공 후 `SnackbarResult`/다이얼로그로 "계속 촬영" 선택 시 동일 화면(같은 bookId)에서 카메라를 재시작하고, "완료" 선택 시 호출한 곳(대시보드 또는 책 상세)으로 pop. 내비게이션 스택에 화면을 새로 쌓지 않고 같은 컴포저블 내에서 상태만 리셋.
 - **여러 페이지 인용구("다음 페이지 이어서 촬영")**: `QuoteCaptureViewModel`이 `capturedPages: List<CapturedPageOcrResult>`(각 원소 = 한 번의 촬영에서 나온 인식 줄 목록 + 사용자가 선택한 줄 인덱스 + 그 페이지의 인식/입력된 페이지번호)를 순서대로 보관. "다음 페이지 이어서 촬영" 탭 시 카메라를 다시 열고 촬영 결과를 리스트에 append, 텍스트 선택 화면은 그룹별로 구분해 보여주되 최종 텍스트필드는 순수 함수 `joinSelectedQuoteLines(capturedPages): String`(선택된 줄을 촬영 순서대로 join, Android 의존성 없어 단위테스트 가능)의 결과를 표시. 저장 시 `QuoteEntity.pageNumber = capturedPages.first().pageNumber`, `pageNumberEnd = if (capturedPages.size > 1) capturedPages.last().pageNumber else null`. "계속 촬영"(저장 후 새 인용구)과는 별개 기능이며 저장 전에만 등장.
 - **로그 수정/삭제(임의 시점 가능)**: `ReadingLogDao`에 `getLatest(roundId): Flow<ReadingLogEntity?>`, `getAllForRound(roundId): Flow<List<ReadingLogEntity>>`, `update(log)`, `deleteById(id)` 추가. `EditLogUseCase`/`DeleteLogUseCase`는 대상 로그의 `roundId`만 확인하고 바로 update/delete — 델타가 저장되지 않으므로 이웃 로그를 손댈 필요가 전혀 없다. 대시보드 시트는 `getLatest`로 최근 1건만 인라인 노출하고, 책 상세의 진행 이력은 `getAllForRound`로 전체 목록을 보여주며 각 행에 동일한 수정/삭제 진입점을 둔다. 두 화면 모두 Flow 구독이라 수정/삭제 즉시 진행률 링·그래프·이력 목록이 자동 갱신됨. 삭제 시 스낵바의 "실행취소"는 삭제된 엔티티를 ViewModel이 메모리에 잠깐 들고 있다가 재삽입하는 방식으로 구현(별도 soft-delete 컬럼 불필요).
@@ -168,7 +171,7 @@ com.dyk1323.booklogs/
 
 샌드박스에 Android SDK/에뮬레이터가 없으므로:
 - **가능**: `./gradlew :app:compileDebugKotlin`, `./gradlew :app:testDebugUnitTest`로 순수 로직 검증
-  - `ComputeLogDeltasUseCaseTest`(핵심: 정렬/인접쌍 차이/클램프, 그리고 **중간 로그 수정·삭제 후 이웃 델타가 재저장 없이 올바르게 다시 계산되는지** — 이번 스키마 변경의 핵심 검증 대상), `AggregateDailyPagesUseCaseTest`(일자 버켓팅/0채움/여러 책 합산/기간 경계 밖 로그 포함 여부, **목표값과 비교해 성공 여부 플래그가 맞는지**), `LogProgressUseCaseTest`(단순 insert), `EditLogUseCaseTest`/`DeleteLogUseCaseTest`(임의 시점 로그 수정/삭제, 이웃 로그 미변경 확인), `ComputeBookProgressUseCaseTest`(totalPages null 처리), `ChangeBookStatusUseCaseTest`(READING↔PAUSED는 라운드 불변, →FINISHED/DROPPED는 라운드 종료+endReason 정확성, FINISHED/DROPPED→READING은 roundNumber 증가한 새 라운드 생성, PAUSED→READING은 라운드 재사용), `PickReminderBookUseCaseTest`(빈 목록→null, 여러 권 중 무작위 선택이 목록 범위 내에서만 나오는지), `BookMetadataMapperTest`(카카오 DTO 매핑 + Google Books DTO 매핑 + 폴백 분기), `PageNumberCandidateExtractorTest`(숫자 토큰 필터링/코너 스코어링 로직, 순수 함수로 분리해 단위 테스트), `JoinSelectedQuoteLinesTest`(여러 페이지의 선택된 줄을 촬영 순서대로 합치는 순수 함수, 페이지 1건/2건 이상일 때 `pageNumberEnd` null 여부), Fake DAO 기반 Repository 테스트
+  - `ComputeLogDeltasUseCaseTest`(핵심: 정렬/인접쌍 차이/클램프, 그리고 **중간 로그 수정·삭제 후 이웃 델타가 재저장 없이 올바르게 다시 계산되는지** — 이번 스키마 변경의 핵심 검증 대상), `AggregateDailyPagesUseCaseTest`(일자 버켓팅/0채움/여러 책 합산/기간 경계 밖 로그 포함 여부, **목표값과 비교해 성공 여부 플래그가 맞는지**), `LogProgressUseCaseTest`(단순 insert), `EditLogUseCaseTest`/`DeleteLogUseCaseTest`(임의 시점 로그 수정/삭제, 이웃 로그 미변경 확인), `ComputeBookProgressUseCaseTest`(totalPages null 처리), `ChangeBookStatusUseCaseTest`(READING↔PAUSED는 라운드 불변, →FINISHED/DROPPED는 라운드 종료+endReason 정확성, FINISHED/DROPPED→READING은 roundNumber 증가한 새 라운드 생성, PAUSED→READING은 라운드 재사용), `PickReminderBookUseCaseTest`(빈 목록→null, 여러 권 중 무작위 선택이 목록 범위 내에서만 나오는지), `BookMetadataMapperTest`(카카오 DTO 매핑 + Google Books DTO 매핑 + 폴백 분기), `PageNumberCandidateExtractorTest`(숫자 토큰 필터링/코너 스코어링 로직, 순수 함수로 분리해 단위 테스트), `JoinSelectedQuoteLinesTest`(여러 페이지의 선택된 줄을 촬영 순서대로 합치는 순수 함수, 페이지 1건/2건 이상일 때 `pageNumberEnd` null 여부), `ConvertPagePercentUseCaseTest`(양방향 변환 반올림 정확성, totalPages null일 때 변환 불가 처리, 0%/100% 경계값), Fake DAO 기반 Repository 테스트
   - `assembleDebug`/`lint`는 SDK 플랫폼 컴포넌트 다운로드가 가능한지에 따라 시도해보되, 안 되면 컴파일+유닛테스트까지가 한계
 - **불가능(사용자가 실기기/에뮬레이터에서 직접 확인 필요)**: Compose 화면 렌더링/내비게이션 클릭 흐름(책장 그리드 + 도넛 오버레이 실제 표시 포함), CameraX 프리뷰·권한, 실제 바코드 인식 정확도, 실제 한글/영어 책 페이지 OCR 정확도 및 텍스트 선택 UX, 페이지 번호 자동 인식 정확도(폰트/각도/코너 위치 편차가 커서 실기기 튜닝 필요), Room 실기기 동작, 카카오/Google Books 실제 네트워크 응답, **AlarmManager 알람 발화·Doze 하 지연 정도·재부팅 후 재등록·알림 표시/딥링크 동작**, 전체 엔드투엔드 플로우(등록→기록→그래프 갱신→인용구→독후감→리마인더)
 
