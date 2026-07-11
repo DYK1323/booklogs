@@ -22,6 +22,8 @@ import com.dyk1323.booklogs.ui.registration.BookConfirmFormScreen
 import com.dyk1323.booklogs.ui.registration.BookRegistrationScreen
 import com.dyk1323.booklogs.ui.registration.BookRegistrationViewModel
 import com.dyk1323.booklogs.ui.registration.TitleSearchScreen
+import com.dyk1323.booklogs.ui.review.ReviewEditorScreen
+import com.dyk1323.booklogs.ui.review.ReviewEditorViewModel
 
 @Composable
 fun BooklogsNavHost(
@@ -30,6 +32,7 @@ fun BooklogsNavHost(
     bookDetailViewModel: BookDetailViewModel,
     libraryViewModel: LibraryViewModel,
     quoteCaptureViewModel: QuoteCaptureViewModel,
+    reviewEditorViewModel: ReviewEditorViewModel,
     navController: NavHostController = rememberNavController(),
 ) {
     NavHost(navController = navController, startDestination = Destinations.DASHBOARD) {
@@ -75,6 +78,9 @@ fun BooklogsNavHost(
                 onCaptureQuoteClick = {
                     navController.navigate(Destinations.quoteCapture(bookId))
                 },
+                onWriteReviewClick = {
+                    navController.navigate(Destinations.reviewEditor(bookId))
+                },
             )
         }
 
@@ -86,6 +92,18 @@ fun BooklogsNavHost(
             QuoteCaptureScreen(
                 bookId = bookId,
                 viewModel = quoteCaptureViewModel,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(
+            route = Destinations.REVIEW_EDITOR,
+            arguments = listOf(navArgument("bookId") { type = NavType.LongType }),
+        ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getLong("bookId") ?: return@composable
+            ReviewEditorScreen(
+                bookId = bookId,
+                viewModel = reviewEditorViewModel,
                 onBack = { navController.popBackStack() },
             )
         }

@@ -5,6 +5,7 @@ object Destinations {
     const val LIBRARY = "library"
     const val BOOK_DETAIL = "book/{bookId}"
     const val QUOTE_CAPTURE = "book/{bookId}/quote-capture"
+    const val REVIEW_EDITOR = "book/{bookId}/review"
     const val REGISTRATION_ENTRY = "registration"
     const val REGISTRATION_SCAN = "registration/scan"
     const val REGISTRATION_SEARCH = "registration/search"
@@ -12,4 +13,5 @@ object Destinations {
 
     fun bookDetail(bookId: Long): String = "book/$bookId"
     fun quoteCapture(bookId: Long): String = "book/$bookId/quote-capture"
+    fun reviewEditor(bookId: Long): String = "book/$bookId/review"
 }

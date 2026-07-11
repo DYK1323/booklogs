@@ -134,9 +134,33 @@
   },
   "hotPaths": [
     {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\detail\\BookDetailScreen.kt",
+      "accessCount": 11,
+      "lastAccessed": 1783758496381,
+      "type": "directory"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\dashboard\\DashboardScreen.kt",
+      "accessCount": 10,
+      "lastAccessed": 1783758517302,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\detail\\BookDetailViewModel.kt",
+      "accessCount": 9,
+      "lastAccessed": 1783758385325,
+      "type": "file"
+    },
+    {
       "path": "docs\\PLAN.md",
-      "accessCount": 5,
-      "lastAccessed": 1783757700342,
+      "accessCount": 7,
+      "lastAccessed": 1783757840016,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\navigation\\BooklogsNavHost.kt",
+      "accessCount": 7,
+      "lastAccessed": 1783758467330,
       "type": "file"
     },
     {
@@ -152,6 +176,18 @@
       "type": "file"
     },
     {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\library\\LibraryScreen.kt",
+      "accessCount": 4,
+      "lastAccessed": 1783758265245,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\MainActivity.kt",
+      "accessCount": 4,
+      "lastAccessed": 1783758488981,
+      "type": "file"
+    },
+    {
       "path": "app\\src\\main\\kotlin",
       "accessCount": 3,
       "lastAccessed": 1783757533988,
@@ -164,27 +200,15 @@
       "type": "file"
     },
     {
-      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\detail\\BookDetailScreen.kt",
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\navigation\\Destinations.kt",
       "accessCount": 2,
-      "lastAccessed": 1783757280359,
-      "type": "directory"
+      "lastAccessed": 1783758420683,
+      "type": "file"
     },
     {
       "path": "domain\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\domain\\model\\Quote.kt",
       "accessCount": 1,
       "lastAccessed": 1783757261967,
-      "type": "file"
-    },
-    {
-      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\navigation\\BooklogsNavHost.kt",
-      "accessCount": 1,
-      "lastAccessed": 1783757287469,
-      "type": "file"
-    },
-    {
-      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\dashboard\\DashboardScreen.kt",
-      "accessCount": 1,
-      "lastAccessed": 1783757297975,
       "type": "file"
     },
     {
@@ -215,6 +239,66 @@
       "path": "local.properties",
       "accessCount": 1,
       "lastAccessed": 1783757725994,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\notification\\ReminderReceiver.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783757882303,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\notification\\BootReceiver.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783757891895,
+      "type": "file"
+    },
+    {
+      "path": "domain\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\domain\\repository\\ReviewRepository.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783758054587,
+      "type": "file"
+    },
+    {
+      "path": "domain\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\domain\\model\\Review.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783758057948,
+      "type": "file"
+    },
+    {
+      "path": "domain\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\domain\\model\\ReadingRound.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783758057997,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\di\\AppContainer.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783758107584,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\common\\components\\BookCoverImage.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783758160825,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\common\\components\\EmptyState.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783758169920,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\review\\ReviewEditorViewModel.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783758397269,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\review\\ReviewEditorScreen.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783758413509,
       "type": "file"
     }
   ],

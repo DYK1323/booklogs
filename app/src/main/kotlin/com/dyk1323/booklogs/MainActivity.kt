@@ -14,6 +14,7 @@ import com.dyk1323.booklogs.ui.library.LibraryViewModel
 import com.dyk1323.booklogs.ui.navigation.BooklogsNavHost
 import com.dyk1323.booklogs.ui.quote.QuoteCaptureViewModel
 import com.dyk1323.booklogs.ui.registration.BookRegistrationViewModel
+import com.dyk1323.booklogs.ui.review.ReviewEditorViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -52,7 +53,6 @@ class MainActivity : ComponentActivity() {
                 BookDetailViewModel(
                     bookRepository = container.bookRepository,
                     readingLogRepository = container.readingLogRepository,
-                    readingRoundRepository = container.readingRoundRepository,
                     quoteRepository = container.quoteRepository,
                     reviewRepository = container.reviewRepository,
                     changeBookStatusUseCase = container.changeBookStatusUseCase,
@@ -85,6 +85,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val reviewEditorViewModel: ReviewEditorViewModel by viewModels {
+        val container = (application as BooklogsApplication).container
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =
+                ReviewEditorViewModel(
+                    readingRoundRepository = container.readingRoundRepository,
+                    reviewRepository = container.reviewRepository,
+                ) as T
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -95,6 +107,7 @@ class MainActivity : ComponentActivity() {
                     bookDetailViewModel = bookDetailViewModel,
                     libraryViewModel = libraryViewModel,
                     quoteCaptureViewModel = quoteCaptureViewModel,
+                    reviewEditorViewModel = reviewEditorViewModel,
                 )
             }
         }

@@ -23,7 +23,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -48,7 +47,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -56,8 +54,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.dyk1323.booklogs.domain.usecase.DayPageTotal
+import com.dyk1323.booklogs.ui.common.components.BookCoverImage
+import com.dyk1323.booklogs.ui.common.components.EmptyState
 import com.dyk1323.booklogs.ui.common.theme.StatusGoodLight
 import java.time.LocalDate
 
@@ -117,7 +116,11 @@ fun DashboardScreen(
             }
             Spacer(modifier = Modifier.height(14.dp))
             if (uiState.readingBooks.isEmpty() && !uiState.isLoading) {
-                EmptyReadingShelf(onRegisterBookClick = onRegisterBookClick)
+                EmptyState(
+                    message = "아직 읽는 중인 책이 없어요.",
+                    actionLabel = "책 등록",
+                    onActionClick = onRegisterBookClick,
+                )
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 132.dp),
@@ -227,29 +230,18 @@ private fun BookShelfTile(item: BookShelfItemUi, onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(0.68f)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .aspectRatio(0.68f),
             contentAlignment = Alignment.Center,
         ) {
-            if (item.book.coverImageUrl != null) {
-                AsyncImage(
-                    model = item.book.coverImageUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Outlined.Book,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.32f),
-                    modifier = Modifier.size(42.dp),
-                )
-            }
+            BookCoverImage(
+                coverImageUrl = item.book.coverImageUrl,
+                modifier = Modifier.matchParentSize(),
+                placeholderIconSize = 42.dp,
+            )
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(8.dp))
                     .background(Color.Black.copy(alpha = 0.28f)),
             )
             ProgressDonut(progress = item.progress, modifier = Modifier.size(72.dp))
@@ -315,29 +307,6 @@ private fun ProgressDonut(progress: Float?, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.labelLarge,
             color = Color.White,
         )
-    }
-}
-
-@Composable
-private fun EmptyReadingShelf(onRegisterBookClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 42.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Book,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.32f),
-            modifier = Modifier.size(42.dp),
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = "아직 읽는 중인 책이 없어요.", style = MaterialTheme.typography.bodyLarge)
-        Spacer(modifier = Modifier.height(12.dp))
-        TextButton(onClick = onRegisterBookClick) {
-            Text(text = "책 등록")
-        }
     }
 }
 

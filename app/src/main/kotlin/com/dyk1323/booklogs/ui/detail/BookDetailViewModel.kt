@@ -10,7 +10,6 @@ import com.dyk1323.booklogs.domain.model.Review
 import com.dyk1323.booklogs.domain.repository.BookRepository
 import com.dyk1323.booklogs.domain.repository.QuoteRepository
 import com.dyk1323.booklogs.domain.repository.ReadingLogRepository
-import com.dyk1323.booklogs.domain.repository.ReadingRoundRepository
 import com.dyk1323.booklogs.domain.repository.ReviewRepository
 import com.dyk1323.booklogs.domain.usecase.ChangeBookStatusUseCase
 import com.dyk1323.booklogs.domain.usecase.DeleteBookUseCase
@@ -37,7 +36,6 @@ data class BookDetailUiState(
     val reviews: List<Review> = emptyList(),
     val quoteText: String = "",
     val quotePageText: String = "",
-    val reviewText: String = "",
     val message: String? = null,
 )
 
@@ -54,7 +52,6 @@ private data class BookDetailBaseState(
 class BookDetailViewModel(
     private val bookRepository: BookRepository,
     private val readingLogRepository: ReadingLogRepository,
-    private val readingRoundRepository: ReadingRoundRepository,
     private val quoteRepository: QuoteRepository,
     private val reviewRepository: ReviewRepository,
     private val changeBookStatusUseCase: ChangeBookStatusUseCase,
@@ -65,7 +62,6 @@ class BookDetailViewModel(
     private val selectedBookId = MutableStateFlow<Long?>(null)
     private val quoteText = MutableStateFlow("")
     private val quotePageText = MutableStateFlow("")
-    private val reviewText = MutableStateFlow("")
     private val message = MutableStateFlow<String?>(null)
 
     private val quotes = selectedBookId.flatMapLatest { bookId ->
@@ -101,9 +97,8 @@ class BookDetailViewModel(
         baseState,
         quoteText,
         quotePageText,
-        reviewText,
         message,
-    ) { base, quoteText, quotePageText, reviewText, message ->
+    ) { base, quoteText, quotePageText, message ->
         BookDetailUiState(
             book = base.book,
             currentPage = base.currentPage,
@@ -113,7 +108,6 @@ class BookDetailViewModel(
             reviews = base.reviews,
             quoteText = quoteText,
             quotePageText = quotePageText,
-            reviewText = reviewText,
             message = message,
         )
     }.stateIn(
@@ -134,11 +128,6 @@ class BookDetailViewModel(
 
     fun updateQuotePageText(value: String) {
         quotePageText.value = value.filter(Char::isDigit).take(4)
-        message.value = null
-    }
-
-    fun updateReviewText(value: String) {
-        reviewText.value = value
         message.value = null
     }
 
@@ -163,35 +152,6 @@ class BookDetailViewModel(
             quoteText.value = ""
             quotePageText.value = ""
             message.value = "인용구를 저장했어요."
-        }
-    }
-
-    fun saveReview() {
-        val bookId = selectedBookId.value ?: return
-        val text = reviewText.value.trim()
-        if (text.isEmpty()) {
-            message.value = "저장할 독후감을 입력해주세요."
-            return
-        }
-        viewModelScope.launch {
-            val round = readingRoundRepository.getOpenRound(bookId)
-                ?: readingRoundRepository.getRoundsForBook(bookId).maxByOrNull { it.roundNumber }
-            if (round == null) {
-                message.value = "읽기 기록이 있는 책에 독후감을 저장할 수 있어요."
-                return@launch
-            }
-            reviewRepository.insert(
-                Review(
-                    id = 0,
-                    bookId = bookId,
-                    readingRoundId = round.id,
-                    content = text,
-                    rating = null,
-                    createdAt = System.currentTimeMillis(),
-                ),
-            )
-            reviewText.value = ""
-            message.value = "독후감을 저장했어요."
         }
     }
 

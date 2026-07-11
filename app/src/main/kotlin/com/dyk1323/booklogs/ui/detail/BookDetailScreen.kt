@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -43,14 +42,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.dyk1323.booklogs.domain.model.BookStatus
 import com.dyk1323.booklogs.domain.model.Quote
 import com.dyk1323.booklogs.domain.usecase.LogDelta
+import com.dyk1323.booklogs.ui.common.components.BookCoverImage
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -63,6 +60,7 @@ fun BookDetailScreen(
     onBack: () -> Unit,
     onDeleted: () -> Unit,
     onCaptureQuoteClick: () -> Unit,
+    onWriteReviewClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(bookId) {
@@ -197,20 +195,12 @@ fun BookDetailScreen(
             }
             item {
                 DetailSection(title = "독후감") {
-                    OutlinedTextField(
-                        value = uiState.reviewText,
-                        onValueChange = viewModel::updateReviewText,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("독후감") },
-                        minLines = 4,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        Button(onClick = viewModel::saveReview, shape = RoundedCornerShape(8.dp)) {
-                            Text(text = "저장")
+                        TextButton(onClick = onWriteReviewClick) {
+                            Text(text = "독후감 작성")
                         }
                     }
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     if (uiState.reviews.isEmpty()) {
                         Text(
                             text = "저장된 독후감이 없어요.",
@@ -268,29 +258,12 @@ fun BookDetailScreen(
 private fun BookHeader(state: BookDetailUiState) {
     val book = state.book ?: return
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        Box(
+        BookCoverImage(
+            coverImageUrl = book.coverImageUrl,
             modifier = Modifier
                 .width(116.dp)
-                .aspectRatio(0.68f)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (book.coverImageUrl != null) {
-                AsyncImage(
-                    model = book.coverImageUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Outlined.Book,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.32f),
-                )
-            }
-        }
+                .aspectRatio(0.68f),
+        )
         Spacer(modifier = Modifier.width(18.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(text = book.title, style = MaterialTheme.typography.titleLarge)
