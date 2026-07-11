@@ -63,8 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -459,20 +457,14 @@ private fun QuickLogSheet(
     onCancelEditLatestLog: () -> Unit,
     onDeleteLatestLog: () -> Unit,
 ) {
-    val focusRequester = remember { FocusRequester() }
+    // Never auto-focus — book-cover tap is the highest-frequency action in the app, and requesting
+    // focus programmatically (even only on some events) proved flaky under rapid open/close (keyboard
+    // would sometimes show, sometimes not, depending on recomposition timing). The field is prefilled
+    // and select-all'd so a manual tap + type still overwrites it outright; focus only ever comes from
+    // the user tapping the field themselves.
     var fieldValue by remember { mutableStateOf(TextFieldValue(state.inputText)) }
-    // Book-cover tap is the highest-frequency action in the app — popping the keyboard the instant the
-    // sheet opens is disruptive when the user just wants to glance at progress or tap another action.
-    // Only steal focus for prefill events that happen *after* the sheet is already open (editing the
-    // latest log, a camera-OCR prefill) — those are clearly "the user wants to type now" moments.
-    var previousBookId by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(state.book.id, state.prefillNonce) {
-        val isInitialOpen = state.book.id != previousBookId
         fieldValue = TextFieldValue(text = state.inputText, selection = TextRange(0, state.inputText.length))
-        if (!isInitialOpen) {
-            focusRequester.requestFocus()
-        }
-        previousBookId = state.book.id
     }
 
     Column(
@@ -502,9 +494,7 @@ private fun QuickLogSheet(
                     fieldValue = it
                     onInputChanged(it.text)
                 },
-                modifier = Modifier
-                    .weight(1f)
-                    .focusRequester(focusRequester),
+                modifier = Modifier.weight(1f),
                 label = { Text(state.inputLabel) },
                 suffix = { Text(state.inputSuffix) },
                 singleLine = true,
