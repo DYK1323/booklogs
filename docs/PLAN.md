@@ -39,6 +39,8 @@
 | 차트 | Compose `Canvas`로 직접 구현하는 막대그래프 (외부 차트 라이브러리 미사용) | 요구사항이 "일별 합산 막대그래프" 하나뿐이라 Vico 등 의존성 추가보다 ~100줄 커스텀 Canvas가 더 가볍고, 데이터 버켓팅 로직은 순수 Kotlin 함수로 분리해 단위 테스트 가능 |
 | 내비게이션 | Jetpack Compose Navigation, 단일 Activity | |
 | 리마인더 | `AlarmManager`(비정확 알람, `setAndAllowWhileIdle`) + `NotificationManager` + DataStore Preferences(설정 저장) | 클라우드/서버 푸시 없이 기기 로컬 알람만으로 구현 가능. 분 단위 오차는 독서 리마인더 용도에 무해하다고 보고 정확 알람(Android 12+ `SCHEDULE_EXACT_ALARM` 권한 필요)은 피해 권한 요청 절차를 단순화 |
+| JSON 직렬화 | kotlinx.serialization | Retrofit 컨버터와 백업 내보내기/가져오기(JSON) 양쪽에 동일 라이브러리 재사용, 별도 JSON 라이브러리 추가 안 함 |
+| 백업/복원 | Storage Access Framework(`ACTION_CREATE_DOCUMENT`/`ACTION_OPEN_DOCUMENT`) + kotlinx.serialization JSON | 클라우드 없이도 사용자가 원하는 위치(구글드라이브 문서공급자 포함, SAF가 지원하는 곳 어디든)에 수동 백업 가능. 별도 저장소 권한 불필요(SAF가 스코프드 접근 제공) |
 | SDK | minSdk 26, target/compile SDK 35 | ML Kit 한글 인식·CameraX 안정 지원 범위 |
 
 ## 비주얼 디자인 원칙 (AI 슬롭 방지)
@@ -79,10 +81,13 @@ Material 3 기본 다이나믹 컬러(기기별 랜덤 보라/파랑)를 그대�
 - **빈 상태(EmptyState)**: 마스코트 일러스트 없이 텍스트 + 필요하면 아이콘 하나만("아직 읽는 중인 책이 없어요" + 책 등록 버튼).
 - **모션 절제**: 의미 있는 전환에만 애니메이션 사용(진행률 링이 값 변경 시 자연스럽게 채워짐, 표지 이미지 crossfade) — 통통 튀는 스프링/과장된 화면 전환 효과 없음, 시스템 기본 모션 우선.
 - **일관된 컴포넌트 재사용**: `BookCoverImage`/`SkeletonBox`/`LoadingOverlay`/`EmptyState`/`AttributeBarChart`처럼 이미 설계된 공용 컴포넌트를 화면마다 새로 만들지 않고 그대로 재사용 — 코드 재사용이자 동시에 시각적 일관성 확보 수단.
+- **접근성(TalkBack) 기본 원칙**: 도넛 진행률 링처럼 시각 정보만으로 전달되는 요소는 `Modifier.semantics { contentDescription = "$title, ${progress}% 진행" }`으로 스크린리더가 값을 읽게 함(이미 중앙에 퍼센트 텍스트가 있어 시각적으로는 커버되지만 TalkBack엔 별도 처리 필요). 아이콘 전용 버튼(카메라, 연필, 휴지통 등)엔 빠짐없이 `contentDescription` 지정. 터치 타깃은 최소 48dp 유지. 시스템 폰트 확대 설정 시 텍스트가 잘리지 않도록 고정 높이 `Box`에 텍스트를 강제로 욱여넣지 않고 `wrapContentHeight` 기본값 사용.
 
 ## 데이터 모델 (Room)
 
-- **BookEntity** (`books`): id, isbn?, title, author?, publisher?, coverImageUrl?, totalPages?, status(READING/PAUSED/FINISHED/DROPPED/PLANNED), **format**(PHYSICAL/EBOOK, 기본 PHYSICAL), **genre?**, **country?**, createdAt
+**마이그레이션 원칙**: `BooklogsDatabase`는 버전 1부터 시작해, 이후 스키마를 바꿀 때마다(컬럼 추가/삭제, 테이블 추가 등) 반드시 정식 `Migration(from, to)` 객체를 작성해 누적한다. **`fallbackToDestructiveMigration()`은 사용하지 않음** — 로컬 전용 앱이라 마이그레이션 실패나 스키마 불일치가 곧 사용자의 독서 기록 영구 손실로 이어지므로, 서버가 있는 앱과 달리 "그냥 지우고 다시 만들기"가 절대 안전하지 않음. 버전을 올릴 때마다 Room의 `MigrationTestHelper` 기반 마이그레이션 테스트를 작성하는 걸 원칙으로 하되, 이건 계측 테스트(instrumented test)라 이 샌드박스에선 실행 불가 — 사용자가 실기기/에뮬레이터 확보 후 검증. 지금 계획 문서상 스키마가 여러 차례 바뀌었지만, 실제 구현은 최종 형태를 스키마 버전 1로 잡고 시작하면 되므로 지금까지의 설계 변경 이력 자체를 마이그레이션으로 재현할 필요는 없음.
+
+- **BookEntity** (`books`): id, isbn?(인덱스 — 중복 등록 감지용 조회에 사용), title, author?, publisher?, coverImageUrl?, totalPages?, status(READING/PAUSED/FINISHED/DROPPED/PLANNED), **format**(PHYSICAL/EBOOK, 기본 PHYSICAL), **genre?**, **country?**, createdAt
   - country는 어떤 API도 제공하지 않는 정보라 항상 수동 입력. genre는 카카오엔 필드 자체가 없지만, **Google Books를 항상 보조로 병렬 호출**하므로 그 응답에 `categories`가 있으면 자동완성됨(실패해도 무방, 사용자가 직접 채우거나 비워둘 수 있음). 둘 다 비워두면 통계 화면에서 "미상"으로 집계.
   - READING: 대시보드 책장에 노출, 진행 중
   - PAUSED: 일시중지 — 나중에 재개할 생각 있음. 같은 라운드를 유지한 채 책장에서만 빠짐
@@ -106,8 +111,9 @@ com.dyk1323.booklogs/
   data/
     local/{BooklogsDatabase, dao/*, entity/*}
     remote/{KakaoBooksApi, GoogleBooksApi, dto/*, BookMetadataMapper — 두 API 응답을 병합해 하나의 BookMetadata로 합성}
-    repository/{Book,ReadingLog,Quote,Review,BookMetadata}Repository(+Impl)
+    repository/{Book,ReadingLog,Quote,Review,BookMetadata}Repository(+Impl) — `BookRepository`에 `findByIsbn(isbn): BookEntity?` 추가(중복 등록 감지용)
     settings/ (AppSettingsDataStore — DataStore Preferences, Room이 아님. reminderEnabled: Boolean, reminderHour/Minute: Int, **dailyGoalPages: Int?**)
+    backup/ (BackupExporter, BackupImporter, dto/BackupEnvelope — schemaVersion 포함 JSON 스키마. Room 5개 테이블 전체를 하나의 JSON으로 직렬화/역직렬화. 사진/이미지 바이너리는 애초에 디스크에 저장 안 하므로 백업 대상에서 자연히 제외)
   domain/
     model/ (Book, ReadingLog, Quote, Review, ReadingRound — Room 엔티티와 분리된 순수 모델)
     usecase/
@@ -121,15 +127,16 @@ com.dyk1323.booklogs/
       ChangeBookStatusUseCase.kt      ← 상태 전이 처리(READING↔PAUSED는 라운드 유지, →FINISHED/DROPPED는 현재 라운드 종료+endReason 기록, FINISHED/DROPPED→READING은 새 라운드 생성). 전이 종류별 라운드 부수효과를 한 곳에 모아 화면(책 상세)에서는 단순 호출만 하도록 함
       PickReminderBookUseCase.kt      ← 순수 함수: READING 상태 책 목록을 받아 무작위로 1권 선택(빈 목록이면 null 반환 → 리시버가 알림을 건너뜀)
       AggregateBooksByAttributeUseCase.kt ← 통계 화면용 순수 함수: 책 목록 + 키 추출 함수(genre/author/publisher/country)를 받아 그룹별 권수를 세고 내림차순 정렬, 상위 N개 외엔 "기타"로 묶음. null/빈 값은 "미상"으로 그룹핑. 장르/작가/출판사/국가 4개 차트가 모두 이 함수 하나를 재사용(키 추출 함수만 다름)
+      DeleteBookUseCase.kt            ← 책 삭제(Room `onDelete=CASCADE`로 라운드/로그/인용구/독후감 전부 함께 삭제됨). 파괴적 작업이라 호출 전 확인은 UI(책 상세) 책임
   ui/
     dashboard/ (DashboardScreen, DashboardViewModel, TodayPagesHero, DailyPagesBarChart, BookShelfGrid, BookCoverProgressRing, BookQuickActionSheet, QuickProgressEntryViewModel)
     registration/ (BookRegistrationScreen, BarcodeScanScreen, BarcodeAnalyzer, TitleSearchScreen, BookConfirmFormScreen, BookRegistrationViewModel)
-    bookdetail/ (BookDetailScreen, BookDetailViewModel, ReadingRoundSection, QuoteListSection, ReviewListSection, BookStatusActions — "진행률 기록"/"인용구 추가" 버튼은 dashboard의 BookQuickActionSheet/QuoteCaptureScreen을 그대로 재사용)
+    bookdetail/ (BookDetailScreen, BookDetailViewModel, ReadingRoundSection, QuoteListSection, ReviewListSection, BookStatusActions, DeleteBookConfirmDialog — "진행률 기록"/"인용구 추가" 버튼은 dashboard의 BookQuickActionSheet/QuoteCaptureScreen을 그대로 재사용)
     library/ (LibraryScreen, LibraryViewModel — 상태별 필터가 가능한 전체 책 목록. PAUSED/DROPPED/FINISHED/PLANNED 책은 대시보드 책장(READING 전용)에 안 나오므로 이 화면이 유일한 접근 경로)
     stats/ (StatsScreen, StatsViewModel, AttributeBarChart — 장르별/작가별/출판사별/국가별 4개 섹션이 모두 이 컴포저블 하나를 재사용)
     quote/ (QuoteCaptureScreen, TextRecognitionAnalyzer, QuoteTextSelectionScreen, QuoteCaptureViewModel — bookId 파라미터로 대시보드/책상세 양쪽에서 직접 진입 가능. `QuoteCaptureViewModel`은 캡처된 사진별 인식 결과를 `List<CapturedPageOcrResult>`로 누적 보관해 여러 페이지에 걸친 인용구를 지원)
     review/ (ReviewEditorScreen, ReviewEditorViewModel)
-    settings/ (SettingsScreen, SettingsViewModel — 리마인더 on/off 토글 + TimePicker)
+    settings/ (SettingsScreen, SettingsViewModel — 리마인더 on/off 토글 + TimePicker, 일일 목표, **데이터 내보내기/가져오기**)
     common/{theme, components/(SkeletonBox, LoadingOverlay, EmptyState, BookCoverImage)}
     navigation/{BooklogsNavHost, Destinations}
   notification/
@@ -181,10 +188,13 @@ com.dyk1323.booklogs/
    - **최근 7일 합산 페이지 막대그래프**(걷기 그래프 스타일): 오늘 막대는 강조색, 나머지는 흐린 색. 위 "오늘 읽은 페이지"와 이 그래프는 같은 데이터 소스(`AggregateDailyPagesUseCase`가 만드는 일자별 합산 배열) — 배열의 마지막(오늘) 항목을 숫자로 뽑아 보여주고 배열 전체를 막대로 그리는 것뿐, 별도 계산 불필요. 일일 목표가 설정돼 있으면 목표값 높이에 **점선 기준선**을 그려 넣어 날짜별로 목표 달성 여부를 한눈에 비교(목표를 넘긴 날의 막대는 성공 컬러로 표시).
    - **책장 그리드**: 진행 중인(`BookEntity.status == READING`) 책들을 표지로 배치 — 각 표지 이미지에 dim 오버레이(반투명 검정)를 씌우고, 그 위에 원형(도넛) 진행률 링을 겹쳐 그림(진행률 = currentPage/totalPages, `ComputeBookProgressUseCase` 재사용). **도넛 중앙에 퍼센트 텍스트("62%")를 함께 표시**해 시각적 링만으로 정확한 값을 가늠하기 어려운 문제를 보완 — 정확한 페이지 수(185/320p)는 표지 탭 시 열리는 빠른 기록 시트/책 상세에서 확인.
    - 표지 탭 → 위 "빠른 기록 UX"의 바텀시트가 열림(화면 전환 없음). 별도 FAB로 책 등록 화면 진입.
-2. **책 등록**: 스캔/제목검색/수동입력 선택 → 스캔은 CameraX+ML Kit 바코드 인식 → ISBN으로 **카카오(메인) + Google Books(페이지수·장르 보조)를 병렬 조회**해 하나로 합성 → 확인/수정 폼(둘 다 실패 시 빈 폼+수동입력 안내) → 저장(상태 READING이면 첫 라운드 자동 생성). 제목 검색도 동일하게 카카오로 검색해 결과 목록을 보여주고, 사용자가 하나를 고르면 그때 Google Books를 페이지수/장르용으로 추가 조회. **확인/수정 폼에 "종이책/전자책" 토글**을 추가(기본값 종이책, 메타데이터 API로는 형식을 알 수 없어 항상 수동 선택) — 전자책을 선택하면 이후 그 책의 빠른 기록 시트가 %입력 모드로 동작. **장르/국가 입력 필드**도 폼에 추가 — 장르는 위 병렬 조회로 자동완성되는 경우가 많고, 국가는 항상 수동, 둘 다 선택 입력이라 비워도 등록 가능(통계에서 "미상"으로 집계). 저빈도 작업이므로 기존의 다단계 절차를 그대로 유지.
+2. **책 등록**: 스캔/제목검색/수동입력 선택 → 스캔은 CameraX+ML Kit 바코드 인식 → ISBN으로 **카카오(메인) + Google Books(페이지수·장르 보조)를 병렬 조회**해 하나로 합성 → 확인/수정 폼(둘 다 실패 시 빈 폼+수동입력 안내) → 저장(상태 READING이면 첫 라운드 자동 생성). 제목 검색도 동일하게 카카오로 검색해 결과 목록을 보여주고, 사용자가 하나를 고르면 그때 Google Books를 페이지수/장르용으로 추가 조회. **확인/수정 폼에 "종이책/전자책" 토글**을 추가(기본값 종이책, 메타데이터 API로는 형식을 알 수 없어 항상 수동 선택) — 전자책을 선택하면 이후 그 책의 빠른 기록 시트가 %입력 모드로 동작. **장르/국가 입력 필드**도 폼에 추가 — 장르는 위 병렬 조회로 자동완성되는 경우가 많고, 국가는 항상 수동, 둘 다 선택 입력이라 비워도 등록 가능(통계에서 "미상"으로 집계).
+   - **중복 등록 감지**: ISBN을 알고 있는 시점(바코드 스캔은 항상, 제목 검색은 대부분)에 `BookRepository.findByIsbn`으로 이미 등록된 책인지 확인. 있으면 저장을 막지 않되 확인 폼 상단에 "이미 등록된 책이에요 · 『제목』" 안내 + "그 책으로 이동"(기존 책 상세로 이동, 재독이면 거기서 "다시 읽기 시작") / "그래도 새로 등록"(다른 사본을 별도로 추적하고 싶은 드문 경우) 선택지 제공. ISBN이 없는 수동 입력은 이 검사를 건너뜀(제목/저자 퍼지 매칭은 오탐 위험이 커서 범위에서 제외).
+   - 저빈도 작업이므로 기존의 다단계 절차를 그대로 유지.
 3. **진행률 빠른 기록 시트**: 위 "빠른 기록 UX" 참고. 대시보드 표지 탭으로 진입하는 것이 기본 경로이며, 책 상세 화면에서도 동일한 시트를 재사용해 진입 가능(어떤 경로든 "책 선택" 단계가 별도로 필요 없음 — 이미 어떤 책인지 알고 진입하므로). PHYSICAL 책의 사진 인식 모드는 인용구 캡처와 동일한 카메라+OCR 파이프라인을 재사용, 코너의 독립된 숫자 토큰을 페이지 후보로 추출해 프리필하되 항상 사용자 확인 후 저장. EBOOK 책은 % 직접 입력만 지원.
 4. **책 상세**: 메타데이터, 진행률, 라운드별 진행 이력/독후감, 인용구 목록. 딥다이브용 화면이며 빠른 기록 시트에서 "상세보기"로 진입하거나, 검색/목록에서 직접 진입. **진행 이력 목록의 각 로그 행은 탭하면 인라인으로 펼쳐져 수정/삭제 가능**(대시보드 빠른 기록 시트와 동일한 `EditLogUseCase`/`DeleteLogUseCase` 재사용) — 과거 특정 날짜의 기록을 고치는 것은 이 화면이 담당. 이력의 각 행은 책 `format`에 따라 "245p" 또는 "62%"로 표시(저장된 값은 항상 페이지, 표시만 환산).
    - **상태 변경 액션**(`BookStatusActions`, `ChangeBookStatusUseCase` 호출): READING 중엔 "다 읽음" / "중단" / "일시중지" 세 버튼을 노출. "일시중지"는 라운드를 유지한 채 상태만 바꾸고, "다 읽음"/"중단"은 현재 라운드를 종료(각각 `endReason = COMPLETED`/`DROPPED`)하고 책 상태를 FINISHED/DROPPED로 바꿈. FINISHED/DROPPED/PAUSED 상태에선 "다시 읽기 시작" 버튼 하나로 재개(PAUSED는 같은 라운드 이어감, FINISHED/DROPPED는 새 라운드 시작). 등록/상태변경처럼 저빈도 작업이라 책 상세에 위치, 확인 다이얼로그 없이 즉시 적용 후 스낵바로 되돌리기 제공.
+   - **책 삭제**(`DeleteBookConfirmDialog`, `DeleteBookUseCase` 호출): 화면 하단에 시각적으로 눈에 덜 띄게(에러 컬러 텍스트 버튼) 배치. 탭하면 "『책 제목』을 삭제하면 진행 기록·인용구·독후감이 모두 함께 사라집니다"를 알리는 **블로킹 확인 다이얼로그**를 띄움 — 다른 곳의 실행취소 스낵바 패턴과 달리, cascade로 지워지는 데이터 양이 크므로 삭제 전에 확실히 막아섬. 대시보드 빠른 기록 시트에서는 접근 불가(책 상세에서만).
    - → 독후감작성 등 저빈도 작업으로 이동
 5. **인용구 캡처**: 대시보드 빠른 기록 시트 또는 책 상세에서 진입(둘 다 책 컨텍스트를 이미 알고 있어 책 선택 단계 없음). 단발 촬영(연속 프레임 아님, 정확도 우선) → Latin+Korean 인식기 동시 실행 → 인식된 줄(line) 단위 리스트를 체크박스로 선택("전체 선택" 토글도 제공, 문단 전체를 인용하는 경우가 많음).
    - **여러 페이지에 걸친 인용구**: 텍스트 선택 화면에 "다음 페이지 이어서 촬영" 버튼을 둔다. 탭하면 카메라가 다시 열려 다음 페이지를 촬영 → OCR 실행 → 인식된 줄이 "2페이지" 그룹으로 같은 선택 목록에 이어서 추가됨(1페이지 선택 내용은 유지). 페이지 수 제한 없이 반복 가능. 최종적으로 **선택된 줄을 촬영 순서대로 합쳐 하나의 편집 가능한 텍스트필드**에 표시 — 인용구는 항상 1건으로 저장됨(페이지별로 쪼개지지 않음).
@@ -196,6 +206,8 @@ com.dyk1323.booklogs/
 9. **설정**: 대시보드 상단바에서 진입.
    - 리마인더 on/off 토글 + 시각 선택(`TimePicker`, 하루 1회). 저장 즉시 `ReminderScheduler`가 알람을 재등록/취소. 알림 자체는 매일 정해진 시각에 현재 READING인 책 중 **무작위로 1권**을 골라 "『책 제목』 62% 읽는 중" 형태로 표시하고, 알림 탭 시 그 책의 빠른 기록 시트가 바로 열려 그 자리에서 진행률을 기록할 수 있음(리마인더가 곧 빠른 기록 진입점이 되도록 설계). READING인 책이 하나도 없는 날은 알림을 건너뛰고 다음날 알람만 재등록.
    - **일일 목표 페이지 수**(숫자 입력, 비워두면 목표 없음/그래프에 기준선 미표시). 저장 즉시 대시보드의 히어로 숫자·막대그래프에 반영(둘 다 DataStore를 구독하는 Flow라 별도 갱신 로직 불필요).
+   - **데이터 내보내기**: 탭하면 SAF `ACTION_CREATE_DOCUMENT`(기본 파일명 `booklogs_backup_YYYY-MM-DD.json`)로 저장 위치를 사용자가 직접 고름(로컬 저장소든 구글드라이브 등 문서공급자든 SAF가 지원하는 곳 어디든) → 전체 데이터를 JSON으로 내보냄. 클라우드 없이도 사용자가 원하는 곳에 수동 백업 가능하다는 게 핵심.
+   - **데이터 가져오기**: SAF `ACTION_OPEN_DOCUMENT`로 이전에 내보낸 JSON 파일 선택 → "가져오기를 하면 현재 앱의 모든 데이터가 가져온 파일 내용으로 대체됩니다"를 알리는 확인 다이얼로그(파괴적 작업이라 삭제와 동일하게 블로킹 확인) → 승인 시 기존 Room 데이터 전체 삭제 후 JSON 내용으로 재삽입. 새 기기로 옮기거나 데이터 손실에서 복구하는 용도이므로 병합이 아니라 전체 대체가 맞는 동작.
 
 ## 구현 시 유의사항
 
@@ -225,13 +237,17 @@ com.dyk1323.booklogs/
   - FINISHED/DROPPED → READING: `roundNumber = 이전 최대값 + 1`인 새 `ReadingRoundEntity` 삽입(startedAt=now, finishedAt=null) + `BookEntity.status = READING`. 첫 등록 시 라운드 생성 로직과 동일한 헬퍼 재사용.
   - 각 케이스가 독립적인 분기라 파악이 쉽고, 트랜잭션 하나(`@Transaction`)로 묶어 라운드/책 상태가 항상 같이 갱신되도록 함(하나만 갱신되고 나머지가 실패하는 상태 방지).
 - **라이브러리 화면 쿼리**: `BookDao.observeAll(): Flow<List<BookEntity>>`를 가져와 ViewModel에서 status로 필터링(데이터 양이 적어 SQL WHERE 없이 메모리 필터로 충분). 검색은 title/author `contains` 매칭.
-- **통계 화면**: `StatsViewModel`이 `BookDao.observeAll()`을 status != PLANNED로 필터링한 뒤 `AggregateBooksByAttributeUseCase`를 genre/author/publisher/country 4번 호출(키 추출 함수만 다르게 전달)해 4개 섹션 데이터를 만듦 — 별도 쿼리/usecase 중복 없이 하나의 순수 함수 재사용. 장르 자동완성은 `BookMetadataMapper`가 Google Books 응답의 `volumeInfo.categories`(List<String>) 중 첫 값을 확인/수정 폼의 장르 필드에 프리필하되, 카카오 우선 조회 결과엔 이 필드가 없으므로 Google Books 폴백이 실제로 호출된 경우에만 채워짐 — 항상 사용자가 확인/수정 가능.
+- **통계 화면**: `StatsViewModel`이 `BookDao.observeAll()`을 status != PLANNED로 필터링한 뒤 `AggregateBooksByAttributeUseCase`를 genre/author/publisher/country 4번 호출(키 추출 함수만 다르게 전달)해 4개 섹션 데이터를 만듦 — 별도 쿼리/usecase 중복 없이 하나의 순수 함수 재사용. 장르 자동완성은 `BookMetadataMapper`가 Google Books 응답의 `volumeInfo.categories`(List<String>) 중 첫 값을 확인/수정 폼의 장르 필드에 프리필(카카오·Google Books 병렬 조회이므로 카카오가 성공해도 매번 시도됨) — 항상 사용자가 확인/수정 가능.
+- **중복 등록 감지**: `BookRegistrationViewModel`이 ISBN을 확보한 시점(바코드 디코드 직후, 또는 제목검색 결과 선택 직후)에 `BookRepository.findByIsbn(isbn)`을 호출 — 결과가 있으면 확인 폼에 안내 배너를 노출하고 "그 책으로 이동"/"그래도 새로 등록" 두 액션을 제공, 저장 자체를 막지는 않음(정말 별도 사본을 추적하고 싶은 경우를 배려).
+- **책 삭제**: `DeleteBookUseCase`는 `BookDao.deleteById(bookId)` 단순 호출(FK `onDelete=CASCADE`가 라운드/로그/인용구/독후감을 전부 정리). UI 쪽 `DeleteBookConfirmDialog`가 실제 안전장치 — usecase 자체엔 확인 로직을 넣지 않고(순수하게 삭제만 수행), 확인 여부는 항상 호출부(책 상세 화면) 책임으로 분리해 usecase를 단순하게 유지.
+- **백업/복원**: `BackupExporter`가 5개 테이블(Book/ReadingRound/ReadingLog/Quote/Review)을 각각 `List<XxxDto>`로 변환 후 `BackupEnvelope(schemaVersion = 1, exportedAt, books, rounds, logs, quotes, reviews)`로 감싸 kotlinx.serialization으로 직렬화, SAF `ACTION_CREATE_DOCUMENT`로 받은 `Uri`에 스트림으로 씀. `BackupImporter`는 반대로 역직렬화 후 **Room 트랜잭션 하나**로 기존 데이터 전량 삭제 + 새 데이터 삽입(부분 실패 시 롤백되어 데이터가 어중간하게 섞이는 상태 방지). Room 자동생성 PK(`id`)는 내보낼 때 그대로 포함하되 가져오기 시 그 값 그대로 재삽입해 FK 관계(bookId 등)가 깨지지 않게 함(가져오기는 "새 기기에 그대로 복원"이 목적이라 ID 재발급 불필요). `schemaVersion`이 현재 앱의 지원 버전보다 낮으면 가져오기 전에 JSON 단계에서 매핑해 올리는 마이그레이션 함수를 추가할 자리를 마련해둠(현재는 버전 1 하나뿐이라 매핑 없음).
 - **리마인더 알람/알림**: `ReminderScheduler.schedule(hour, minute)`이 `AlarmManager.setAndAllowWhileIdle(RTC_WAKEUP, triggerAtMillis, pendingIntent)`로 다음 발생 시각 하나만 예약(반복 알람 대신 매번 재예약 — Doze 하에서 `setRepeating` 오차 누적을 피하기 위함). `ReminderReceiver.onReceive`가 (1) `BookDao`에서 READING 목록 조회 → `PickReminderBookUseCase`로 무작위 1권 선택(없으면 알림 생략) → (2) 알림 표시 시 `PendingIntent`의 딥링크 extra로 `bookId`를 실어 `MainActivity` → `Destinations.Dashboard(openQuickSheetFor = bookId)`로 진입하도록 구성 → (3) 다음날 같은 시각으로 알람 재예약. 기기 재부팅 시 `AlarmManager` 알람이 사라지므로 `BootReceiver`가 `RECEIVE_BOOT_COMPLETED`를 받아 저장된 설정으로 재등록. Android 13(API 33)+에서는 알림 표시 전 런타임 `POST_NOTIFICATIONS` 권한 요청 필요(설정 화면에서 리마인더를 켤 때 요청).
 - DAO는 인터페이스로 정의해 Repository 단위 테스트에서 Room 없이 Fake DAO로 대체 가능하게 함.
 
 ## Gradle 설정
 
-- Version Catalog(`gradle/libs.versions.toml`)에 Compose BOM, Room(+KSP), CameraX, ML Kit(barcode-scanning, text-recognition, text-recognition-korean), Retrofit+OkHttp, Coil, Navigation-Compose, Coroutines, **DataStore Preferences** 추가
+- Version Catalog(`gradle/libs.versions.toml`)에 Compose BOM, Room(+KSP), CameraX, ML Kit(barcode-scanning, text-recognition, text-recognition-korean), Retrofit+OkHttp, Coil, Navigation-Compose, Coroutines, DataStore Preferences, **kotlinx.serialization**(+ Retrofit용 컨버터) 추가
+- 백업/복원(SAF `ACTION_CREATE_DOCUMENT`/`ACTION_OPEN_DOCUMENT`)은 별도 매니페스트 권한이나 의존성 불필요 — `Intent`만으로 동작, `READ/WRITE_EXTERNAL_STORAGE` 등 저장소 권한 일체 불필요(스코프드 SAF 접근이라 안전).
 - `AndroidManifest.xml`: `CAMERA`, `INTERNET`, **`POST_NOTIFICATIONS`(API 33+ 런타임 권한), `RECEIVE_BOOT_COMPLETED`** 권한, `<uses-feature android:name="android.hardware.camera" required="true"/>`, `ReminderReceiver`/`BootReceiver`를 `<receiver>`로 등록
 - 카카오 REST API 키: `local.properties`에 `KAKAO_API_KEY=...` 추가 → `app/build.gradle.kts`에서 `buildConfigField`로 주입, `local.properties`는 이미 `.gitignore` 대상이므로 키가 커밋되지 않음을 확인. 사용자가 카카오 디벨로퍼스(https://developers.kakao.com)에서 앱을 등록하고 키를 발급받아야 하는 단계는 구현 완료 후 별도 안내
 
@@ -239,8 +255,8 @@ com.dyk1323.booklogs/
 
 샌드박스에 Android SDK/에뮬레이터가 없으므로:
 - **가능**: `./gradlew :app:compileDebugKotlin`, `./gradlew :app:testDebugUnitTest`로 순수 로직 검증
-  - `ComputeLogDeltasUseCaseTest`(핵심: 정렬/인접쌍 차이/클램프, 그리고 **중간 로그 수정·삭제 후 이웃 델타가 재저장 없이 올바르게 다시 계산되는지** — 이번 스키마 변경의 핵심 검증 대상), `AggregateDailyPagesUseCaseTest`(일자 버켓팅/0채움/여러 책 합산/기간 경계 밖 로그 포함 여부, **목표값과 비교해 성공 여부 플래그가 맞는지**), `LogProgressUseCaseTest`(단순 insert), `EditLogUseCaseTest`/`DeleteLogUseCaseTest`(임의 시점 로그 수정/삭제, 이웃 로그 미변경 확인), `ComputeBookProgressUseCaseTest`(totalPages null 처리), `ChangeBookStatusUseCaseTest`(READING↔PAUSED는 라운드 불변, →FINISHED/DROPPED는 라운드 종료+endReason 정확성, FINISHED/DROPPED→READING은 roundNumber 증가한 새 라운드 생성, PAUSED→READING은 라운드 재사용), `PickReminderBookUseCaseTest`(빈 목록→null, 여러 권 중 무작위 선택이 목록 범위 내에서만 나오는지), `BookMetadataMapperTest`(카카오 DTO 매핑 + Google Books DTO 매핑 + **두 응답 병합 시 pageCount/categories만 Google Books에서 채택되는지** + 카카오 실패 시 Google Books 전체 대체 폴백 분기), `PageNumberCandidateExtractorTest`(숫자 토큰 필터링/코너 스코어링 로직, 순수 함수로 분리해 단위 테스트), `JoinSelectedQuoteLinesTest`(여러 페이지의 선택된 줄을 촬영 순서대로 합치는 순수 함수, 페이지 1건/2건 이상일 때 `pageNumberEnd` null 여부), `ConvertPagePercentUseCaseTest`(양방향 변환 반올림 정확성, totalPages null일 때 변환 불가 처리, 0%/100% 경계값), `AggregateBooksByAttributeUseCaseTest`(그룹별 카운트/내림차순 정렬/상위 N+"기타" 묶음/null·빈값 "미상" 처리), `BookMetadataRepositoryImplTest`(Fake `KakaoBooksApi`/`GoogleBooksApi`로 **Success/NotFound/NetworkError 3×3 조합**을 각각 주입해 병합 결과·대체 폴백·`NotFound`/`NetworkError` 최종 분류가 위 표대로 나오는지 전수 검증 — 이번에 정리한 실패 처리 매트릭스의 핵심 테스트), Fake DAO 기반 Repository 테스트
+  - `ComputeLogDeltasUseCaseTest`(핵심: 정렬/인접쌍 차이/클램프, 그리고 **중간 로그 수정·삭제 후 이웃 델타가 재저장 없이 올바르게 다시 계산되는지** — 이번 스키마 변경의 핵심 검증 대상), `AggregateDailyPagesUseCaseTest`(일자 버켓팅/0채움/여러 책 합산/기간 경계 밖 로그 포함 여부, **목표값과 비교해 성공 여부 플래그가 맞는지**), `LogProgressUseCaseTest`(단순 insert), `EditLogUseCaseTest`/`DeleteLogUseCaseTest`(임의 시점 로그 수정/삭제, 이웃 로그 미변경 확인), `ComputeBookProgressUseCaseTest`(totalPages null 처리), `ChangeBookStatusUseCaseTest`(READING↔PAUSED는 라운드 불변, →FINISHED/DROPPED는 라운드 종료+endReason 정확성, FINISHED/DROPPED→READING은 roundNumber 증가한 새 라운드 생성, PAUSED→READING은 라운드 재사용), `PickReminderBookUseCaseTest`(빈 목록→null, 여러 권 중 무작위 선택이 목록 범위 내에서만 나오는지), `BookMetadataMapperTest`(카카오 DTO 매핑 + Google Books DTO 매핑 + **두 응답 병합 시 pageCount/categories만 Google Books에서 채택되는지** + 카카오 실패 시 Google Books 전체 대체 폴백 분기), `PageNumberCandidateExtractorTest`(숫자 토큰 필터링/코너 스코어링 로직, 순수 함수로 분리해 단위 테스트), `JoinSelectedQuoteLinesTest`(여러 페이지의 선택된 줄을 촬영 순서대로 합치는 순수 함수, 페이지 1건/2건 이상일 때 `pageNumberEnd` null 여부), `ConvertPagePercentUseCaseTest`(양방향 변환 반올림 정확성, totalPages null일 때 변환 불가 처리, 0%/100% 경계값), `AggregateBooksByAttributeUseCaseTest`(그룹별 카운트/내림차순 정렬/상위 N+"기타" 묶음/null·빈값 "미상" 처리), `BookMetadataRepositoryImplTest`(Fake `KakaoBooksApi`/`GoogleBooksApi`로 **Success/NotFound/NetworkError 3×3 조합**을 각각 주입해 병합 결과·대체 폴백·`NotFound`/`NetworkError` 최종 분류가 위 표대로 나오는지 전수 검증 — 이번에 정리한 실패 처리 매트릭스의 핵심 테스트), `BackupExportImportRoundTripTest`(Fake 데이터를 `BackupEnvelope`로 직렬화 후 역직렬화했을 때 5개 테이블 전부 원본과 동일한지, FK 관계(bookId 등)가 유지되는지 — 실제 파일 I/O·SAF는 Android 의존적이라 제외하고 순수 매핑/직렬화 로직만 검증), `FindByIsbnDuplicateCheckTest`(Fake DAO에 동일 ISBN 책이 있을 때/없을 때 분기), Fake DAO 기반 Repository 테스트
   - `assembleDebug`/`lint`는 SDK 플랫폼 컴포넌트 다운로드가 가능한지에 따라 시도해보되, 안 되면 컴파일+유닛테스트까지가 한계
-- **불가능(사용자가 실기기/에뮬레이터에서 직접 확인 필요)**: Compose 화면 렌더링/내비게이션 클릭 흐름(책장 그리드 + 도넛 오버레이 실제 표시 포함), CameraX 프리뷰·권한, 실제 바코드 인식 정확도, 실제 한글/영어 책 페이지 OCR 정확도 및 텍스트 선택 UX, 페이지 번호 자동 인식 정확도(폰트/각도/코너 위치 편차가 커서 실기기 튜닝 필요), Room 실기기 동작, 카카오/Google Books 실제 네트워크 응답, **AlarmManager 알람 발화·Doze 하 지연 정도·재부팅 후 재등록·알림 표시/딥링크 동작**, 전체 엔드투엔드 플로우(등록→기록→그래프 갱신→인용구→독후감→리마인더)
+- **불가능(사용자가 실기기/에뮬레이터에서 직접 확인 필요)**: Compose 화면 렌더링/내비게이션 클릭 흐름(책장 그리드 + 도넛 오버레이 실제 표시 포함), CameraX 프리뷰·권한, 실제 바코드 인식 정확도, 실제 한글/영어 책 페이지 OCR 정확도 및 텍스트 선택 UX, 페이지 번호 자동 인식 정확도(폰트/각도/코너 위치 편차가 커서 실기기 튜닝 필요), Room 실기기 동작(마이그레이션 테스트 포함), 카카오/Google Books 실제 네트워크 응답, **AlarmManager 알람 발화·Doze 하 지연 정도·재부팅 후 재등록·알림 표시/딥링크 동작**, **SAF 파일 선택/쓰기·실제 백업 파일로 새 기기 복원 시나리오**, TalkBack 실제 낭독 확인, 전체 엔드투엔드 플로우(등록→기록→그래프 갱신→인용구→독후감→리마인더→백업)
 
 구현 순서는 Room 스키마 → DAO/Repository → domain usecase(전부 유닛테스트로 검증) → ViewModel(Fake Repository로 검증) → Compose UI/CameraX/ML Kit(유닛테스트 불가, 최대한 단순하게 구현) 순으로 진행해, 샌드박스에서 검증 가능한 "핵심 로직"을 먼저 견고히 하고 카메라/OCR 튜닝은 사용자 몫으로 넘긴다.
