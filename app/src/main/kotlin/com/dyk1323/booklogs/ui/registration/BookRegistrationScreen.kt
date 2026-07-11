@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 
 /** Entry point of docs/PLAN.md 화면 흐름 #2 — a low-frequency action, so three explicit choices is fine. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookRegistrationScreen(
     onScanBarcode: () -> Unit,

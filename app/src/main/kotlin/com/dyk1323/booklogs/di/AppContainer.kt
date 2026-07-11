@@ -28,11 +28,8 @@ import com.dyk1323.booklogs.domain.usecase.LogProgressUseCase
 import com.dyk1323.booklogs.domain.usecase.PickReminderBookUseCase
 import com.dyk1323.booklogs.domain.usecase.RegisterBookUseCase
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 /**
  * Manual DI container (no Hilt — see docs/PLAN.md "DI" row: a handful of repositories doesn't
@@ -55,38 +52,13 @@ class AppContainer(context: Context) {
     val reviewRepository: ReviewRepository = ReviewRepositoryImpl(database.reviewDao())
 
     private val json = Json { ignoreUnknownKeys = true }
-    private val jsonConverterFactory = json.asConverterFactory("application/json".toMediaType())
 
-    // Kakao requires an "Authorization: KakaoAK {key}" header on every request; Google Books doesn't,
-    // so it gets its own plain client instead of a header that would be silently wrong on that host.
-    private val kakaoHttpClient = OkHttpClient.Builder()
-        .addInterceptor { chain ->
-            chain.proceed(
-                chain.request().newBuilder()
-                    .addHeader("Authorization", "KakaoAK ${BuildConfig.KAKAO_API_KEY}")
-                    .build(),
-            )
-        }
+    private val sharedHttpClient = OkHttpClient.Builder()
         .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC })
         .build()
 
-    private val googleHttpClient = OkHttpClient.Builder()
-        .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC })
-        .build()
-
-    private val kakaoBooksApi: KakaoBooksApi = Retrofit.Builder()
-        .baseUrl("https://dapi.kakao.com/")
-        .client(kakaoHttpClient)
-        .addConverterFactory(jsonConverterFactory)
-        .build()
-        .create(KakaoBooksApi::class.java)
-
-    private val googleBooksApi: GoogleBooksApi = Retrofit.Builder()
-        .baseUrl("https://www.googleapis.com/books/v1/")
-        .client(googleHttpClient)
-        .addConverterFactory(jsonConverterFactory)
-        .build()
-        .create(GoogleBooksApi::class.java)
+    private val kakaoBooksApi = KakaoBooksApi(sharedHttpClient, BuildConfig.KAKAO_API_KEY, json)
+    private val googleBooksApi = GoogleBooksApi(sharedHttpClient, json)
 
     val bookMetadataRepository: BookMetadataRepository = BookMetadataRepositoryImpl(kakaoBooksApi, googleBooksApi)
 

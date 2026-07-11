@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -37,6 +38,7 @@ import androidx.core.content.ContextCompat
 import java.util.concurrent.Executors
 
 /** docs/PLAN.md 화면 흐름 #2 스캔 경로 — 첫 유효 ISBN 인식 즉시 [onIsbnScanned]를 호출한다. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BarcodeScanScreen(
     onIsbnScanned: (String) -> Unit,

@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -33,6 +34,7 @@ import com.dyk1323.booklogs.domain.model.BookMetadata
 import com.dyk1323.booklogs.ui.common.components.SkeletonBox
 
 /** docs/PLAN.md 화면 흐름 #2 제목 검색 경로 — 카카오 우선, 0건일 때만 Google Books 폴백(리포지토리가 처리). */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TitleSearchScreen(
     searchState: SearchUiState,

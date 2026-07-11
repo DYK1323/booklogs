@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -32,6 +33,7 @@ import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.ui.common.components.LoadingOverlay
 
 /** docs/PLAN.md 화면 흐름 #2 확인/수정 폼 — 모든 진입 경로(스캔/검색/수동)가 마지막에 이 화면으로 모인다. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookConfirmFormScreen(
     formState: BookFormState,

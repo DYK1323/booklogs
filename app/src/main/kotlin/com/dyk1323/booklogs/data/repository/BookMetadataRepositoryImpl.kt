@@ -14,7 +14,6 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeout
-import retrofit2.HttpException
 
 private const val LOOKUP_TIMEOUT_MS = 5_000L
 
@@ -86,8 +85,6 @@ class BookMetadataRepositoryImpl(
     } catch (e: TimeoutCancellationException) {
         ApiLookupResult.NetworkError
     } catch (e: IOException) {
-        ApiLookupResult.NetworkError
-    } catch (e: HttpException) {
         ApiLookupResult.NetworkError
     }
 }
