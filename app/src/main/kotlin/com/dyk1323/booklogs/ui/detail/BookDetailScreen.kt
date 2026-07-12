@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -191,13 +192,14 @@ fun BookDetailScreen(
                 }
             }
             item {
-                DetailSection(title = "인용구") {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = onCaptureQuoteClick) {
-                            Text(text = "촬영으로 추가")
+                DetailSection(
+                    title = "인용구",
+                    actions = {
+                        IconButton(onClick = onCaptureQuoteClick) {
+                            Icon(Icons.Outlined.Add, contentDescription = "인용구 추가")
                         }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    },
+                ) {
                     if (uiState.editingQuoteId != null) {
                         Text(
                             text = "인용구 수정 중",
@@ -205,35 +207,33 @@ fun BookDetailScreen(
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                    }
-                    OutlinedTextField(
-                        value = uiState.quoteText,
-                        onValueChange = viewModel::updateQuoteText,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("인용구") },
-                        minLines = 2,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
-                            value = uiState.quotePageText,
-                            onValueChange = viewModel::updateQuotePageText,
-                            modifier = Modifier.weight(1f),
-                            label = { Text("페이지") },
-                            singleLine = true,
+                            value = uiState.quoteText,
+                            onValueChange = viewModel::updateQuoteText,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("인용구") },
+                            minLines = 2,
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        if (uiState.editingQuoteId != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = uiState.quotePageText,
+                                onValueChange = viewModel::updateQuotePageText,
+                                modifier = Modifier.weight(1f),
+                                label = { Text("페이지") },
+                                singleLine = true,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             TextButton(onClick = viewModel::cancelEditQuote) {
                                 Text(text = "취소")
                             }
                             Spacer(modifier = Modifier.width(4.dp))
+                            Button(onClick = viewModel::saveQuote, shape = RoundedCornerShape(8.dp)) {
+                                Text(text = "수정 저장")
+                            }
                         }
-                        Button(onClick = viewModel::saveQuote, shape = RoundedCornerShape(8.dp)) {
-                            Text(text = if (uiState.editingQuoteId != null) "수정 저장" else "저장")
-                        }
+                        Spacer(modifier = Modifier.height(14.dp))
                     }
-                    Spacer(modifier = Modifier.height(14.dp))
                     if (uiState.quotes.isEmpty()) {
                         Text(
                             text = "저장된 인용구가 없어요.",
@@ -387,9 +387,20 @@ private fun BookHeader(state: BookDetailUiState) {
 }
 
 @Composable
-private fun DetailSection(title: String, content: @Composable () -> Unit) {
+private fun DetailSection(
+    title: String,
+    actions: (@Composable () -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = title, style = MaterialTheme.typography.titleLarge)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = title, style = MaterialTheme.typography.titleLarge)
+            actions?.invoke()
+        }
         Spacer(modifier = Modifier.height(10.dp))
         content()
     }

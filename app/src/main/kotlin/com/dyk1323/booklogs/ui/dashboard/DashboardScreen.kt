@@ -589,7 +589,7 @@ private fun QuickLogSheet(
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ),
         ) {
-            Text(text = "인용구 촬영")
+            Text(text = "인용구 추가")
         }
         Spacer(modifier = Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

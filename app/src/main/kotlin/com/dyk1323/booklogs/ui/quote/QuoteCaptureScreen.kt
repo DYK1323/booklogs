@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Button
@@ -120,7 +121,7 @@ fun QuoteCaptureScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "인용구 촬영") },
+                title = { Text(text = "인용구 추가") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "뒤로")
@@ -148,7 +149,7 @@ fun QuoteCaptureScreen(
                 .padding(innerPadding),
         ) {
             when {
-                uiState.editingPageIndex != null -> FinalTextContent(
+                uiState.editingPageIndex != null || uiState.isManualEntry -> FinalTextContent(
                     state = uiState,
                     onPageChanged = viewModel::updatePageText,
                     onQuoteChanged = viewModel::updateQuoteText,
@@ -187,20 +188,33 @@ fun QuoteCaptureScreen(
                     } else {
                         PermissionMessage()
                     }
-                    TextButton(
-                        onClick = {
-                            galleryLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                            )
-                        },
+                    Column(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(16.dp)
-                            .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(8.dp)),
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Icon(Icons.Outlined.PhotoLibrary, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "앨범에서 선택", color = Color.White)
+                        TextButton(
+                            onClick = {
+                                galleryLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                                )
+                            },
+                            modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(8.dp)),
+                        ) {
+                            Icon(Icons.Outlined.PhotoLibrary, contentDescription = null, tint = Color.White)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "앨범에서 선택", color = Color.White)
+                        }
+                        TextButton(
+                            onClick = { viewModel.beginManualEntry() },
+                            modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(8.dp)),
+                        ) {
+                            Icon(Icons.Outlined.Edit, contentDescription = null, tint = Color.White)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "직접 입력", color = Color.White)
+                        }
                     }
                 }
             }
@@ -389,10 +403,14 @@ private fun FinalTextContent(
             }
         } else {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onNextPage) {
-                    Text(text = "다음 페이지 이어서 촬영")
+                // 직접 입력으로 시작한 인용구는 capturedPages가 비어 있어 joinQuotePages 결과와
+                // 자유 입력된 quoteText가 서로 어긋나므로, 이어서 촬영하는 옵션 자체를 숨김.
+                if (!state.isManualEntry) {
+                    TextButton(onClick = onNextPage) {
+                        Text(text = "다음 페이지 이어서 촬영")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
-                Spacer(modifier = Modifier.width(8.dp))
                 Button(onClick = onSave, enabled = !state.isSaving, shape = RoundedCornerShape(8.dp)) {
                     Text(text = if (state.isSaving) "저장 중" else "저장")
                 }

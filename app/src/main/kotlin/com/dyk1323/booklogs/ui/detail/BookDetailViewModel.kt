@@ -234,35 +234,21 @@ class BookDetailViewModel(
         message.value = null
     }
 
+    /** Inline editing only — adding a new quote now always goes through the camera/album/직접 입력 flow. */
     fun saveQuote() {
-        val bookId = selectedBookId.value ?: return
+        val editing = editingQuote.value ?: return
         val text = quoteText.value.trim()
         if (text.isEmpty()) {
             message.value = "저장할 인용구를 입력해주세요."
             return
         }
-        val editing = editingQuote.value
         viewModelScope.launch {
-            if (editing != null) {
-                // pageNumberEnd/createdAt are preserved from the original quote — this inline form
-                // only edits text/single page number, not the multi-page-capture range.
-                quoteRepository.update(
-                    editing.copy(text = text, pageNumber = quotePageText.value.toIntOrNull()),
-                )
-                message.value = "인용구를 수정했어요."
-            } else {
-                quoteRepository.insert(
-                    Quote(
-                        id = 0,
-                        bookId = bookId,
-                        text = text,
-                        pageNumber = quotePageText.value.toIntOrNull(),
-                        pageNumberEnd = null,
-                        createdAt = System.currentTimeMillis(),
-                    ),
-                )
-                message.value = "인용구를 저장했어요."
-            }
+            // pageNumberEnd/createdAt are preserved from the original quote — this inline form
+            // only edits text/single page number, not the multi-page-capture range.
+            quoteRepository.update(
+                editing.copy(text = text, pageNumber = quotePageText.value.toIntOrNull()),
+            )
+            message.value = "인용구를 수정했어요."
             editingQuote.value = null
             quoteText.value = ""
             quotePageText.value = ""

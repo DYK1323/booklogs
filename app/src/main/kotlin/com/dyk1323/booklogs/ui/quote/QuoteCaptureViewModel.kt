@@ -25,6 +25,8 @@ data class QuoteCaptureUiState(
     val currentPageText: String = "",
     val quoteText: String = "",
     val editingPageIndex: Int? = null,
+    /** Skipped the camera entirely via "직접 입력" — [quoteText] is freely typed, not OCR-derived. */
+    val isManualEntry: Boolean = false,
     val recognizedWords: List<RecognizedWord> = emptyList(),
     val selectionStartIndex: Int? = null,
     val selectionEndIndex: Int? = null,
@@ -59,6 +61,7 @@ class QuoteCaptureViewModel(
             it.copy(
                 currentPageText = "",
                 editingPageIndex = null,
+                isManualEntry = false,
                 recognizedWords = emptyList(),
                 selectionStartIndex = null,
                 selectionEndIndex = null,
@@ -66,6 +69,13 @@ class QuoteCaptureViewModel(
                 message = null,
                 isSaved = false,
             )
+        }
+    }
+
+    /** "직접 입력" — skips camera/OCR entirely, dropping straight into the free-text final screen. */
+    fun beginManualEntry() {
+        _uiState.update {
+            it.copy(currentPageText = "", quoteText = "", isManualEntry = true, message = null, isSaved = false)
         }
     }
 
