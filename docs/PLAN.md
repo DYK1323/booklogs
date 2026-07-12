@@ -340,6 +340,7 @@ com.dyk1323.booklogs/
 - **인용구 삭제에 확인 다이얼로그 추가**: 책 삭제(`DeleteBookConfirmDialog`)와 달리 인용구는 카드의 휴지통 아이콘을 누르면 확인 없이 곧바로 삭제되고 있었음(실행취소 스낵바도 없어 되돌릴 방법이 아예 없었음) — `BookDetailScreen`에 `pendingDeleteQuoteId` 상태를 추가해, 아이콘 탭 시 바로 `deleteQuote()`를 호출하는 대신 "인용구를 삭제할까요?" `AlertDialog`(삭제/취소)를 먼저 띄우고 "삭제"를 확정해야만 실제로 지워지도록 변경 — 책 삭제 다이얼로그와 동일한 패턴.
 - **CI에 `:app` 유닛테스트 스텝 추가 완료**: `.github/workflows/android-build.yml`이 그동안 `:domain:test`만 돌리고 `:app:assembleDebug`(APK 빌드)로 바로 넘어가, `:app` 모듈의 `BookMetadataRepositoryImplTest`/`ReminderSchedulerTest`/`QuoteCaptureViewModelTest`/`QuoteOcrProcessorTest`가 한 번도 CI에서 실행된 적이 없었음(샌드박스가 Google Maven 접근이 막혀 있어 `:app`을 로컬에서 컴파일할 수 없다 보니 이 사실 자체가 뒤늦게 드러남). "Run domain unit tests"와 "Build debug APK" 사이에 `./gradlew :app:testDebugUnitTest --stacktrace` 스텝을 추가(카카오/Google Books 키를 `buildConfigField`가 설정 시점에 읽으므로 빌드 스텝과 동일하게 `KAKAO_API_KEY`/`GOOGLE_BOOKS_API_KEY` 시크릿을 함께 전달 — 값이 없어도 컴파일 자체는 되지만 다른 스텝과의 일관성을 위해 맞춤).
 - **대시보드 책장 그리드를 가로 3열 고정으로 변경**: `LazyVerticalGrid`의 `columns`을 `GridCells.Adaptive(minSize = 132.dp)`(화면 너비에 따라 열 수가 자동으로 늘고 줆)에서 `GridCells.Fixed(3)`으로 교체 — 화면 크기와 무관하게 항상 3열로 고정.
+- **독후감 목록을 제목/날짜만 보이는 카드로 변경**: 기존엔 전체 본문(`review.content`)이 목록에 그대로 다 펼쳐져 있었음 — `QuoteCard`와 같은 패턴(`Card(onClick=...)` + `expanded` 상태)의 `ReviewCard`로 교체해, 접힌 상태에선 제목(한 줄)과 날짜만 보이고 탭하면 본문 전체가 펼쳐짐. `Review` 도메인 모델에 별도 제목 필드가 없어(작성 시 제목 입력을 받지 않음), 본문의 첫 번째 비어있지 않은 줄을 제목으로 대신 사용(`reviewTitle()`).
 - **미구현(다음 작업)**: 통계 화면(장르/작가/출판사/국가별).
 
 ## 검증 계획

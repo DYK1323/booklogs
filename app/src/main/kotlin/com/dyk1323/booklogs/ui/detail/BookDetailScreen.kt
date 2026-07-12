@@ -29,7 +29,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +58,7 @@ import com.dyk1323.booklogs.domain.model.Book
 import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.domain.model.BookStatus
 import com.dyk1323.booklogs.domain.model.Quote
+import com.dyk1323.booklogs.domain.model.Review
 import com.dyk1323.booklogs.domain.usecase.ConvertPagePercentUseCase
 import com.dyk1323.booklogs.domain.usecase.LogDelta
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
@@ -269,10 +269,9 @@ fun BookDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
                     } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             uiState.reviews.forEach { review ->
-                                Text(text = review.content, style = MaterialTheme.typography.bodyLarge)
-                                HorizontalDivider()
+                                ReviewCard(review = review)
                             }
                         }
                     }
@@ -523,6 +522,46 @@ private fun QuoteCard(quote: Quote, onEdit: () -> Unit, onDelete: () -> Unit) {
         }
     }
 }
+
+/** Collapsed to title + date; tapping the card reveals the full review text. */
+@Composable
+private fun ReviewCard(review: Review) {
+    var expanded by remember(review.id) { mutableStateOf(false) }
+    Card(
+        onClick = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            if (expanded) {
+                Text(text = review.content, style = MaterialTheme.typography.bodyLarge)
+            } else {
+                Text(
+                    text = reviewTitle(review),
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = formatDate(review.createdAt),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+            )
+        }
+    }
+}
+
+/** Reviews have no separate title field — the first non-blank line stands in for one. */
+private fun reviewTitle(review: Review): String =
+    review.content.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: "(내용 없음)"
 
 private fun quotePageLabel(quote: Quote): String? {
     val start = quote.pageNumber ?: return null
