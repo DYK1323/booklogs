@@ -21,9 +21,10 @@ data class ReviewEditorUiState(
 )
 
 /**
- * docs/PLAN.md 화면 흐름 #6 — 독후감 작성/수정 화면의 ViewModel. 독후감은 더 이상 특정 라운드에 묶이지
- * 않고 책 단위(docs/PLAN.md "라운드 이력 편집")이므로, 진입 시 그 책의 가장 최근 독후감이 있으면 불러와
- * 수정 모드로 시작한다 — 그렇지 않으면 "작성"을 누를 때마다 독후감이 중복으로 쌓이게 된다.
+ * docs/PLAN.md 화면 흐름 #6 — 독후감 작성/수정 화면의 ViewModel. 독후감은 책 단위로 여러 개 쌓일 수
+ * 있으므로(재독마다 새로 작성 가능), [reviewId]가 주어지면 그 특정 독후감을 불러와 수정 모드로 시작하고,
+ * null이면 항상 새 독후감 작성 모드로 시작한다 — "어떤 독후감을 편집 중인지"는 항상 호출부(독후감
+ * 목록/책 상세)가 명시적으로 알려줘야 하며, 이 화면이 알아서 "가장 최근 것"을 추측하지 않는다.
  */
 class ReviewEditorViewModel(
     private val reviewRepository: ReviewRepository,
@@ -34,15 +35,16 @@ class ReviewEditorViewModel(
 
     private var editingReview: Review? = null
 
-    fun start(bookId: Long) {
+    fun start(bookId: Long, reviewId: Long?) {
         // Always re-initialize (no "same bookId, skip" guard) — the screen bounces back via
         // LaunchedEffect(uiState.isSaved) once isSaved is true, so a stale isSaved=true left over
         // from a previous visit to this same book would otherwise instantly close the screen again
         // before the freshly-loaded existing review is even shown.
         editingReview = null
         _uiState.value = ReviewEditorUiState(bookId = bookId)
+        if (reviewId == null) return
         viewModelScope.launch {
-            val existing = reviewRepository.observeForBook(bookId).first().maxByOrNull { it.createdAt }
+            val existing = reviewRepository.observeForBook(bookId).first().firstOrNull { it.id == reviewId }
             if (existing != null) {
                 editingReview = existing
                 _uiState.update {

@@ -433,6 +433,13 @@ class BookDetailViewModel(
         }
     }
 
+    fun deleteReview(reviewId: Long) {
+        viewModelScope.launch {
+            reviewRepository.deleteById(reviewId)
+            message.value = "독후감을 삭제했어요."
+        }
+    }
+
     fun deleteQuote(quoteId: Long) {
         viewModelScope.launch {
             quoteRepository.deleteById(quoteId)

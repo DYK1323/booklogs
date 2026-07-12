@@ -33,12 +33,13 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ReviewEditorScreen(
     bookId: Long,
+    reviewId: Long?,
     viewModel: ReviewEditorViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LaunchedEffect(bookId) {
-        viewModel.start(bookId)
+    LaunchedEffect(bookId, reviewId) {
+        viewModel.start(bookId, reviewId)
     }
     val uiState by viewModel.uiState.collectAsState()
 
@@ -103,7 +104,7 @@ fun ReviewEditorScreen(
     }
 }
 
-/** 평점은 선택 사항(docs/PLAN.md "특정 라운드에 연결된 텍스트+평점(선택) 작성"). 아이콘 일관성 원칙에 따라 outlined 별 하나만 쓰고 색으로만 선택 여부를 표시. */
+/** 평점은 선택 사항(docs/PLAN.md 화면 흐름 #6). 아이콘 일관성 원칙에 따라 outlined 별 하나만 쓰고 색으로만 선택 여부를 표시. */
 @Composable
 private fun RatingSelector(rating: Int?, onRatingChanged: (Int?) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

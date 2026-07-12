@@ -81,7 +81,10 @@ fun BookDetailScreen(
     onBack: () -> Unit,
     onDeleted: () -> Unit,
     onCaptureQuoteClick: () -> Unit,
+    onViewAllQuotesClick: () -> Unit,
     onWriteReviewClick: () -> Unit,
+    onEditReviewClick: (Long) -> Unit,
+    onViewAllReviewsClick: () -> Unit,
     onEditClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -92,6 +95,7 @@ fun BookDetailScreen(
     val book = uiState.book
     var showDeleteBookDialog by remember { mutableStateOf(false) }
     var pendingDeleteQuoteId by remember { mutableStateOf<Long?>(null) }
+    var pendingDeleteReviewId by remember { mutableStateOf<Long?>(null) }
     var pendingStatusChange by remember { mutableStateOf<BookStatus?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -238,43 +242,27 @@ fun BookDetailScreen(
                 DetailSection(
                     title = "인용구",
                     actions = {
-                        IconButton(onClick = onCaptureQuoteClick) {
-                            Icon(Icons.Outlined.Add, contentDescription = "인용구 추가")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (uiState.quotes.isNotEmpty()) {
+                                TextButton(onClick = onViewAllQuotesClick) {
+                                    Text(text = "전체보기")
+                                }
+                            }
+                            IconButton(onClick = onCaptureQuoteClick) {
+                                Icon(Icons.Outlined.Add, contentDescription = "인용구 추가")
+                            }
                         }
                     },
                 ) {
                     if (uiState.editingQuoteId != null) {
-                        Text(
-                            text = "인용구 수정 중",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                        QuoteEditForm(
+                            quoteText = uiState.quoteText,
+                            quotePageText = uiState.quotePageText,
+                            onQuoteTextChanged = viewModel::updateQuoteText,
+                            onQuotePageTextChanged = viewModel::updateQuotePageText,
+                            onCancel = viewModel::cancelEditQuote,
+                            onSave = viewModel::saveQuote,
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = uiState.quoteText,
-                            onValueChange = viewModel::updateQuoteText,
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("인용구") },
-                            minLines = 2,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedTextField(
-                                value = uiState.quotePageText,
-                                onValueChange = viewModel::updateQuotePageText,
-                                modifier = Modifier.weight(1f),
-                                label = { Text("페이지") },
-                                singleLine = true,
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            TextButton(onClick = viewModel::cancelEditQuote) {
-                                Text(text = "취소")
-                            }
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Button(onClick = viewModel::saveQuote, shape = RoundedCornerShape(8.dp)) {
-                                Text(text = "수정 저장")
-                            }
-                        }
                         Spacer(modifier = Modifier.height(14.dp))
                     }
                     if (uiState.quotes.isEmpty()) {
@@ -284,13 +272,9 @@ fun BookDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
                     } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 320.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            items(uiState.quotes, key = { it.id }) { quote ->
+                        // 최근 3개만 미리보기 — 전체 목록은 "전체보기"에서 검색/필터와 함께 확인(QuoteListScreen).
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            uiState.quotes.take(3).forEach { quote ->
                                 QuoteCard(
                                     quote = quote,
                                     onComments = { viewModel.openComments(quote.id) },
@@ -303,13 +287,21 @@ fun BookDetailScreen(
                 }
             }
             item {
-                DetailSection(title = "독후감") {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = onWriteReviewClick) {
-                            Text(text = "독후감 작성")
+                DetailSection(
+                    title = "독후감",
+                    actions = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (uiState.reviews.isNotEmpty()) {
+                                TextButton(onClick = onViewAllReviewsClick) {
+                                    Text(text = "전체보기")
+                                }
+                            }
+                            TextButton(onClick = onWriteReviewClick) {
+                                Text(text = "작성")
+                            }
                         }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    },
+                ) {
                     if (uiState.reviews.isEmpty()) {
                         Text(
                             text = "저장된 독후감이 없어요.",
@@ -317,9 +309,14 @@ fun BookDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
                     } else {
+                        // 최근 3개만 미리보기 — 전체 목록은 "전체보기"에서 검색/평점 필터와 함께 확인(ReviewListScreen).
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            uiState.reviews.forEach { review ->
-                                ReviewCard(review = review)
+                            uiState.reviews.take(3).forEach { review ->
+                                ReviewCard(
+                                    review = review,
+                                    onEdit = { onEditReviewClick(review.id) },
+                                    onDelete = { pendingDeleteReviewId = review.id },
+                                )
                             }
                         }
                     }
@@ -377,6 +374,28 @@ fun BookDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { pendingDeleteQuoteId = null }) {
+                    Text(text = "취소")
+                }
+            },
+        )
+    }
+
+    pendingDeleteReviewId?.let { reviewId ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteReviewId = null },
+            title = { Text(text = "독후감을 삭제할까요?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDeleteReviewId = null
+                        viewModel.deleteReview(reviewId)
+                    },
+                ) {
+                    Text(text = "삭제", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteReviewId = null }) {
                     Text(text = "취소")
                 }
             },
@@ -447,6 +466,51 @@ private fun BookHeader(state: BookDetailUiState) {
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                 )
+            }
+        }
+    }
+}
+
+/** Shared by [BookDetailScreen]'s inline "인용구" 섹션 and [QuoteListScreen] — inline edit form for a quote. */
+@Composable
+internal fun QuoteEditForm(
+    quoteText: String,
+    quotePageText: String,
+    onQuoteTextChanged: (String) -> Unit,
+    onQuotePageTextChanged: (String) -> Unit,
+    onCancel: () -> Unit,
+    onSave: () -> Unit,
+) {
+    Column {
+        Text(
+            text = "인용구 수정 중",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        OutlinedTextField(
+            value = quoteText,
+            onValueChange = onQuoteTextChanged,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("인용구") },
+            minLines = 2,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = quotePageText,
+                onValueChange = onQuotePageTextChanged,
+                modifier = Modifier.weight(1f),
+                label = { Text("페이지") },
+                singleLine = true,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            TextButton(onClick = onCancel) {
+                Text(text = "취소")
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+            Button(onClick = onSave, shape = RoundedCornerShape(8.dp)) {
+                Text(text = "수정 저장")
             }
         }
     }
@@ -694,9 +758,9 @@ private fun roundEndReasonLabel(reason: RoundEndReason?): String = when (reason)
     null -> "-"
 }
 
-/** Tapping the card toggles between a 4-line preview and the full quote text. */
+/** Tapping the card toggles between a 4-line preview and the full quote text. Shared with [QuoteListScreen]. */
 @Composable
-private fun QuoteCard(quote: Quote, onComments: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
+internal fun QuoteCard(quote: Quote, onComments: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     var expanded by remember(quote.id) { mutableStateOf(false) }
     Card(
         onClick = { expanded = !expanded },
@@ -754,7 +818,7 @@ private fun QuoteCard(quote: Quote, onComments: () -> Unit, onEdit: () -> Unit, 
 }
 
 @Composable
-private fun QuoteCommentsSheetContent(
+internal fun QuoteCommentsSheetContent(
     comments: List<QuoteComment>,
     inputText: String,
     onInputChanged: (String) -> Unit,
@@ -827,9 +891,9 @@ private fun QuoteCommentsSheetContent(
     }
 }
 
-/** Collapsed to title + date; tapping the card reveals the full review text. */
+/** Collapsed to title + date; tapping the card reveals the full review text. Shared with [ReviewListScreen]. */
 @Composable
-private fun ReviewCard(review: Review) {
+internal fun ReviewCard(review: Review, onEdit: () -> Unit, onDelete: () -> Unit) {
     var expanded by remember(review.id) { mutableStateOf(false) }
     Card(
         onClick = { expanded = !expanded },
@@ -853,21 +917,45 @@ private fun ReviewCard(review: Review) {
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            review.rating?.let {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "★".repeat(it),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = formatDate(review.createdAt),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onEdit) {
+                    Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "수정")
+                }
+                TextButton(onClick = onDelete) {
+                    Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "삭제")
+                }
+            }
         }
     }
 }
 
 /** Reviews have no separate title field — the first non-blank line stands in for one. */
-private fun reviewTitle(review: Review): String =
+internal fun reviewTitle(review: Review): String =
     review.content.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: "(내용 없음)"
 
-private fun quotePageLabel(quote: Quote): String? {
+internal fun quotePageLabel(quote: Quote): String? {
     val start = quote.pageNumber ?: return null
     val end = quote.pageNumberEnd
     return if (end != null && end != start) "p. $start-$end" else "p. $start"
@@ -880,7 +968,7 @@ private fun progressText(state: BookDetailUiState): String {
     return "$current / ${total}p · $percent%"
 }
 
-private fun formatDate(timestampMillis: Long): String {
+internal fun formatDate(timestampMillis: Long): String {
     val formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
     return Instant.ofEpochMilli(timestampMillis).atZone(ZoneId.systemDefault()).format(formatter)
 }

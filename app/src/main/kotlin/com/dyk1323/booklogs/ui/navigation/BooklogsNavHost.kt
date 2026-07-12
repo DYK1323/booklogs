@@ -16,6 +16,8 @@ import com.dyk1323.booklogs.ui.dashboard.DashboardScreen
 import com.dyk1323.booklogs.ui.dashboard.DashboardViewModel
 import com.dyk1323.booklogs.ui.detail.BookDetailScreen
 import com.dyk1323.booklogs.ui.detail.BookDetailViewModel
+import com.dyk1323.booklogs.ui.detail.QuoteListScreen
+import com.dyk1323.booklogs.ui.detail.ReviewListScreen
 import com.dyk1323.booklogs.ui.library.LibraryScreen
 import com.dyk1323.booklogs.ui.library.LibraryViewModel
 import com.dyk1323.booklogs.ui.quote.QuoteCaptureScreen
@@ -104,11 +106,51 @@ fun BooklogsNavHost(
                 onCaptureQuoteClick = {
                     navController.navigate(Destinations.quoteCapture(bookId))
                 },
+                onViewAllQuotesClick = {
+                    navController.navigate(Destinations.quoteList(bookId))
+                },
                 onWriteReviewClick = {
                     navController.navigate(Destinations.reviewEditor(bookId))
                 },
+                onEditReviewClick = { reviewId ->
+                    navController.navigate(Destinations.reviewEditor(bookId, reviewId))
+                },
+                onViewAllReviewsClick = {
+                    navController.navigate(Destinations.reviewList(bookId))
+                },
                 onEditClick = {
                     navController.navigate(Destinations.bookEdit(bookId))
+                },
+            )
+        }
+
+        composable(
+            route = Destinations.QUOTE_LIST,
+            arguments = listOf(navArgument("bookId") { type = NavType.LongType }),
+        ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getLong("bookId") ?: return@composable
+            QuoteListScreen(
+                viewModel = bookDetailViewModel,
+                onBack = { navController.popBackStack() },
+                onCaptureQuoteClick = {
+                    navController.navigate(Destinations.quoteCapture(bookId))
+                },
+            )
+        }
+
+        composable(
+            route = Destinations.REVIEW_LIST,
+            arguments = listOf(navArgument("bookId") { type = NavType.LongType }),
+        ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getLong("bookId") ?: return@composable
+            ReviewListScreen(
+                viewModel = bookDetailViewModel,
+                onBack = { navController.popBackStack() },
+                onWriteReviewClick = {
+                    navController.navigate(Destinations.reviewEditor(bookId))
+                },
+                onEditReviewClick = { reviewId ->
+                    navController.navigate(Destinations.reviewEditor(bookId, reviewId))
                 },
             )
         }
@@ -140,11 +182,20 @@ fun BooklogsNavHost(
 
         composable(
             route = Destinations.REVIEW_EDITOR,
-            arguments = listOf(navArgument("bookId") { type = NavType.LongType }),
+            arguments = listOf(
+                navArgument("bookId") { type = NavType.LongType },
+                navArgument("reviewId") {
+                    type = NavType.LongType
+                    defaultValue = Destinations.NO_REVIEW_ID
+                },
+            ),
         ) { backStackEntry ->
             val bookId = backStackEntry.arguments?.getLong("bookId") ?: return@composable
+            val reviewId = backStackEntry.arguments?.getLong("reviewId")
+                ?.takeIf { it != Destinations.NO_REVIEW_ID }
             ReviewEditorScreen(
                 bookId = bookId,
+                reviewId = reviewId,
                 viewModel = reviewEditorViewModel,
                 onBack = { navController.popBackStack() },
             )
