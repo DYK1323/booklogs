@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -21,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Delete
@@ -29,8 +29,6 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,7 +42,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -54,10 +51,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.dyk1323.booklogs.domain.model.Book
 import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.domain.model.BookStatus
@@ -69,9 +70,71 @@ import com.dyk1323.booklogs.domain.model.RoundEndReason
 import com.dyk1323.booklogs.domain.usecase.ConvertPagePercentUseCase
 import com.dyk1323.booklogs.domain.usecase.LogDelta
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
+import com.dyk1323.booklogs.ui.common.components.BooklogsListBlock
+import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentRow
+import com.dyk1323.booklogs.ui.common.components.BooklogsSheetBottomPadding
+import com.dyk1323.booklogs.ui.common.components.BooklogsSheetHorizontalPadding
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+private val DetailHeaderTitleTextStyle = TextStyle(
+    fontSize = 20.sp,
+    lineHeight = 20.sp,
+    fontWeight = FontWeight.SemiBold,
+    letterSpacing = 0.sp,
+)
+
+private val DetailHeaderMetaTextStyle = TextStyle(
+    fontSize = 12.sp,
+    lineHeight = 12.sp,
+    fontWeight = FontWeight.Light,
+    letterSpacing = 0.sp,
+)
+
+private val DetailSectionTitleTextStyle = TextStyle(
+    fontSize = 14.sp,
+    lineHeight = 14.sp,
+    fontWeight = FontWeight.Light,
+    letterSpacing = 0.sp,
+)
+
+private val DetailProgressTextStyle = TextStyle(
+    fontSize = 14.sp,
+    lineHeight = 14.sp,
+    fontWeight = FontWeight.Medium,
+    letterSpacing = 0.sp,
+)
+
+private val DetailListPrimaryTextStyle = TextStyle(
+    fontSize = 16.sp,
+    lineHeight = 16.sp,
+    fontWeight = FontWeight.Medium,
+    letterSpacing = 0.sp,
+)
+
+private val DetailListSecondaryTextStyle = TextStyle(
+    fontSize = 12.sp,
+    lineHeight = 12.sp,
+    fontWeight = FontWeight.Light,
+    letterSpacing = 0.sp,
+)
+
+private val DetailSectionActionTextStyle = TextStyle(
+    fontSize = 14.sp,
+    lineHeight = 14.sp,
+    fontWeight = FontWeight.Light,
+    letterSpacing = 0.sp,
+)
+
+private val DetailQuoteTextStyle = TextStyle(
+    fontSize = 14.sp,
+    lineHeight = 21.sp,
+    fontWeight = FontWeight.Light,
+    letterSpacing = 0.sp,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +144,8 @@ fun BookDetailScreen(
     onBack: () -> Unit,
     onDeleted: () -> Unit,
     onCaptureQuoteClick: () -> Unit,
+    onViewAllRoundsClick: () -> Unit,
+    onViewAllLogsClick: () -> Unit,
     onViewAllQuotesClick: () -> Unit,
     onWriteReviewClick: () -> Unit,
     onEditReviewClick: (Long) -> Unit,
@@ -112,28 +177,41 @@ fun BookDetailScreen(
     }
 
     Scaffold(
+        containerColor = Color.White,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = book?.title ?: "책 상세",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "뒤로")
-                    }
-                },
+            BooklogsTopBar(
+                title = "책 상세보기",
+                onBack = onBack,
                 actions = {
                     if (book != null) {
-                        IconButton(onClick = onEditClick) {
-                            Icon(Icons.Outlined.Edit, contentDescription = "책 정보 수정")
-                        }
-                        IconButton(onClick = { showDeleteBookDialog = true }) {
-                            Icon(Icons.Outlined.Delete, contentDescription = "책 삭제")
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clickable(onClick = onEditClick),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Edit,
+                                    contentDescription = "책 정보 수정",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.Black,
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clickable(onClick = { showDeleteBookDialog = true }),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Delete,
+                                    contentDescription = "책 삭제",
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.Black,
+                                )
+                            }
                         }
                     }
                 },
@@ -155,22 +233,17 @@ fun BookDetailScreen(
         LazyColumn(
             modifier = modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(Color.White)
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(22.dp),
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(36.dp),
         ) {
-            item {
-                BookHeader(state = uiState)
-            }
+            item { BookHeader(state = uiState) }
             item {
                 DetailSection(title = "상태") {
                     StatusActions(
                         status = book.status,
                         onStatusClick = { target ->
-                            // 완독/중단은 현재 라운드를 끝내는 동작이라, 실수로 눌렀다가 "다시 읽기"로
-                            // 되돌려도 진행 페이지가 0부터 다시 계산되는 새 라운드가 시작돼버림 —
-                            // 되돌릴 수 없는 결과라 확정 전에 한 번 더 확인.
                             if (target == BookStatus.FINISHED || target == BookStatus.DROPPED) {
                                 pendingStatusChange = target
                             } else {
@@ -181,18 +254,28 @@ fun BookDetailScreen(
                 }
             }
             item {
-                DetailSection(title = "라운드 이력") {
+                DetailSection(
+                    title = "라운드 이력",
+                    actions = {
+                        if (uiState.rounds.size > 3) {
+                            TextButton(onClick = onViewAllRoundsClick) {
+                                Text(text = "전체 보기", style = DetailSectionActionTextStyle, color = Color(0xFF0C7EFF))
+                            }
+                        }
+                    },
+                ) {
                     if (uiState.rounds.isEmpty()) {
                         Text(
-                            text = "아직 라운드가 없어요.",
+                            text = "아직 라운드가 없어요",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
                     } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            uiState.rounds.forEach { round ->
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            uiState.rounds.take(3).forEachIndexed { index, round ->
                                 RoundRow(
                                     round = round,
+                                    highlighted = index == 0,
                                     isExpanded = uiState.expandedRoundId == round.id,
                                     startedAtText = uiState.roundEditStartedAtText,
                                     finishedAtText = uiState.roundEditFinishedAtText,
@@ -213,19 +296,29 @@ fun BookDetailScreen(
                 }
             }
             item {
-                DetailSection(title = "진행 이력") {
+                DetailSection(
+                    title = "진행 이력",
+                    actions = {
+                        if (uiState.logDeltas.size > 3) {
+                            TextButton(onClick = onViewAllLogsClick) {
+                                Text(text = "전체 보기", style = DetailSectionActionTextStyle, color = Color(0xFF0C7EFF))
+                            }
+                        }
+                    },
+                ) {
                     if (uiState.logDeltas.isEmpty()) {
                         Text(
-                            text = "아직 진행 기록이 없어요.",
+                            text = "아직 진행 기록이 없어요",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
                     } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            uiState.logDeltas.take(12).forEach { delta ->
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            uiState.logDeltas.take(3).forEachIndexed { index, delta ->
                                 LogDeltaRow(
                                     book = book,
                                     delta = delta,
+                                    highlighted = index == 0,
                                     isExpanded = uiState.expandedLogId == delta.log.id,
                                     editInputText = uiState.logEditInputText,
                                     editErrorMessage = uiState.logEditErrorMessage,
@@ -247,11 +340,21 @@ fun BookDetailScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (uiState.quotes.isNotEmpty()) {
                                 TextButton(onClick = onViewAllQuotesClick) {
-                                    Text(text = "전체보기")
+                                    Text(text = "전체 보기", style = DetailSectionActionTextStyle, color = Color(0xFF0C7EFF))
                                 }
                             }
-                            IconButton(onClick = onCaptureQuoteClick) {
-                                Icon(Icons.Outlined.Add, contentDescription = "인용구 추가")
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clickable(onClick = onCaptureQuoteClick),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Add,
+                                    contentDescription = "인용구 추가",
+                                    modifier = Modifier.size(22.dp),
+                                    tint = Color.Black,
+                                )
                             }
                         }
                     },
@@ -269,13 +372,12 @@ fun BookDetailScreen(
                     }
                     if (uiState.quotes.isEmpty()) {
                         Text(
-                            text = "저장된 인용구가 없어요.",
+                            text = "저장된 인용구가 없어요",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
                     } else {
-                        // 최근 3개만 미리보기 — 전체 목록은 "전체보기"에서 검색/필터와 함께 확인(QuoteListScreen).
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             uiState.quotes.take(3).forEach { quote ->
                                 QuoteCard(
                                     quote = quote,
@@ -292,30 +394,25 @@ fun BookDetailScreen(
                 DetailSection(
                     title = "독후감",
                     actions = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (uiState.reviews.isNotEmpty()) {
-                                TextButton(onClick = onViewAllReviewsClick) {
-                                    Text(text = "전체보기")
-                                }
-                            }
-                            TextButton(onClick = onWriteReviewClick) {
-                                Text(text = "작성")
+                        if (uiState.reviews.isNotEmpty()) {
+                            TextButton(onClick = onViewAllReviewsClick) {
+                                Text(text = "전체 보기", style = DetailSectionActionTextStyle, color = Color(0xFF0C7EFF))
                             }
                         }
                     },
                 ) {
                     if (uiState.reviews.isEmpty()) {
                         Text(
-                            text = "저장된 독후감이 없어요.",
+                            text = "저장된 독후감이 없어요",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
                     } else {
-                        // 최근 3개만 미리보기 — 전체 목록은 "전체보기"에서 검색/평점 필터와 함께 확인(ReviewListScreen).
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            uiState.reviews.take(3).forEach { review ->
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            uiState.reviews.take(3).forEachIndexed { index, review ->
                                 ReviewCard(
                                     review = review,
+                                    highlighted = index == 0,
                                     onEdit = { onEditReviewClick(review.id) },
                                     onDelete = { pendingDeleteReviewId = review.id },
                                 )
@@ -323,16 +420,6 @@ fun BookDetailScreen(
                         }
                     }
                 }
-            }
-            item {
-                uiState.message?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 24.dp),
-                    )
-                } ?: Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
@@ -428,7 +515,11 @@ fun BookDetailScreen(
     }
 
     if (uiState.expandedCommentsQuoteId != null) {
-        ModalBottomSheet(onDismissRequest = { viewModel.closeComments() }) {
+        ModalBottomSheet(
+            onDismissRequest = { viewModel.closeComments() },
+            containerColor = BooklogsScreenBackground,
+            tonalElevation = 0.dp,
+        ) {
             QuoteCommentsSheetContent(
                 comments = uiState.comments,
                 inputText = uiState.commentInputText,
@@ -443,7 +534,7 @@ fun BookDetailScreen(
         AlertDialog(
             onDismissRequest = { pendingStatusChange = null },
             title = { Text(text = if (target == BookStatus.FINISHED) "완독으로 표시할까요?" else "읽기를 중단할까요?") },
-            text = { Text(text = "지금 라운드가 종료돼요. 나중에 \"다시 읽기\"를 시작하면 새 라운드가 만들어져요 — 날짜나 시작 페이지는 라운드 이력에서 언제든 고칠 수 있어요.") },
+            text = { Text(text = "지금 라운드가 종료돼요. 나중에 \"다시 읽기\"를 시작하면 새 라운드가 만들어져서 날짜와 시작 페이지는 라운드 이력에서 따로 고쳐야 해요.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -473,30 +564,35 @@ private fun BookHeader(state: BookDetailUiState) {
                 .width(116.dp)
                 .aspectRatio(0.68f),
         )
-        Spacer(modifier = Modifier.width(18.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = book.title, style = MaterialTheme.typography.titleLarge)
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = book.title, style = DetailHeaderTitleTextStyle)
             book.author?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                    style = DetailHeaderMetaTextStyle,
+                    color = Color(0xFF757575),
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(text = progressText(state), style = MaterialTheme.typography.bodyMedium)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = progressText(state), style = DetailProgressTextStyle)
             book.genre?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                    style = DetailHeaderMetaTextStyle,
+                    color = Color(0xFF757575),
                 )
+            }
             }
         }
     }
 }
 
-/** Shared by [BookDetailScreen]'s inline "인용구" 섹션 and [QuoteListScreen] — inline edit form for a quote. */
 @Composable
 internal fun QuoteEditForm(
     quoteText: String,
@@ -530,9 +626,7 @@ internal fun QuoteEditForm(
                 singleLine = true,
             )
             Spacer(modifier = Modifier.width(8.dp))
-            TextButton(onClick = onCancel) {
-                Text(text = "취소")
-            }
+            TextButton(onClick = onCancel) { Text(text = "취소") }
             Spacer(modifier = Modifier.width(4.dp))
             Button(onClick = onSave, shape = RoundedCornerShape(8.dp)) {
                 Text(text = "수정 저장")
@@ -553,40 +647,55 @@ private fun DetailSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = title, style = MaterialTheme.typography.titleLarge)
+            Text(
+                text = title,
+                style = DetailSectionTitleTextStyle,
+                color = Color(0xFF757575),
+            )
             actions?.invoke()
         }
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         content()
     }
 }
 
 @Composable
 private fun StatusActions(status: BookStatus, onStatusClick: (BookStatus) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        availableStatusActions(status).forEach { target ->
+    BooklogsSegmentRow {
+        listOf(BookStatus.READING, BookStatus.FINISHED, BookStatus.PAUSED, BookStatus.DROPPED).forEach { target ->
             Button(
-                onClick = { onStatusClick(target) },
-                modifier = Modifier.weight(1f, fill = false),
-                shape = RoundedCornerShape(8.dp),
+                onClick = { if (target != status) onStatusClick(target) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(5.dp),
+                enabled = target != status,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    containerColor = if (target == status) Color.White else Color.Transparent,
+                    contentColor = if (target == status) Color(0xFF111111) else Color(0xFF757575),
+                    disabledContainerColor = Color.White,
+                    disabledContentColor = Color(0xFF111111),
                 ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+                contentPadding = PaddingValues(vertical = 8.dp),
             ) {
-                Text(text = statusActionLabel(status, target))
+                Text(
+                    text = statusTabLabel(target),
+                    style = TextStyle(
+                        fontSize = 16.sp,
+                        lineHeight = 16.sp,
+                        fontWeight = FontWeight.Normal,
+                        letterSpacing = 0.sp,
+                    ),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun LogDeltaRow(
+internal fun LogDeltaRow(
     book: Book,
     delta: LogDelta,
+    highlighted: Boolean,
     isExpanded: Boolean,
     editInputText: String,
     editErrorMessage: String?,
@@ -596,23 +705,28 @@ private fun LogDeltaRow(
     onCancelEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggleExpand),
+            .background(if (highlighted) Color(0xFFF5F5F5) else Color.White, RoundedCornerShape(5.dp))
+            .clickable(onClick = onToggleExpand)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column {
-                Text(text = "p. ${delta.log.currentPage}", style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    text = formatDate(delta.log.loggedAt),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
-                )
-            }
-            Text(text = deltaLabel(book, delta), style = MaterialTheme.typography.bodyMedium)
+            Text(text = "p. ${delta.log.currentPage}", style = DetailListPrimaryTextStyle, color = Color.Black)
+            Text(
+                text = formatDate(delta.log.loggedAt),
+                style = DetailListSecondaryTextStyle,
+                color = Color(0xFF757575),
+            )
         }
         if (isExpanded) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = deltaLabel(book, delta),
+                style = DetailListSecondaryTextStyle,
+                color = Color(0xFF757575),
+            )
             Spacer(modifier = Modifier.height(8.dp))
             val inputLabel = if (book.format == BookFormat.EBOOK) "진행률" else "페이지"
             val inputSuffix = if (book.format == BookFormat.EBOOK) "%" else "p"
@@ -637,9 +751,7 @@ private fun LogDeltaRow(
                     Text(text = "삭제", color = MaterialTheme.colorScheme.error)
                 }
                 Row {
-                    TextButton(onClick = onCancelEdit) {
-                        Text(text = "취소")
-                    }
+                    TextButton(onClick = onCancelEdit) { Text(text = "취소") }
                     Spacer(modifier = Modifier.width(4.dp))
                     Button(onClick = onSaveEdit, shape = RoundedCornerShape(8.dp)) {
                         Text(text = "수정 저장")
@@ -650,30 +762,22 @@ private fun LogDeltaRow(
     }
 }
 
-/** For EBOOK books, a raw page delta ("+5p") doesn't map onto the % the reader actually tracks. */
 private fun deltaLabel(book: Book, delta: LogDelta): String {
     val totalPages = book.totalPages
     return if (book.format == BookFormat.EBOOK && totalPages != null) {
         val previousPage = (delta.log.currentPage - delta.pagesRead).coerceAtLeast(0)
         val deltaPercent = ConvertPagePercentUseCase.pageToPercent(delta.log.currentPage, totalPages) -
             ConvertPagePercentUseCase.pageToPercent(previousPage, totalPages)
-        "+$deltaPercent%"
+        "+${deltaPercent}%"
     } else {
         "+${delta.pagesRead}p"
     }
 }
 
-/**
- * Tap to expand and correct a round's 시작일/종료일/종료 사유/시작 페이지 — this never opens or closes a
- * round (see [EditRoundUseCase]), only fixes its recorded metadata. [startingPage] is the delta baseline
- * for this round's first log (docs/PLAN.md "라운드 이력 편집") — the fix for a round that got split by an
- * accidental 완독/중단 → 다시 읽기 is to correct it here to wherever the reader actually left off.
- * [onDelete] is only offered for closed rounds — see [DeleteRoundUseCase] for why the currently open
- * round can't be deleted here (deleting it would leave a READING/PAUSED book with no open round).
- */
 @Composable
-private fun RoundRow(
+internal fun RoundRow(
     round: ReadingRound,
+    highlighted: Boolean,
     isExpanded: Boolean,
     startedAtText: String,
     finishedAtText: String,
@@ -689,23 +793,31 @@ private fun RoundRow(
     onDelete: () -> Unit,
 ) {
     val isOpen = round.finishedAt == null
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggleExpand),
+            .background(if (highlighted) Color(0xFFF5F5F5) else Color.White, RoundedCornerShape(5.dp))
+            .clickable(onClick = onToggleExpand)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column {
-                Text(text = "${round.roundNumber}번째 라운드", style = MaterialTheme.typography.bodyMedium)
+                Text(text = "${round.roundNumber}번째 라운드", style = DetailListPrimaryTextStyle, color = Color.Black)
                 Text(
                     text = roundPeriodText(round),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                    style = DetailListSecondaryTextStyle,
+                    color = Color(0xFF757575),
                 )
             }
             Text(
                 text = if (isOpen) "읽는 중" else roundEndReasonLabel(round.endReason),
-                style = MaterialTheme.typography.bodyMedium,
+                style = TextStyle(
+                    fontSize = 12.sp,
+                    lineHeight = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.sp,
+                ),
+                color = Color.Black,
             )
         }
         if (isExpanded) {
@@ -734,16 +846,8 @@ private fun RoundRow(
                             onClick = { onEndReasonChanged(reason) },
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (selected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                },
-                                contentColor = if (selected) {
-                                    MaterialTheme.colorScheme.onPrimary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
+                                containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                             ),
                         ) {
                             Text(text = label)
@@ -768,9 +872,7 @@ private fun RoundRow(
                     }
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                TextButton(onClick = onCancel) {
-                    Text(text = "취소")
-                }
+                TextButton(onClick = onCancel) { Text(text = "취소") }
                 Spacer(modifier = Modifier.width(4.dp))
                 Button(onClick = onSave, shape = RoundedCornerShape(8.dp)) {
                     Text(text = "저장")
@@ -792,59 +894,63 @@ private fun roundEndReasonLabel(reason: RoundEndReason?): String = when (reason)
     null -> "-"
 }
 
-/** Tapping the card toggles between a 4-line preview and the full quote text. Shared with [QuoteListScreen]. */
 @Composable
 internal fun QuoteCard(quote: Quote, onComments: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     var expanded by remember(quote.id) { mutableStateOf(false) }
-    Card(
-        onClick = { expanded = !expanded },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFF5F5F5), RoundedCornerShape(5.dp))
+            .clickable { expanded = !expanded }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = quote.text,
-                style = MaterialTheme.typography.bodyLarge,
+                style = DetailQuoteTextStyle,
+                color = Color.Black,
                 maxLines = if (expanded) Int.MAX_VALUE else 4,
                 overflow = TextOverflow.Ellipsis,
             )
             quotePageLabel(quote)?.let {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                    style = DetailListSecondaryTextStyle,
+                    color = Color(0xFF757575),
                 )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = onComments) {
+                TextButton(
+                    onClick = onComments,
+                    contentPadding = PaddingValues(0.dp),
+                ) {
                     Icon(
                         Icons.Outlined.ChatBubbleOutline,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(20.dp),
+                        tint = Color(0xFF757575),
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "댓글")
                 }
-                TextButton(onClick = onEdit) {
-                    Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "수정")
+                TextButton(onClick = onEdit, contentPadding = PaddingValues(0.dp)) {
+                    Icon(
+                        Icons.Outlined.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = Color(0xFF757575),
+                    )
                 }
-                TextButton(onClick = onDelete) {
-                    Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "삭제")
+                TextButton(onClick = onDelete, contentPadding = PaddingValues(0.dp)) {
+                    Icon(
+                        Icons.Outlined.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = Color(0xFF757575),
+                    )
                 }
             }
         }
@@ -862,14 +968,15 @@ internal fun QuoteCommentsSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .padding(bottom = 24.dp),
+            .background(BooklogsScreenBackground)
+            .padding(horizontal = BooklogsSheetHorizontalPadding)
+            .padding(bottom = BooklogsSheetBottomPadding),
     ) {
         Text(text = "댓글", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
         if (comments.isEmpty()) {
             Text(
-                text = "아직 댓글이 없어요.",
+                text = "아직 댓글이 없어요",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
             )
@@ -925,67 +1032,83 @@ internal fun QuoteCommentsSheetContent(
     }
 }
 
-/** Collapsed to title + date; tapping the card reveals the full review text. Shared with [ReviewListScreen]. */
 @Composable
-internal fun ReviewCard(review: Review, onEdit: () -> Unit, onDelete: () -> Unit) {
+internal fun ReviewCard(
+    review: Review,
+    highlighted: Boolean = false,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
     var expanded by remember(review.id) { mutableStateOf(false) }
-    Card(
-        onClick = { expanded = !expanded },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (highlighted) Color(0xFFF5F5F5) else Color.White, RoundedCornerShape(5.dp))
+            .clickable { expanded = !expanded }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             if (expanded) {
-                Text(text = review.content, style = MaterialTheme.typography.bodyLarge)
+                Text(text = review.content, style = DetailQuoteTextStyle, color = Color.Black)
             } else {
-                Text(
-                    text = reviewTitle(review),
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            review.rating?.let {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "★".repeat(it),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = formatDate(review.createdAt),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = onEdit) {
-                    Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "수정")
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(
+                        text = reviewTitle(review),
+                        modifier = Modifier.weight(1f),
+                        style = DetailListPrimaryTextStyle,
+                        color = Color.Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = formatDate(review.createdAt),
+                        style = DetailListSecondaryTextStyle,
+                        color = Color(0xFF757575),
+                    )
                 }
-                TextButton(onClick = onDelete) {
-                    Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "삭제")
+            }
+            if (expanded) {
+                review.rating?.let {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "★".repeat(it),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = formatDate(review.createdAt),
+                    style = DetailListSecondaryTextStyle,
+                    color = Color(0xFF757575),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = onEdit, contentPadding = PaddingValues(0.dp)) {
+                        Icon(
+                            Icons.Outlined.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = Color(0xFF757575),
+                        )
+                    }
+                    TextButton(onClick = onDelete, contentPadding = PaddingValues(0.dp)) {
+                        Icon(
+                            Icons.Outlined.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = Color(0xFF757575),
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-/** Reviews have no separate title field — the first non-blank line stands in for one. */
 internal fun reviewTitle(review: Review): String =
     review.content.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: "(내용 없음)"
 
@@ -1007,21 +1130,10 @@ internal fun formatDate(timestampMillis: Long): String {
     return Instant.ofEpochMilli(timestampMillis).atZone(ZoneId.systemDefault()).format(formatter)
 }
 
-private fun availableStatusActions(status: BookStatus): List<BookStatus> = when (status) {
-    BookStatus.PLANNED -> listOf(BookStatus.READING)
-    BookStatus.READING -> listOf(BookStatus.PAUSED, BookStatus.FINISHED, BookStatus.DROPPED)
-    BookStatus.PAUSED -> listOf(BookStatus.READING)
-    BookStatus.FINISHED -> listOf(BookStatus.READING)
-    BookStatus.DROPPED -> listOf(BookStatus.READING)
-}
-
-private fun statusActionLabel(from: BookStatus, target: BookStatus): String = when {
-    from == BookStatus.FINISHED && target == BookStatus.READING -> "다시 읽기"
-    from == BookStatus.DROPPED && target == BookStatus.READING -> "다시 읽기"
-    target == BookStatus.READING -> "읽기 시작"
-    target == BookStatus.PAUSED -> "멈추기"
-    target == BookStatus.FINISHED -> "완독"
-    target == BookStatus.DROPPED -> "중단"
-    target == BookStatus.PLANNED -> "읽을 예정"
-    else -> "변경"
+private fun statusTabLabel(target: BookStatus): String = when (target) {
+    BookStatus.READING -> "읽는중"
+    BookStatus.FINISHED -> "완독"
+    BookStatus.PAUSED -> "일시중지"
+    BookStatus.DROPPED -> "중단"
+    BookStatus.PLANNED -> "읽을 예정"
 }

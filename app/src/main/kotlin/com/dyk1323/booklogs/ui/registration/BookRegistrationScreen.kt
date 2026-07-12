@@ -5,20 +5,26 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.sp
+import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
+import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 
-/** Entry point of docs/PLAN.md 화면 흐름 #2 — a low-frequency action, so three explicit choices is fine. */
+private val RegistrationTitleTextStyle = TextStyle(
+    fontSize = 20.sp,
+    lineHeight = 20.sp,
+    fontWeight = FontWeight.SemiBold,
+    letterSpacing = 0.sp,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookRegistrationScreen(
@@ -29,38 +35,40 @@ fun BookRegistrationScreen(
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
+        containerColor = Color.White,
         topBar = {
-            TopAppBar(
-                title = { Text("책 등록") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("닫기") } },
-            )
+            BooklogsTopBar(title = "책 등록", onBack = onBack)
         },
     ) { innerPadding ->
         Column(
-            modifier = modifier.fillMaxSize().padding(innerPadding).padding(24.dp),
+            modifier = modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 24.dp, vertical = 36.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
                 text = "어떻게 등록할까요?",
-                style = MaterialTheme.typography.headlineMedium,
+                style = RegistrationTitleTextStyle,
+                color = Color.Black,
+                modifier = Modifier.padding(bottom = 20.dp),
             )
-            Button(
+            BooklogsFilledButton(
+                text = "바코드로 스캔",
                 onClick = onScanBarcode,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(percent = 50),
-            ) {
-                Text("바코드로 스캔", style = MaterialTheme.typography.labelLarge)
-            }
-            OutlinedButton(
+                primary = true,
+            )
+            BooklogsFilledButton(
+                text = "제목으로 검색",
                 onClick = onSearchByTitle,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(percent = 50),
-            ) {
-                Text("제목으로 검색", style = MaterialTheme.typography.labelLarge)
-            }
-            TextButton(onClick = onManualEntry, modifier = Modifier.fillMaxWidth()) {
-                Text("직접 입력", style = MaterialTheme.typography.labelLarge)
-            }
+            )
+            BooklogsFilledButton(
+                text = "직접 입력",
+                onClick = onManualEntry,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

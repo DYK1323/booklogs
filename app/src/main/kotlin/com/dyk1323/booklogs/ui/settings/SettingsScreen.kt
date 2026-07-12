@@ -2,11 +2,15 @@ package com.dyk1323.booklogs.ui.settings
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,25 +18,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -42,11 +41,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import android.net.Uri
 import com.dyk1323.booklogs.data.settings.ThemeMode
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -66,140 +72,157 @@ fun SettingsScreen(
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { }
-
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
     ) { uri -> uri?.let(viewModel::exportBackup) }
-
     val importPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let { pendingImportUri = it } }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = "설정") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "뒤로")
-                    }
-                },
-            )
-        },
+        containerColor = Color.White,
+        topBar = { SettingsTopBar(onBack = onBack) },
     ) { innerPadding ->
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(Color.White)
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 24.dp, vertical = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(36.dp),
         ) {
-            Text(text = "리마인더", style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(text = "매일 진행률 알림", style = MaterialTheme.typography.bodyLarge)
-                Switch(
-                    checked = uiState.reminderEnabled,
-                    onCheckedChange = { enabled ->
-                        if (enabled &&
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
-                            PackageManager.PERMISSION_GRANTED
+            SettingsSection(title = "리마인더") {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "매일 진행률 알림",
+                            style = SettingsBodyTextStyle,
+                        )
+                        ReminderToggle(
+                            checked = uiState.reminderEnabled,
+                            onToggle = { enabled ->
+                                if (
+                                    enabled &&
+                                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                                    PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                }
+                                viewModel.setReminderEnabled(enabled)
+                            },
+                        )
+                    }
+                    if (uiState.reminderEnabled) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            Text(text = "알림 시각", style = SettingsBodyTextStyle)
+                            Text(
+                                text = formatReminderTime(uiState.reminderHour, uiState.reminderMinute),
+                                modifier = Modifier.clickable { showTimePicker = true },
+                                style = SettingsActionTextStyle.copy(fontWeight = FontWeight.Medium),
+                                color = Color(0xFF0C7EFF),
+                            )
                         }
-                        viewModel.setReminderEnabled(enabled)
-                    },
-                )
-            }
-            if (uiState.reminderEnabled) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "알림 시각",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-                    )
-                    TextButton(onClick = { showTimePicker = true }) {
-                        Text(text = formatReminderTime(uiState.reminderHour, uiState.reminderMinute))
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
-            Text(text = "일일 목표", style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.Top) {
-                OutlinedTextField(
-                    value = uiState.dailyGoalPagesText,
-                    onValueChange = viewModel::updateDailyGoalPagesText,
-                    modifier = Modifier.weight(1f),
-                    label = { Text(text = "하루 목표 페이지 수") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    supportingText = { Text(text = "비워두면 목표 없이 기록만 표시돼요.") },
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = viewModel::saveDailyGoalPages, shape = RoundedCornerShape(8.dp)) {
-                    Text(text = "저장")
+            SettingsSection(title = "일일 목표") {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        GoalInput(
+                            value = uiState.dailyGoalPagesText,
+                            onValueChange = viewModel::updateDailyGoalPagesText,
+                            modifier = Modifier.weight(1f),
+                        )
+                        FilledActionButton(
+                            text = "저장",
+                            onClick = viewModel::saveDailyGoalPages,
+                            primary = true,
+                            modifier = Modifier
+                                .width(64.dp)
+                                .height(42.dp),
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 4.dp),
+                    ) {
+                        Text(
+                            text = "비워두면 목표 없이 기록만 표시돼요.",
+                            style = SettingsCaptionTextStyle,
+                            color = Color(0xFF757575),
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
-            Text(text = "화면 테마", style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ThemeModeOption(
-                    label = "시스템 설정",
-                    selected = uiState.themeMode == ThemeMode.SYSTEM,
-                    onClick = { viewModel.setThemeMode(ThemeMode.SYSTEM) },
-                )
-                ThemeModeOption(
-                    label = "라이트",
-                    selected = uiState.themeMode == ThemeMode.LIGHT,
-                    onClick = { viewModel.setThemeMode(ThemeMode.LIGHT) },
-                )
-                ThemeModeOption(
-                    label = "다크",
-                    selected = uiState.themeMode == ThemeMode.DARK,
-                    onClick = { viewModel.setThemeMode(ThemeMode.DARK) },
-                )
+            SettingsSection(title = "화면 테마") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(43.dp)
+                        .background(Color(0xFFF5F5F5), RoundedCornerShape(8.dp))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ThemeModeChip(
+                        text = "시스템 설정",
+                        selected = uiState.themeMode == ThemeMode.SYSTEM,
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.setThemeMode(ThemeMode.SYSTEM) },
+                    )
+                    ThemeModeChip(
+                        text = "라이트",
+                        selected = uiState.themeMode == ThemeMode.LIGHT,
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.setThemeMode(ThemeMode.LIGHT) },
+                    )
+                    ThemeModeChip(
+                        text = "다크",
+                        selected = uiState.themeMode == ThemeMode.DARK,
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.setThemeMode(ThemeMode.DARK) },
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
-            Text(text = "데이터 백업", style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = { exportLauncher.launch(defaultBackupFileName()) },
-                    enabled = !uiState.isExportingBackup,
-                    shape = RoundedCornerShape(8.dp),
+            SettingsSection(title = "데이터 백업") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(text = if (uiState.isExportingBackup) "내보내는 중" else "데이터 내보내기")
+                    FilledActionButton(
+                        text = if (uiState.isExportingBackup) "데이터 내보내는 중" else "데이터 내보내기",
+                        onClick = { exportLauncher.launch(defaultBackupFileName()) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp),
+                    )
+                    FilledActionButton(
+                        text = if (uiState.isImportingBackup) "데이터 가져오는 중" else "데이터 가져오기",
+                        onClick = { importPickerLauncher.launch(arrayOf("*/*")) },
+                        primary = true,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp),
+                    )
                 }
-                OutlinedButton(
-                    onClick = { importPickerLauncher.launch(arrayOf("*/*")) },
-                    enabled = !uiState.isImportingBackup,
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Text(text = if (uiState.isImportingBackup) "가져오는 중" else "데이터 가져오기")
-                }
-            }
-            uiState.backupMessage?.let {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
             }
         }
     }
@@ -218,14 +241,10 @@ fun SettingsScreen(
                         viewModel.setReminderTime(timePickerState.hour, timePickerState.minute)
                         showTimePicker = false
                     },
-                ) {
-                    Text(text = "확인")
-                }
+                ) { Text(text = "확인") }
             },
             dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) {
-                    Text(text = "취소")
-                }
+                TextButton(onClick = { showTimePicker = false }) { Text(text = "취소") }
             },
             text = { TimePicker(state = timePickerState) },
         )
@@ -247,26 +266,265 @@ fun SettingsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingImportUri = null }) {
-                    Text(text = "취소")
-                }
+                TextButton(onClick = { pendingImportUri = null }) { Text(text = "취소") }
             },
         )
     }
 }
 
 @Composable
-private fun ThemeModeOption(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    if (selected) {
-        Button(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(percent = 50)) {
-            Text(label, style = MaterialTheme.typography.labelLarge)
-        }
-    } else {
-        OutlinedButton(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(percent = 50)) {
-            Text(label, style = MaterialTheme.typography.labelLarge)
+private fun SettingsTopBar(onBack: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .drawBehind {
+                val stroke = 0.8.dp.toPx()
+                drawLine(
+                    color = Color(0xFFB3B3B3),
+                    start = Offset(0f, size.height - stroke / 2f),
+                    end = Offset(size.width, size.height - stroke / 2f),
+                    strokeWidth = stroke,
+                )
+            }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(15.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = "뒤로",
+                    modifier = Modifier.size(24.dp),
+                    tint = Color.Black,
+                )
+            }
+            Text(
+                text = "설정",
+                style = TextStyle(
+                    fontSize = 20.sp,
+                    lineHeight = 20.sp,
+                    fontWeight = FontWeight.Normal,
+                    letterSpacing = 0.sp,
+                ),
+                color = Color.Black,
+            )
         }
     }
 }
+
+@Composable
+private fun SettingsSection(
+    title: String,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            text = title,
+            style = SettingsSectionTitleTextStyle,
+            color = Color.Black,
+        )
+        content()
+    }
+}
+
+@Composable
+private fun ReminderToggle(
+    checked: Boolean,
+    onToggle: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .width(48.dp)
+            .height(24.dp)
+            .background(
+                color = if (checked) Color(0xFF0969DA) else Color(0xFFF5F5F5),
+                shape = RoundedCornerShape(6.dp),
+            )
+            .padding(2.dp)
+            .clickable { onToggle(!checked) },
+        horizontalArrangement = if (checked) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (checked) {
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                ToggleCheckGlyph()
+            }
+        }
+        Box(
+            modifier = Modifier
+                .size(width = 21.dp, height = 20.dp)
+                .background(Color.White, RoundedCornerShape(4.dp)),
+        )
+        if (!checked) {
+            Spacer(modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun ToggleCheckGlyph() {
+    val path = remember {
+        PathParser().parsePathString(
+            "M0.75 6.75V1.5",
+        ).toPath()
+    }
+    androidx.compose.foundation.Canvas(modifier = Modifier.size(width = 1.5.dp, height = 13.5.dp)) {
+        drawPath(
+            path = path,
+            color = Color.White,
+            style = Stroke(width = 1.5f),
+        )
+    }
+}
+
+@Composable
+private fun GoalInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.height(42.dp),
+        singleLine = true,
+        textStyle = SettingsInputTextStyle.copy(color = Color.Black),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        decorationBox = { innerTextField ->
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White, RoundedCornerShape(5.dp))
+                    .border(0.5.dp, Color(0xFF757575), RoundedCornerShape(5.dp))
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = "하루에 읽을 페이지 수 목표",
+                            style = SettingsInputTextStyle,
+                            color = Color(0xFFB3B3B3),
+                        )
+                    }
+                    innerTextField()
+                }
+                Text(
+                    text = "p",
+                    style = SettingsInputTextStyle,
+                    color = Color(0xFFB3B3B3),
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun ThemeModeChip(
+    text: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(35.dp)
+            .background(if (selected) Color.White else Color.Transparent, RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = TextStyle(
+                fontSize = 16.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.Normal,
+                letterSpacing = 0.sp,
+            ),
+            color = if (selected) Color.Black else Color(0xFF757575),
+        )
+    }
+}
+
+@Composable
+private fun FilledActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    primary: Boolean = false,
+) {
+    Box(
+        modifier = modifier
+            .background(
+                color = if (primary) Color(0xFF0C7EFF) else Color(0xFFF5F5F5),
+                shape = RoundedCornerShape(5.dp),
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = TextStyle(
+                fontSize = 14.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.sp,
+            ),
+            color = if (primary) Color.White else Color(0xFF757575),
+        )
+    }
+}
+
+private val SettingsSectionTitleTextStyle = TextStyle(
+    fontSize = 20.sp,
+    lineHeight = 20.sp,
+    fontWeight = FontWeight.SemiBold,
+    letterSpacing = 0.sp,
+)
+
+private val SettingsBodyTextStyle = TextStyle(
+    fontSize = 14.sp,
+    lineHeight = 14.sp,
+    fontWeight = FontWeight.Normal,
+    letterSpacing = 0.sp,
+)
+
+private val SettingsActionTextStyle = TextStyle(
+    fontSize = 14.sp,
+    lineHeight = 14.sp,
+    letterSpacing = 0.sp,
+)
+
+private val SettingsInputTextStyle = TextStyle(
+    fontSize = 12.sp,
+    lineHeight = 12.sp,
+    fontWeight = FontWeight.Normal,
+    letterSpacing = 0.sp,
+)
+
+private val SettingsCaptionTextStyle = TextStyle(
+    fontSize = 12.sp,
+    lineHeight = 12.sp,
+    fontWeight = FontWeight.Normal,
+    letterSpacing = 0.sp,
+)
 
 private fun defaultBackupFileName(): String =
     "booklogs_backup_${LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.json"

@@ -6,6 +6,8 @@ object Destinations {
     const val BOOK_DETAIL = "book/{bookId}"
     const val BOOK_EDIT = "book/{bookId}/edit"
     const val QUOTE_CAPTURE = "book/{bookId}/quote-capture"
+    const val ROUND_LIST = "book/{bookId}/rounds"
+    const val LOG_LIST = "book/{bookId}/logs"
     const val QUOTE_LIST = "book/{bookId}/quotes"
     const val REVIEW_LIST = "book/{bookId}/reviews"
 
@@ -21,6 +23,8 @@ object Destinations {
     fun bookDetail(bookId: Long): String = "book/$bookId"
     fun bookEdit(bookId: Long): String = "book/$bookId/edit"
     fun quoteCapture(bookId: Long): String = "book/$bookId/quote-capture"
+    fun roundList(bookId: Long): String = "book/$bookId/rounds"
+    fun logList(bookId: Long): String = "book/$bookId/logs"
     fun quoteList(bookId: Long): String = "book/$bookId/quotes"
     fun reviewList(bookId: Long): String = "book/$bookId/reviews"
     fun reviewEditor(bookId: Long, reviewId: Long? = null): String =

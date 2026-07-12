@@ -11,15 +11,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,10 +22,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dyk1323.booklogs.domain.model.BookMetadata
+import com.dyk1323.booklogs.ui.common.components.BooklogsSearchField
+import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.SkeletonBox
 
 /** docs/PLAN.md 화면 흐름 #2 제목 검색 경로 — 카카오 우선, 0건일 때만 Google Books 폴백(리포지토리가 처리). */
@@ -47,21 +42,17 @@ fun TitleSearchScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("제목으로 검색") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("취소") } },
-            )
+            BooklogsTopBar(title = "제목으로 검색", onBack = onBack)
         },
     ) { innerPadding ->
-        Column(modifier = modifier.fillMaxSize().padding(innerPadding).padding(16.dp)) {
-            OutlinedTextField(
+        Column(modifier = modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 24.dp, vertical = 36.dp)) {
+            BooklogsSearchField(
                 value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("책 제목") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { onQueryChanged(query) }),
+                onValueChange = {
+                    query = it
+                    onQueryChanged(it)
+                },
+                placeholder = "책 제목",
             )
 
             Spacer(modifier = Modifier.height(16.dp))

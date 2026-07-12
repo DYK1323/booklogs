@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1783751915538,
+  "lastScanned": 1783846739267,
   "projectRoot": "c:\\Users\\DAYOUNG\\booklogs",
   "techStack": {
     "languages": [
@@ -47,24 +47,28 @@
     "app": {
       "path": "app",
       "purpose": "Application code",
-      "fileCount": 1,
-      "lastAccessed": 1783751915492,
+      "fileCount": 2,
+      "lastAccessed": 1783846739236,
       "keyFiles": [
+        "booklogs-dev.keystore",
         "build.gradle.kts"
       ]
     },
     "build": {
       "path": "build",
       "purpose": "Build output",
-      "fileCount": 0,
-      "lastAccessed": 1783751915493,
-      "keyFiles": []
+      "fileCount": 2,
+      "lastAccessed": 1783846739236,
+      "keyFiles": [
+        "diagnostic-default-debug-signed.apk",
+        "diagnostic-default-debug-signed.apk.idsig"
+      ]
     },
     "docs": {
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 1,
-      "lastAccessed": 1783751915494,
+      "lastAccessed": 1783846739237,
       "keyFiles": [
         "PLAN.md"
       ]
@@ -73,7 +77,7 @@
       "path": "domain",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783751915494,
+      "lastAccessed": 1783846739237,
       "keyFiles": [
         "build.gradle.kts"
       ]
@@ -82,7 +86,7 @@
       "path": "gradle",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783751915495,
+      "lastAccessed": 1783846739238,
       "keyFiles": [
         "libs.versions.toml"
       ]
@@ -91,7 +95,7 @@
       "path": "licenses",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783751915496,
+      "lastAccessed": 1783846739238,
       "keyFiles": [
         "PRETENDARD_LICENSE.txt"
       ]
@@ -100,39 +104,45 @@
       "path": "app\\build",
       "purpose": "Build output",
       "fileCount": 0,
-      "lastAccessed": 1783751915497,
+      "lastAccessed": 1783846739239,
       "keyFiles": []
     },
     "app\\schemas": {
       "path": "app\\schemas",
       "purpose": "Schema definitions",
       "fileCount": 0,
-      "lastAccessed": 1783751915497,
+      "lastAccessed": 1783846739240,
       "keyFiles": []
     },
     "app\\src": {
       "path": "app\\src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1783751915498,
+      "lastAccessed": 1783846739240,
       "keyFiles": []
     },
     "domain\\build": {
       "path": "domain\\build",
       "purpose": "Build output",
       "fileCount": 0,
-      "lastAccessed": 1783751915499,
+      "lastAccessed": 1783846739241,
       "keyFiles": []
     },
     "domain\\src": {
       "path": "domain\\src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1783751915500,
+      "lastAccessed": 1783846739241,
       "keyFiles": []
     }
   },
   "hotPaths": [
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\dashboard\\DashboardScreen.kt",
+      "accessCount": 16,
+      "lastAccessed": 1783760241509,
+      "type": "file"
+    },
     {
       "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\detail\\BookDetailScreen.kt",
       "accessCount": 11,
@@ -140,9 +150,9 @@
       "type": "directory"
     },
     {
-      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\dashboard\\DashboardScreen.kt",
-      "accessCount": 10,
-      "lastAccessed": 1783758517302,
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\navigation\\BooklogsNavHost.kt",
+      "accessCount": 11,
+      "lastAccessed": 1783760311760,
       "type": "file"
     },
     {
@@ -158,9 +168,9 @@
       "type": "file"
     },
     {
-      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\navigation\\BooklogsNavHost.kt",
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\MainActivity.kt",
       "accessCount": 7,
-      "lastAccessed": 1783758467330,
+      "lastAccessed": 1783760348495,
       "type": "file"
     },
     {
@@ -182,9 +192,9 @@
       "type": "file"
     },
     {
-      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\MainActivity.kt",
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\dashboard\\DashboardViewModel.kt",
       "accessCount": 4,
-      "lastAccessed": 1783758488981,
+      "lastAccessed": 1783760175176,
       "type": "file"
     },
     {
@@ -200,9 +210,27 @@
       "type": "file"
     },
     {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\di\\AppContainer.kt",
+      "accessCount": 3,
+      "lastAccessed": 1783760146963,
+      "type": "file"
+    },
+    {
       "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\navigation\\Destinations.kt",
+      "accessCount": 3,
+      "lastAccessed": 1783760282961,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\notification\\ReminderReceiver.kt",
       "accessCount": 2,
-      "lastAccessed": 1783758420683,
+      "lastAccessed": 1783760127199,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\notification\\BootReceiver.kt",
+      "accessCount": 2,
+      "lastAccessed": 1783760134614,
       "type": "file"
     },
     {
@@ -242,18 +270,6 @@
       "type": "file"
     },
     {
-      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\notification\\ReminderReceiver.kt",
-      "accessCount": 1,
-      "lastAccessed": 1783757882303,
-      "type": "file"
-    },
-    {
-      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\notification\\BootReceiver.kt",
-      "accessCount": 1,
-      "lastAccessed": 1783757891895,
-      "type": "file"
-    },
-    {
       "path": "domain\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\domain\\repository\\ReviewRepository.kt",
       "accessCount": 1,
       "lastAccessed": 1783758054587,
@@ -269,12 +285,6 @@
       "path": "domain\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\domain\\model\\ReadingRound.kt",
       "accessCount": 1,
       "lastAccessed": 1783758057997,
-      "type": "file"
-    },
-    {
-      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\di\\AppContainer.kt",
-      "accessCount": 1,
-      "lastAccessed": 1783758107584,
       "type": "file"
     },
     {
@@ -299,6 +309,72 @@
       "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\review\\ReviewEditorScreen.kt",
       "accessCount": 1,
       "lastAccessed": 1783758413509,
+      "type": "file"
+    },
+    {
+      "path": "domain\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\domain\\usecase\\AggregateDailyPagesUseCase.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783759905397,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\AndroidManifest.xml",
+      "accessCount": 1,
+      "lastAccessed": 1783759907232,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\BooklogsApplication.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783759907471,
+      "type": "file"
+    },
+    {
+      "path": "domain\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\domain\\usecase\\PickReminderBookUseCase.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783759941347,
+      "type": "file"
+    },
+    {
+      "path": "domain\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\domain\\model\\Book.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783759942047,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\data\\settings\\AppSettingsDataStore.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783760083256,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\notification\\ReminderNotificationBuilder.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783760094714,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\notification\\ReminderScheduler.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783760107492,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\test\\kotlin\\com\\dyk1323\\booklogs\\notification\\ReminderSchedulerTest.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783760116701,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\settings\\SettingsViewModel.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783760255645,
+      "type": "file"
+    },
+    {
+      "path": "app\\src\\main\\kotlin\\com\\dyk1323\\booklogs\\ui\\settings\\SettingsScreen.kt",
+      "accessCount": 1,
+      "lastAccessed": 1783760276493,
       "type": "file"
     }
   ],

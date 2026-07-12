@@ -16,7 +16,9 @@ import com.dyk1323.booklogs.ui.dashboard.DashboardScreen
 import com.dyk1323.booklogs.ui.dashboard.DashboardViewModel
 import com.dyk1323.booklogs.ui.detail.BookDetailScreen
 import com.dyk1323.booklogs.ui.detail.BookDetailViewModel
+import com.dyk1323.booklogs.ui.detail.LogListScreen
 import com.dyk1323.booklogs.ui.detail.QuoteListScreen
+import com.dyk1323.booklogs.ui.detail.RoundListScreen
 import com.dyk1323.booklogs.ui.detail.ReviewListScreen
 import com.dyk1323.booklogs.ui.library.LibraryScreen
 import com.dyk1323.booklogs.ui.library.LibraryViewModel
@@ -106,6 +108,12 @@ fun BooklogsNavHost(
                 onCaptureQuoteClick = {
                     navController.navigate(Destinations.quoteCapture(bookId))
                 },
+                onViewAllRoundsClick = {
+                    navController.navigate(Destinations.roundList(bookId))
+                },
+                onViewAllLogsClick = {
+                    navController.navigate(Destinations.logList(bookId))
+                },
                 onViewAllQuotesClick = {
                     navController.navigate(Destinations.quoteList(bookId))
                 },
@@ -121,6 +129,26 @@ fun BooklogsNavHost(
                 onEditClick = {
                     navController.navigate(Destinations.bookEdit(bookId))
                 },
+            )
+        }
+
+        composable(
+            route = Destinations.ROUND_LIST,
+            arguments = listOf(navArgument("bookId") { type = NavType.LongType }),
+        ) {
+            RoundListScreen(
+                viewModel = bookDetailViewModel,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(
+            route = Destinations.LOG_LIST,
+            arguments = listOf(navArgument("bookId") { type = NavType.LongType }),
+        ) {
+            LogListScreen(
+                viewModel = bookDetailViewModel,
+                onBack = { navController.popBackStack() },
             )
         }
 
