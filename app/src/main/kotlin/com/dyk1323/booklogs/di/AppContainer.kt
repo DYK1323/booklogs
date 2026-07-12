@@ -6,11 +6,13 @@ import com.dyk1323.booklogs.BuildConfig
 import com.dyk1323.booklogs.data.backup.BackupExporter
 import com.dyk1323.booklogs.data.backup.BackupImporter
 import com.dyk1323.booklogs.data.local.BooklogsDatabase
+import com.dyk1323.booklogs.data.local.MIGRATION_1_2
 import com.dyk1323.booklogs.data.settings.AppSettingsDataStore
 import com.dyk1323.booklogs.data.remote.GoogleBooksApi
 import com.dyk1323.booklogs.data.remote.KakaoBooksApi
 import com.dyk1323.booklogs.data.repository.BookMetadataRepositoryImpl
 import com.dyk1323.booklogs.data.repository.BookRepositoryImpl
+import com.dyk1323.booklogs.data.repository.QuoteCommentRepositoryImpl
 import com.dyk1323.booklogs.data.repository.QuoteRepositoryImpl
 import com.dyk1323.booklogs.data.repository.ReadingLogRepositoryImpl
 import com.dyk1323.booklogs.data.repository.ReadingRoundRepositoryImpl
@@ -18,6 +20,7 @@ import com.dyk1323.booklogs.data.repository.ReviewRepositoryImpl
 import com.dyk1323.booklogs.data.repository.RoomTransactionRunner
 import com.dyk1323.booklogs.domain.repository.BookMetadataRepository
 import com.dyk1323.booklogs.domain.repository.BookRepository
+import com.dyk1323.booklogs.domain.repository.QuoteCommentRepository
 import com.dyk1323.booklogs.domain.repository.QuoteRepository
 import com.dyk1323.booklogs.domain.repository.ReadingLogRepository
 import com.dyk1323.booklogs.domain.repository.ReadingRoundRepository
@@ -44,7 +47,9 @@ class AppContainer(context: Context) {
         context.applicationContext,
         BooklogsDatabase::class.java,
         BooklogsDatabase.DATABASE_NAME,
-    ).build()
+    )
+        .addMigrations(MIGRATION_1_2)
+        .build()
 
     val transactionRunner: TransactionRunner = RoomTransactionRunner(database)
 
@@ -53,6 +58,7 @@ class AppContainer(context: Context) {
     val readingLogRepository: ReadingLogRepository = ReadingLogRepositoryImpl(database.readingLogDao())
     val quoteRepository: QuoteRepository = QuoteRepositoryImpl(database.quoteDao())
     val reviewRepository: ReviewRepository = ReviewRepositoryImpl(database.reviewDao())
+    val quoteCommentRepository: QuoteCommentRepository = QuoteCommentRepositoryImpl(database.quoteCommentDao())
 
     val appSettingsDataStore = AppSettingsDataStore(context)
 

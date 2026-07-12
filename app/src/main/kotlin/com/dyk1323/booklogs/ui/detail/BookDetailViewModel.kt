@@ -6,9 +6,11 @@ import com.dyk1323.booklogs.domain.model.Book
 import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.domain.model.BookStatus
 import com.dyk1323.booklogs.domain.model.Quote
+import com.dyk1323.booklogs.domain.model.QuoteComment
 import com.dyk1323.booklogs.domain.model.ReadingLog
 import com.dyk1323.booklogs.domain.model.Review
 import com.dyk1323.booklogs.domain.repository.BookRepository
+import com.dyk1323.booklogs.domain.repository.QuoteCommentRepository
 import com.dyk1323.booklogs.domain.repository.QuoteRepository
 import com.dyk1323.booklogs.domain.repository.ReadingLogRepository
 import com.dyk1323.booklogs.domain.repository.ReviewRepository
@@ -48,6 +50,9 @@ data class BookDetailUiState(
     val expandedLogId: Long? = null,
     val logEditInputText: String = "",
     val logEditErrorMessage: String? = null,
+    val expandedCommentsQuoteId: Long? = null,
+    val comments: List<QuoteComment> = emptyList(),
+    val commentInputText: String = "",
     val message: String? = null,
 )
 
@@ -62,6 +67,12 @@ private data class LogEditState(
     val expandedLogId: Long?,
     val logEditInputText: String,
     val logEditErrorMessage: String?,
+)
+
+private data class CommentState(
+    val expandedCommentsQuoteId: Long?,
+    val comments: List<QuoteComment>,
+    val commentInputText: String,
 )
 
 private data class BookDetailBaseState(
@@ -79,6 +90,7 @@ class BookDetailViewModel(
     private val readingLogRepository: ReadingLogRepository,
     private val quoteRepository: QuoteRepository,
     private val reviewRepository: ReviewRepository,
+    private val quoteCommentRepository: QuoteCommentRepository,
     private val changeBookStatusUseCase: ChangeBookStatusUseCase,
     private val deleteBookUseCase: DeleteBookUseCase,
     private val deleteLogUseCase: DeleteLogUseCase,
@@ -93,6 +105,8 @@ class BookDetailViewModel(
     private val expandedLogId = MutableStateFlow<Long?>(null)
     private val logEditInputText = MutableStateFlow("")
     private val logEditErrorMessage = MutableStateFlow<String?>(null)
+    private val expandedCommentsQuoteId = MutableStateFlow<Long?>(null)
+    private val commentInputText = MutableStateFlow("")
 
     private val _undoLogEvents = Channel<ReadingLog>(Channel.BUFFERED)
     val undoLogEvents: Flow<ReadingLog> = _undoLogEvents.receiveAsFlow()
@@ -103,6 +117,10 @@ class BookDetailViewModel(
 
     private val reviews = selectedBookId.flatMapLatest { bookId ->
         if (bookId == null) flowOf(emptyList()) else reviewRepository.observeForBook(bookId)
+    }
+
+    private val comments = expandedCommentsQuoteId.flatMapLatest { quoteId ->
+        if (quoteId == null) flowOf(emptyList()) else quoteCommentRepository.observeForQuote(quoteId)
     }
 
     private val baseState = combine(
@@ -143,11 +161,20 @@ class BookDetailViewModel(
         LogEditState(expandedLogId, logEditInputText, logEditErrorMessage)
     }
 
+    private val commentState: Flow<CommentState> = combine(
+        expandedCommentsQuoteId,
+        comments,
+        commentInputText,
+    ) { expandedCommentsQuoteId, comments, commentInputText ->
+        CommentState(expandedCommentsQuoteId, comments, commentInputText)
+    }
+
     val uiState: StateFlow<BookDetailUiState> = combine(
         baseState,
         quoteFormState,
         logEditState,
-    ) { base, quoteForm, logEdit ->
+        commentState,
+    ) { base, quoteForm, logEdit, commentForm ->
         BookDetailUiState(
             book = base.book,
             currentPage = base.currentPage,
@@ -161,6 +188,9 @@ class BookDetailViewModel(
             expandedLogId = logEdit.expandedLogId,
             logEditInputText = logEdit.logEditInputText,
             logEditErrorMessage = logEdit.logEditErrorMessage,
+            expandedCommentsQuoteId = commentForm.expandedCommentsQuoteId,
+            comments = commentForm.comments,
+            commentInputText = commentForm.commentInputText,
             message = quoteForm.message,
         )
     }.stateIn(
@@ -174,6 +204,8 @@ class BookDetailViewModel(
         editingQuote.value = null
         quoteText.value = ""
         quotePageText.value = ""
+        expandedCommentsQuoteId.value = null
+        commentInputText.value = ""
         message.value = null
     }
 
@@ -351,7 +383,43 @@ class BookDetailViewModel(
                 quoteText.value = ""
                 quotePageText.value = ""
             }
+            if (expandedCommentsQuoteId.value == quoteId) {
+                expandedCommentsQuoteId.value = null
+                commentInputText.value = ""
+            }
             message.value = "인용구를 삭제했어요."
+        }
+    }
+
+    fun openComments(quoteId: Long) {
+        expandedCommentsQuoteId.value = quoteId
+        commentInputText.value = ""
+    }
+
+    fun closeComments() {
+        expandedCommentsQuoteId.value = null
+        commentInputText.value = ""
+    }
+
+    fun updateCommentInput(value: String) {
+        commentInputText.value = value
+    }
+
+    fun addComment() {
+        val quoteId = expandedCommentsQuoteId.value ?: return
+        val text = commentInputText.value.trim()
+        if (text.isEmpty()) return
+        viewModelScope.launch {
+            quoteCommentRepository.insert(
+                QuoteComment(id = 0, quoteId = quoteId, content = text, createdAt = System.currentTimeMillis()),
+            )
+            commentInputText.value = ""
+        }
+    }
+
+    fun deleteComment(commentId: Long) {
+        viewModelScope.launch {
+            quoteCommentRepository.deleteById(commentId)
         }
     }
 }

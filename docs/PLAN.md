@@ -153,6 +153,7 @@ Apple 문서의 스프링 물리 기반 모션은 Compose의 기본 애니메이
 - **ReadingLogEntity** (`reading_logs`): id, bookId(FK), readingRoundId(FK), currentPage, logDateEpochDay(타임존 안정적인 일자 버켓용), loggedAt — bookId, logDateEpochDay에 인덱스. **델타는 컬럼으로 저장하지 않는다.** 각 로그는 "이 시점에 몇 페이지였다"는 스냅샷일 뿐이고, 페이지 증가량(델타)은 항상 같은 라운드의 로그들을 `loggedAt` 순으로 정렬해 인접한 두 로그의 차이로 그때그때 계산한다(clamped ≥0). 이렇게 델타를 파생값으로만 다루면 과거 로그를 수정/삭제해도 그 행 하나만 갱신/삭제하면 끝이고, 이웃 로그의 저장된 델타를 다시 써넣는 연쇄 작업이 필요 없다 — **어떤 시점의 로그든 자유롭게 수정/삭제 가능**. 개인 독서기록 규모(수백~수천 행)에서 매번 정렬+차이계산하는 비용은 무시할 수준.
 - **QuoteEntity** (`quotes`): id, bookId(FK), text, pageNumber?, **pageNumberEnd?**(두 페이지 이상에 걸친 인용구일 때만 값이 들어감, 단일 페이지 인용구는 null — 상세에서 "185p" 또는 "185-186p"로 표시), createdAt
 - **ReviewEntity** (`reviews`): id, bookId(FK), readingRoundId(FK, **non-null**), content, rating?, createdAt — 독후감은 항상 특정 라운드에 연결된다는 설계(화면 흐름 #6)와 일치시키기 위해 nullable로 두지 않음. 작성 화면은 항상 어떤 라운드에 대한 독후감인지 알고 진입하므로(책 상세의 특정 라운드에서 "독후감 작성") 이 FK가 비어있을 상황 자체가 없음.
+- **QuoteCommentEntity** (`quote_comments`, **스키마 버전 2에서 추가**): id, quoteId(FK→quotes), content, createdAt — 인용구 하나에 자유롭게 남기는 짧은 메모/댓글. 시간순(`created_at ASC`)으로 나열.
 
 모든 FK는 `onDelete = CASCADE`. 사진 원본은 디스크에 영구 저장하지 않음(OCR 처리는 메모리상에서, 표지는 Coil 캐시로 충분) — 저장공간 최소화, STORAGE 권한 불필요.
 
@@ -165,7 +166,7 @@ com.dyk1323.booklogs/
     remote/{KakaoBooksApi, GoogleBooksApi, dto/*, BookMetadataMapper — 순수 매핑 전담: 카카오/Google Books DTO 각각을 domain 필드로 변환하고, `merge(kakaoDto?, googleDto?)`로 두 DTO를 하나의 BookMetadata로 합성(어떤 DTO를 넘길지는 Repository가 결정, Mapper는 주어진 값을 합치기만 함)}
     repository/{Book,ReadingLog,Quote,Review,BookMetadata}Repository(+Impl) — `BookRepository`에 `findByIsbn(isbn): BookEntity?` 추가(중복 등록 감지용)
     settings/ (AppSettingsDataStore — DataStore Preferences, Room이 아님. reminderEnabled: Boolean, reminderHour/Minute: Int, **dailyGoalPages: Int?**)
-    backup/ (BackupExporter, BackupImporter, dto/BackupEnvelope — schemaVersion 포함 JSON 스키마. Room 5개 테이블 전체를 하나의 JSON으로 직렬화/역직렬화. 사진/이미지 바이너리는 애초에 디스크에 저장 안 하므로 백업 대상에서 자연히 제외)
+    backup/ (BackupExporter, BackupImporter, dto/BackupEnvelope — schemaVersion 포함 JSON 스키마. Room 6개 테이블 전체를 하나의 JSON으로 직렬화/역직렬화. 사진/이미지 바이너리는 애초에 디스크에 저장 안 하므로 백업 대상에서 자연히 제외)
   domain/
     model/ (Book, ReadingLog, Quote, Review, ReadingRound — Room 엔티티와 분리된 순수 모델)
     usecase/
@@ -341,6 +342,7 @@ com.dyk1323.booklogs/
 - **CI에 `:app` 유닛테스트 스텝 추가 완료**: `.github/workflows/android-build.yml`이 그동안 `:domain:test`만 돌리고 `:app:assembleDebug`(APK 빌드)로 바로 넘어가, `:app` 모듈의 `BookMetadataRepositoryImplTest`/`ReminderSchedulerTest`/`QuoteCaptureViewModelTest`/`QuoteOcrProcessorTest`가 한 번도 CI에서 실행된 적이 없었음(샌드박스가 Google Maven 접근이 막혀 있어 `:app`을 로컬에서 컴파일할 수 없다 보니 이 사실 자체가 뒤늦게 드러남). "Run domain unit tests"와 "Build debug APK" 사이에 `./gradlew :app:testDebugUnitTest --stacktrace` 스텝을 추가(카카오/Google Books 키를 `buildConfigField`가 설정 시점에 읽으므로 빌드 스텝과 동일하게 `KAKAO_API_KEY`/`GOOGLE_BOOKS_API_KEY` 시크릿을 함께 전달 — 값이 없어도 컴파일 자체는 되지만 다른 스텝과의 일관성을 위해 맞춤).
 - **대시보드 책장 그리드를 가로 3열 고정으로 변경**: `LazyVerticalGrid`의 `columns`을 `GridCells.Adaptive(minSize = 132.dp)`(화면 너비에 따라 열 수가 자동으로 늘고 줆)에서 `GridCells.Fixed(3)`으로 교체 — 화면 크기와 무관하게 항상 3열로 고정.
 - **독후감 목록을 제목/날짜만 보이는 카드로 변경**: 기존엔 전체 본문(`review.content`)이 목록에 그대로 다 펼쳐져 있었음 — `QuoteCard`와 같은 패턴(`Card(onClick=...)` + `expanded` 상태)의 `ReviewCard`로 교체해, 접힌 상태에선 제목(한 줄)과 날짜만 보이고 탭하면 본문 전체가 펼쳐짐. `Review` 도메인 모델에 별도 제목 필드가 없어(작성 시 제목 입력을 받지 않음), 본문의 첫 번째 비어있지 않은 줄을 제목으로 대신 사용(`reviewTitle()`).
+- **인용구 댓글 추가 (스키마 버전 2)**: 인용구 카드 우측에 있던 수정/삭제 아이콘 버튼을 카드 하단으로 내려 "댓글 · 수정 · 삭제" 순서의 가로 버튼 행으로 재배치(`QuoteCard`). 새 `quote_comments` 테이블(`QuoteCommentEntity`: `id`, `quote_id`(FK→quotes, `onDelete=CASCADE`), `content`, `created_at`)을 추가하며 이 프로젝트 최초의 실제 Room 마이그레이션을 작성 — "구현 시 유의사항 — 마이그레이션 원칙"대로 `fallbackToDestructiveMigration()` 대신 `MIGRATION_1_2`(`data/local/Migrations.kt`)가 `quotes` 테이블과 동일한 `FOREIGN KEY ... ON DELETE CASCADE` 스타일로 `CREATE TABLE`/인덱스를 직접 실행하고, `BooklogsDatabase`의 `version`을 1→2로 올리며 `AppContainer`의 `Room.databaseBuilder(...).addMigrations(MIGRATION_1_2)`로 등록(이 샌드박스는 `:app`을 컴파일할 수 없어 KSP가 `schemas/2.json`을 자동 생성하는 건 실제 빌드 환경에서만 확인 가능). "댓글" 버튼을 누르면 `ModalBottomSheet`(`QuoteCommentsSheetContent`)가 열려 해당 인용구의 댓글을 시간순으로 보여주고, 하단 입력창+"추가" 버튼으로 새 댓글을 남기며, 각 댓글엔 삭제 아이콘만 있음(개별 수정은 스코프 밖 — 잘못 남기면 삭제 후 다시 남기는 방식). 백업/복원(`BackupEnvelope`)에도 `comments: List<QuoteCommentBackupDto>` 필드를 추가하되 기본값 `emptyList()`를 둬서, 이 기능 이전에 내보낸 백업 파일(그 키 자체가 없음)도 그대로 복원 가능.
 - **미구현(다음 작업)**: 통계 화면(장르/작가/출판사/국가별).
 
 ## 검증 계획

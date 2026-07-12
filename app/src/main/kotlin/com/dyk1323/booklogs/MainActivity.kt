@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
                     readingLogRepository = container.readingLogRepository,
                     quoteRepository = container.quoteRepository,
                     reviewRepository = container.reviewRepository,
+                    quoteCommentRepository = container.quoteCommentRepository,
                     changeBookStatusUseCase = container.changeBookStatusUseCase,
                     deleteBookUseCase = container.deleteBookUseCase,
                     deleteLogUseCase = container.deleteLogUseCase,

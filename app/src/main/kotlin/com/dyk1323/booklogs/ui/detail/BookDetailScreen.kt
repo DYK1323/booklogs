@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
@@ -32,6 +34,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -58,6 +61,7 @@ import com.dyk1323.booklogs.domain.model.Book
 import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.domain.model.BookStatus
 import com.dyk1323.booklogs.domain.model.Quote
+import com.dyk1323.booklogs.domain.model.QuoteComment
 import com.dyk1323.booklogs.domain.model.Review
 import com.dyk1323.booklogs.domain.usecase.ConvertPagePercentUseCase
 import com.dyk1323.booklogs.domain.usecase.LogDelta
@@ -246,6 +250,7 @@ fun BookDetailScreen(
                             items(uiState.quotes, key = { it.id }) { quote ->
                                 QuoteCard(
                                     quote = quote,
+                                    onComments = { viewModel.openComments(quote.id) },
                                     onEdit = { viewModel.startEditQuote(quote) },
                                     onDelete = { pendingDeleteQuoteId = quote.id },
                                 )
@@ -333,6 +338,18 @@ fun BookDetailScreen(
                 }
             },
         )
+    }
+
+    if (uiState.expandedCommentsQuoteId != null) {
+        ModalBottomSheet(onDismissRequest = { viewModel.closeComments() }) {
+            QuoteCommentsSheetContent(
+                comments = uiState.comments,
+                inputText = uiState.commentInputText,
+                onInputChanged = viewModel::updateCommentInput,
+                onAdd = viewModel::addComment,
+                onDelete = viewModel::deleteComment,
+            )
+        }
     }
 }
 
@@ -482,7 +499,7 @@ private fun deltaLabel(book: Book, delta: LogDelta): String {
 
 /** Tapping the card toggles between a 4-line preview and the full quote text. */
 @Composable
-private fun QuoteCard(quote: Quote, onEdit: () -> Unit, onDelete: () -> Unit) {
+private fun QuoteCard(quote: Quote, onComments: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     var expanded by remember(quote.id) { mutableStateOf(false) }
     Card(
         onClick = { expanded = !expanded },
@@ -491,33 +508,123 @@ private fun QuoteCard(quote: Quote, onEdit: () -> Unit, onDelete: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.Top,
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = quote.text,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = if (expanded) Int.MAX_VALUE else 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+            quotePageLabel(quote)?.let {
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = quote.text,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = if (expanded) Int.MAX_VALUE else 4,
-                    overflow = TextOverflow.Ellipsis,
+                    text = it,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                 )
-                quotePageLabel(quote)?.let {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onComments) {
+                    Icon(
+                        Icons.Outlined.ChatBubbleOutline,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
                     )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "댓글")
+                }
+                TextButton(onClick = onEdit) {
+                    Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "수정")
+                }
+                TextButton(onClick = onDelete) {
+                    Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "삭제")
                 }
             }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Outlined.Edit, contentDescription = "인용구 수정")
+        }
+    }
+}
+
+@Composable
+private fun QuoteCommentsSheetContent(
+    comments: List<QuoteComment>,
+    inputText: String,
+    onInputChanged: (String) -> Unit,
+    onAdd: () -> Unit,
+    onDelete: (Long) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 24.dp),
+    ) {
+        Text(text = "댓글", style = MaterialTheme.typography.titleLarge)
+        Spacer(modifier = Modifier.height(12.dp))
+        if (comments.isEmpty()) {
+            Text(
+                text = "아직 댓글이 없어요.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 280.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(comments, key = { it.id }) { comment ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = comment.content, style = MaterialTheme.typography.bodyLarge)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = formatDate(comment.createdAt),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                            )
+                        }
+                        IconButton(onClick = { onDelete(comment.id) }, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                Icons.Outlined.Delete,
+                                contentDescription = "댓글 삭제",
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                }
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Outlined.Delete, contentDescription = "인용구 삭제")
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = inputText,
+                onValueChange = onInputChanged,
+                modifier = Modifier.weight(1f),
+                label = { Text("댓글 추가") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onAdd() }),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(onClick = onAdd, shape = RoundedCornerShape(8.dp)) {
+                Text(text = "추가")
             }
         }
     }

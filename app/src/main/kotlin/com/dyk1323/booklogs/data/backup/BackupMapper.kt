@@ -1,6 +1,7 @@
 package com.dyk1323.booklogs.data.backup
 
 import com.dyk1323.booklogs.data.local.entity.BookEntity
+import com.dyk1323.booklogs.data.local.entity.QuoteCommentEntity
 import com.dyk1323.booklogs.data.local.entity.QuoteEntity
 import com.dyk1323.booklogs.data.local.entity.ReadingLogEntity
 import com.dyk1323.booklogs.data.local.entity.ReadingRoundEntity
@@ -105,5 +106,19 @@ internal fun ReviewBackupDto.toEntity() = ReviewEntity(
     readingRoundId = readingRoundId,
     content = content,
     rating = rating,
+    createdAt = createdAt,
+)
+
+internal fun QuoteCommentEntity.toBackupDto() = QuoteCommentBackupDto(
+    id = id,
+    quoteId = quoteId,
+    content = content,
+    createdAt = createdAt,
+)
+
+internal fun QuoteCommentBackupDto.toEntity() = QuoteCommentEntity(
+    id = id,
+    quoteId = quoteId,
+    content = content,
     createdAt = createdAt,
 )

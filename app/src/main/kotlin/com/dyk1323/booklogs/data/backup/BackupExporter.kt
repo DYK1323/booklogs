@@ -8,7 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
-/** docs/PLAN.md "백업/복원" — dumps all 5 tables to the SAF `Uri` the user picked via ACTION_CREATE_DOCUMENT. */
+/** docs/PLAN.md "백업/복원" — dumps all 6 tables to the SAF `Uri` the user picked via ACTION_CREATE_DOCUMENT. */
 class BackupExporter(
     private val context: Context,
     private val database: BooklogsDatabase,
@@ -22,6 +22,7 @@ class BackupExporter(
             logs = database.readingLogDao().getAll().map { it.toBackupDto() },
             quotes = database.quoteDao().getAll().map { it.toBackupDto() },
             reviews = database.reviewDao().getAll().map { it.toBackupDto() },
+            comments = database.quoteCommentDao().getAll().map { it.toBackupDto() },
         )
         val content = json.encodeToString(BackupEnvelope.serializer(), envelope)
         val stream = context.contentResolver.openOutputStream(uri)

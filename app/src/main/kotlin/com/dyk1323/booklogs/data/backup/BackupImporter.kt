@@ -31,6 +31,7 @@ class BackupImporter(
         database.withTransaction {
             // Children first so FK constraints never see an orphaned row mid-wipe, even though
             // onDelete=CASCADE from books would already cover most of this.
+            database.quoteCommentDao().deleteAll()
             database.reviewDao().deleteAll()
             database.quoteDao().deleteAll()
             database.readingLogDao().deleteAll()
@@ -38,12 +39,13 @@ class BackupImporter(
             database.bookDao().deleteAll()
 
             // Parents first on the way back in. Original ids are preserved (Room only autogenerates
-            // when the provided id is 0), so bookId/readingRoundId references in the JSON stay valid.
+            // when the provided id is 0), so bookId/readingRoundId/quoteId references in the JSON stay valid.
             envelope.books.forEach { database.bookDao().insert(it.toEntity()) }
             envelope.rounds.forEach { database.readingRoundDao().insert(it.toEntity()) }
             envelope.logs.forEach { database.readingLogDao().insert(it.toEntity()) }
             envelope.quotes.forEach { database.quoteDao().insert(it.toEntity()) }
             envelope.reviews.forEach { database.reviewDao().insert(it.toEntity()) }
+            envelope.comments.forEach { database.quoteCommentDao().insert(it.toEntity()) }
         }
     }
 }
