@@ -15,20 +15,12 @@ import androidx.room.PrimaryKey
             childColumns = ["book_id"],
             onDelete = ForeignKey.CASCADE,
         ),
-        ForeignKey(
-            entity = ReadingRoundEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["reading_round_id"],
-            onDelete = ForeignKey.CASCADE,
-        ),
     ],
-    indices = [Index(value = ["book_id"]), Index(value = ["reading_round_id"])],
+    indices = [Index(value = ["book_id"])],
 )
 data class ReviewEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "book_id") val bookId: Long,
-    /** Always non-null — a review always belongs to a specific reading round (docs/PLAN.md #6). */
-    @ColumnInfo(name = "reading_round_id") val readingRoundId: Long,
     val content: String,
     val rating: Int?,
     @ColumnInfo(name = "created_at") val createdAt: Long,

@@ -5,9 +5,16 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.dyk1323.booklogs.data.local.entity.ReadingRoundEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReadingRoundDao {
+    @Query("SELECT * FROM reading_rounds")
+    fun observeAll(): Flow<List<ReadingRoundEntity>>
+
+    @Query("SELECT * FROM reading_rounds WHERE book_id = :bookId ORDER BY round_number DESC")
+    fun observeForBook(bookId: Long): Flow<List<ReadingRoundEntity>>
+
     @Query("SELECT * FROM reading_rounds")
     suspend fun getAll(): List<ReadingRoundEntity>
 

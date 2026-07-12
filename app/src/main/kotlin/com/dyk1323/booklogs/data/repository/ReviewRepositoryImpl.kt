@@ -13,12 +13,6 @@ class ReviewRepositoryImpl(
     override fun observeForBook(bookId: Long): Flow<List<Review>> =
         reviewDao.observeForBook(bookId).map { entities -> entities.map { it.toDomain() } }
 
-    override fun observeForRound(roundId: Long): Flow<List<Review>> =
-        reviewDao.observeForRound(roundId).map { entities -> entities.map { it.toDomain() } }
-
-    override suspend fun getAllForRound(roundId: Long): List<Review> =
-        reviewDao.getAllForRound(roundId).map { it.toDomain() }
-
     override suspend fun insert(review: Review): Long = reviewDao.insert(review.toEntity())
 
     override suspend fun update(review: Review) = reviewDao.update(review.toEntity())
@@ -29,7 +23,6 @@ class ReviewRepositoryImpl(
 internal fun ReviewEntity.toDomain(): Review = Review(
     id = id,
     bookId = bookId,
-    readingRoundId = readingRoundId,
     content = content,
     rating = rating,
     createdAt = createdAt,
@@ -38,7 +31,6 @@ internal fun ReviewEntity.toDomain(): Review = Review(
 internal fun Review.toEntity(): ReviewEntity = ReviewEntity(
     id = id,
     bookId = bookId,
-    readingRoundId = readingRoundId,
     content = content,
     rating = rating,
     createdAt = createdAt,

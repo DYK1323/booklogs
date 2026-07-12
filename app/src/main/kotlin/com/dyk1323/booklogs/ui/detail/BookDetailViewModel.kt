@@ -8,23 +8,30 @@ import com.dyk1323.booklogs.domain.model.BookStatus
 import com.dyk1323.booklogs.domain.model.Quote
 import com.dyk1323.booklogs.domain.model.QuoteComment
 import com.dyk1323.booklogs.domain.model.ReadingLog
+import com.dyk1323.booklogs.domain.model.ReadingRound
 import com.dyk1323.booklogs.domain.model.Review
+import com.dyk1323.booklogs.domain.model.RoundEndReason
 import com.dyk1323.booklogs.domain.repository.BookRepository
 import com.dyk1323.booklogs.domain.repository.QuoteCommentRepository
 import com.dyk1323.booklogs.domain.repository.QuoteRepository
 import com.dyk1323.booklogs.domain.repository.ReadingLogRepository
+import com.dyk1323.booklogs.domain.repository.ReadingRoundRepository
 import com.dyk1323.booklogs.domain.repository.ReviewRepository
 import com.dyk1323.booklogs.domain.usecase.ChangeBookStatusUseCase
 import com.dyk1323.booklogs.domain.usecase.ConvertPagePercentUseCase
 import com.dyk1323.booklogs.domain.usecase.DeleteBookUseCase
 import com.dyk1323.booklogs.domain.usecase.DeleteLogUseCase
 import com.dyk1323.booklogs.domain.usecase.EditLogUseCase
+import com.dyk1323.booklogs.domain.usecase.EditRoundUseCase
 import com.dyk1323.booklogs.domain.usecase.LogDelta
 import com.dyk1323.booklogs.domain.usecase.ResolveLoggedPageResult
-import com.dyk1323.booklogs.domain.usecase.UndoRoundSplitUseCase
 import com.dyk1323.booklogs.domain.usecase.computeBookProgress
 import com.dyk1323.booklogs.domain.usecase.computeLogDeltas
 import com.dyk1323.booklogs.domain.usecase.resolveLoggedPage
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -45,6 +52,7 @@ data class BookDetailUiState(
     val logDeltas: List<LogDelta> = emptyList(),
     val quotes: List<Quote> = emptyList(),
     val reviews: List<Review> = emptyList(),
+    val rounds: List<ReadingRound> = emptyList(),
     val quoteText: String = "",
     val quotePageText: String = "",
     val editingQuoteId: Long? = null,
@@ -54,6 +62,11 @@ data class BookDetailUiState(
     val expandedCommentsQuoteId: Long? = null,
     val comments: List<QuoteComment> = emptyList(),
     val commentInputText: String = "",
+    val expandedRoundId: Long? = null,
+    val roundEditStartedAtText: String = "",
+    val roundEditFinishedAtText: String = "",
+    val roundEditEndReason: RoundEndReason? = null,
+    val roundEditStartingPageText: String = "",
     val message: String? = null,
 )
 
@@ -76,6 +89,20 @@ private data class CommentState(
     val commentInputText: String,
 )
 
+private data class RoundEditState(
+    val expandedRoundId: Long?,
+    val startedAtText: String,
+    val finishedAtText: String,
+    val endReason: RoundEndReason?,
+    val startingPageText: String,
+)
+
+private data class QuoteReviewRoundState(
+    val quotes: List<Quote>,
+    val reviews: List<Review>,
+    val rounds: List<ReadingRound>,
+)
+
 private data class BookDetailBaseState(
     val book: Book?,
     val currentPage: Int?,
@@ -83,12 +110,16 @@ private data class BookDetailBaseState(
     val logDeltas: List<LogDelta>,
     val quotes: List<Quote>,
     val reviews: List<Review>,
+    val rounds: List<ReadingRound>,
 )
+
+private val ROUND_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BookDetailViewModel(
     private val bookRepository: BookRepository,
     private val readingLogRepository: ReadingLogRepository,
+    private val readingRoundRepository: ReadingRoundRepository,
     private val quoteRepository: QuoteRepository,
     private val reviewRepository: ReviewRepository,
     private val quoteCommentRepository: QuoteCommentRepository,
@@ -96,7 +127,7 @@ class BookDetailViewModel(
     private val deleteBookUseCase: DeleteBookUseCase,
     private val deleteLogUseCase: DeleteLogUseCase,
     private val editLogUseCase: EditLogUseCase,
-    private val undoRoundSplitUseCase: UndoRoundSplitUseCase,
+    private val editRoundUseCase: EditRoundUseCase,
 ) : ViewModel() {
 
     private val selectedBookId = MutableStateFlow<Long?>(null)
@@ -109,13 +140,14 @@ class BookDetailViewModel(
     private val logEditErrorMessage = MutableStateFlow<String?>(null)
     private val expandedCommentsQuoteId = MutableStateFlow<Long?>(null)
     private val commentInputText = MutableStateFlow("")
+    private val expandedRoundId = MutableStateFlow<Long?>(null)
+    private val roundEditStartedAtText = MutableStateFlow("")
+    private val roundEditFinishedAtText = MutableStateFlow("")
+    private val roundEditEndReason = MutableStateFlow<RoundEndReason?>(null)
+    private val roundEditStartingPageText = MutableStateFlow("")
 
     private val _undoLogEvents = Channel<ReadingLog>(Channel.BUFFERED)
     val undoLogEvents: Flow<ReadingLog> = _undoLogEvents.receiveAsFlow()
-
-    /** Fires right after a 완독/중단 → 다시 읽기 transition, which silently starts a new round. */
-    private val _undoRoundSplitEvents = Channel<Unit>(Channel.BUFFERED)
-    val undoRoundSplitEvents: Flow<Unit> = _undoRoundSplitEvents.receiveAsFlow()
 
     private val quotes = selectedBookId.flatMapLatest { bookId ->
         if (bookId == null) flowOf(emptyList()) else quoteRepository.observeForBook(bookId)
@@ -125,28 +157,44 @@ class BookDetailViewModel(
         if (bookId == null) flowOf(emptyList()) else reviewRepository.observeForBook(bookId)
     }
 
+    private val rounds = selectedBookId.flatMapLatest { bookId ->
+        if (bookId == null) flowOf(emptyList()) else readingRoundRepository.observeForBook(bookId)
+    }
+
     private val comments = expandedCommentsQuoteId.flatMapLatest { quoteId ->
         if (quoteId == null) flowOf(emptyList()) else quoteCommentRepository.observeForQuote(quoteId)
+    }
+
+    // combine() only has typed overloads up to 5 flows — quotes/reviews/rounds are bundled here first
+    // so the outer baseState combine below stays within that limit.
+    private val quotesReviewsRounds: Flow<QuoteReviewRoundState> = combine(
+        quotes,
+        reviews,
+        rounds,
+    ) { quoteList, reviewList, roundList ->
+        QuoteReviewRoundState(quoteList, reviewList, roundList)
     }
 
     private val baseState = combine(
         selectedBookId,
         bookRepository.observeAll(),
         readingLogRepository.observeAll(),
-        quotes,
-        reviews,
-    ) { bookId, books, logs, quoteList, reviewList ->
+        quotesReviewsRounds,
+    ) { bookId, books, logs, qrr ->
         val book = books.firstOrNull { it.id == bookId }
         val bookLogs = logs.filter { it.bookId == bookId }
         val latestPage = bookLogs.maxByOrNull { it.loggedAt }?.currentPage
+        val startingPageByRound = qrr.rounds.associate { it.id to it.startingPage }
         BookDetailBaseState(
             book = book,
             currentPage = latestPage,
             progress = computeBookProgress(latestPage, book?.totalPages),
-            logDeltas = bookLogs.groupBy { it.readingRoundId }.values.flatMap(::computeLogDeltas)
+            logDeltas = bookLogs.groupBy { it.readingRoundId }
+                .flatMap { (roundId, roundLogs) -> computeLogDeltas(roundLogs, startingPageByRound[roundId] ?: 0) }
                 .sortedByDescending { it.log.loggedAt },
-            quotes = quoteList,
-            reviews = reviewList,
+            quotes = qrr.quotes,
+            reviews = qrr.reviews,
+            rounds = qrr.rounds.sortedByDescending { it.roundNumber },
         )
     }
 
@@ -175,12 +223,23 @@ class BookDetailViewModel(
         CommentState(expandedCommentsQuoteId, comments, commentInputText)
     }
 
+    private val roundEditState: Flow<RoundEditState> = combine(
+        expandedRoundId,
+        roundEditStartedAtText,
+        roundEditFinishedAtText,
+        roundEditEndReason,
+        roundEditStartingPageText,
+    ) { expandedRoundId, startedAtText, finishedAtText, endReason, startingPageText ->
+        RoundEditState(expandedRoundId, startedAtText, finishedAtText, endReason, startingPageText)
+    }
+
     val uiState: StateFlow<BookDetailUiState> = combine(
         baseState,
         quoteFormState,
         logEditState,
         commentState,
-    ) { base, quoteForm, logEdit, commentForm ->
+        roundEditState,
+    ) { base, quoteForm, logEdit, commentForm, roundEdit ->
         BookDetailUiState(
             book = base.book,
             currentPage = base.currentPage,
@@ -188,6 +247,7 @@ class BookDetailViewModel(
             logDeltas = base.logDeltas,
             quotes = base.quotes,
             reviews = base.reviews,
+            rounds = base.rounds,
             quoteText = quoteForm.quoteText,
             quotePageText = quoteForm.quotePageText,
             editingQuoteId = quoteForm.editingQuoteId,
@@ -197,6 +257,11 @@ class BookDetailViewModel(
             expandedCommentsQuoteId = commentForm.expandedCommentsQuoteId,
             comments = commentForm.comments,
             commentInputText = commentForm.commentInputText,
+            expandedRoundId = roundEdit.expandedRoundId,
+            roundEditStartedAtText = roundEdit.startedAtText,
+            roundEditFinishedAtText = roundEdit.finishedAtText,
+            roundEditEndReason = roundEdit.endReason,
+            roundEditStartingPageText = roundEdit.startingPageText,
             message = quoteForm.message,
         )
     }.stateIn(
@@ -212,6 +277,7 @@ class BookDetailViewModel(
         quotePageText.value = ""
         expandedCommentsQuoteId.value = null
         commentInputText.value = ""
+        collapseRoundEdit()
         message.value = null
     }
 
@@ -263,7 +329,6 @@ class BookDetailViewModel(
 
     fun changeStatus(newStatus: BookStatus) {
         val bookId = selectedBookId.value ?: return
-        val previousStatus = uiState.value.book?.status
         viewModelScope.launch {
             val result = changeBookStatusUseCase(
                 bookId = bookId,
@@ -275,23 +340,6 @@ class BookDetailViewModel(
                 onFailure = { error ->
                     error.message?.let { "상태를 변경하지 못했어요. $it" } ?: "상태를 변경하지 못했어요."
                 },
-            )
-            val startedNewRound = result.isSuccess && newStatus == BookStatus.READING &&
-                (previousStatus == BookStatus.FINISHED || previousStatus == BookStatus.DROPPED)
-            if (startedNewRound) {
-                _undoRoundSplitEvents.send(Unit)
-            }
-        }
-    }
-
-    /** "실행취소" on the 다시 읽기 snackbar — merges the round it just created back into the previous one. */
-    fun undoRoundSplit() {
-        val bookId = selectedBookId.value ?: return
-        viewModelScope.launch {
-            val result = undoRoundSplitUseCase(bookId)
-            message.value = result.fold(
-                onSuccess = { "다시 읽기를 취소하고 이전 라운드로 되돌렸어요." },
-                onFailure = { "되돌리지 못했어요." },
             )
         }
     }
@@ -432,6 +480,100 @@ class BookDetailViewModel(
             quoteCommentRepository.deleteById(commentId)
         }
     }
+
+    /** Expands a round row for editing, seeding the fields from its current values. */
+    fun toggleRoundExpanded(roundId: Long) {
+        if (expandedRoundId.value == roundId) {
+            collapseRoundEdit()
+            return
+        }
+        val round = uiState.value.rounds.firstOrNull { it.id == roundId } ?: return
+        expandedRoundId.value = roundId
+        roundEditStartedAtText.value = millisToDateText(round.startedAt)
+        roundEditFinishedAtText.value = round.finishedAt?.let(::millisToDateText).orEmpty()
+        roundEditEndReason.value = round.endReason
+        roundEditStartingPageText.value = round.startingPage.toString()
+        message.value = null
+    }
+
+    fun updateRoundEditStartedAt(value: String) {
+        roundEditStartedAtText.value = value
+        message.value = null
+    }
+
+    fun updateRoundEditFinishedAt(value: String) {
+        roundEditFinishedAtText.value = value
+        message.value = null
+    }
+
+    fun updateRoundEditEndReason(reason: RoundEndReason) {
+        roundEditEndReason.value = reason
+    }
+
+    fun updateRoundEditStartingPage(value: String) {
+        roundEditStartingPageText.value = value.filter(Char::isDigit).take(6)
+        message.value = null
+    }
+
+    fun cancelRoundEdit() {
+        collapseRoundEdit()
+        message.value = null
+    }
+
+    /**
+     * Only ever corrects a round's own fields — see [EditRoundUseCase] for why this can never flip a
+     * round between open/closed (that stays the status state machine's job).
+     */
+    fun saveRoundEdit() {
+        val roundId = expandedRoundId.value ?: return
+        val round = uiState.value.rounds.firstOrNull { it.id == roundId } ?: return
+        val startedAt = dateTextToMillis(roundEditStartedAtText.value)
+        if (startedAt == null) {
+            message.value = "시작일을 yyyy.MM.dd 형식으로 입력해주세요."
+            return
+        }
+        val isOpen = round.finishedAt == null
+        val finishedAt = if (isOpen) null else dateTextToMillis(roundEditFinishedAtText.value)
+        if (!isOpen && finishedAt == null) {
+            message.value = "종료일을 yyyy.MM.dd 형식으로 입력해주세요."
+            return
+        }
+        val endReason = if (isOpen) null else (roundEditEndReason.value ?: round.endReason)
+        val startingPage = roundEditStartingPageText.value.toIntOrNull()
+        if (startingPage == null || startingPage < 0) {
+            message.value = "시작 페이지를 숫자로 입력해주세요."
+            return
+        }
+        viewModelScope.launch {
+            val result = editRoundUseCase(
+                roundId = roundId,
+                startedAt = startedAt,
+                finishedAt = finishedAt,
+                endReason = endReason,
+                startingPage = startingPage,
+            )
+            message.value = result.fold(
+                onSuccess = { "라운드 정보를 수정했어요." },
+                onFailure = { "라운드 정보를 수정하지 못했어요." },
+            )
+            if (result.isSuccess) collapseRoundEdit()
+        }
+    }
+
+    private fun collapseRoundEdit() {
+        expandedRoundId.value = null
+        roundEditStartedAtText.value = ""
+        roundEditFinishedAtText.value = ""
+        roundEditEndReason.value = null
+        roundEditStartingPageText.value = ""
+    }
+
+    private fun millisToDateText(millis: Long): String =
+        Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate().format(ROUND_DATE_FORMATTER)
+
+    private fun dateTextToMillis(text: String): Long? = runCatching {
+        LocalDate.parse(text.trim(), ROUND_DATE_FORMATTER).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }.getOrNull()
 }
 
 private fun statusLabel(status: BookStatus): String = when (status) {

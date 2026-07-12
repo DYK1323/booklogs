@@ -3,8 +3,6 @@ package com.dyk1323.booklogs.ui.review
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dyk1323.booklogs.domain.model.Review
-import com.dyk1323.booklogs.domain.model.ReadingRound
-import com.dyk1323.booklogs.domain.repository.ReadingRoundRepository
 import com.dyk1323.booklogs.domain.repository.ReviewRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,12 +21,11 @@ data class ReviewEditorUiState(
 )
 
 /**
- * docs/PLAN.md 화면 흐름 #6 — 특정 라운드에 연결된 독후감 작성/수정 화면의 ViewModel. 진입 시 해당 책의
- * 현재 라운드(열린 라운드, 없으면 가장 최근 라운드)에 이미 독후감이 있으면 불러와 수정 모드로 시작한다 —
- * 그렇지 않으면 매번 "작성"을 누를 때마다 같은 라운드에 독후감이 중복으로 쌓이게 된다.
+ * docs/PLAN.md 화면 흐름 #6 — 독후감 작성/수정 화면의 ViewModel. 독후감은 더 이상 특정 라운드에 묶이지
+ * 않고 책 단위(docs/PLAN.md "라운드 이력 편집")이므로, 진입 시 그 책의 가장 최근 독후감이 있으면 불러와
+ * 수정 모드로 시작한다 — 그렇지 않으면 "작성"을 누를 때마다 독후감이 중복으로 쌓이게 된다.
  */
 class ReviewEditorViewModel(
-    private val readingRoundRepository: ReadingRoundRepository,
     private val reviewRepository: ReviewRepository,
 ) : ViewModel() {
 
@@ -45,8 +42,7 @@ class ReviewEditorViewModel(
         editingReview = null
         _uiState.value = ReviewEditorUiState(bookId = bookId)
         viewModelScope.launch {
-            val round = currentRound(bookId) ?: return@launch
-            val existing = reviewRepository.observeForRound(round.id).first().firstOrNull()
+            val existing = reviewRepository.observeForBook(bookId).first().maxByOrNull { it.createdAt }
             if (existing != null) {
                 editingReview = existing
                 _uiState.update {
@@ -55,10 +51,6 @@ class ReviewEditorViewModel(
             }
         }
     }
-
-    private suspend fun currentRound(bookId: Long): ReadingRound? =
-        readingRoundRepository.getOpenRound(bookId)
-            ?: readingRoundRepository.getRoundsForBook(bookId).maxByOrNull { it.roundNumber }
 
     fun updateReviewText(value: String) {
         _uiState.update { it.copy(reviewText = value, message = null) }
@@ -83,18 +75,10 @@ class ReviewEditorViewModel(
             if (editing != null) {
                 reviewRepository.update(editing.copy(content = text, rating = state.rating))
             } else {
-                val round = currentRound(bookId)
-                if (round == null) {
-                    _uiState.update {
-                        it.copy(isSaving = false, message = "읽기 기록이 있는 책에 독후감을 저장할 수 있어요.")
-                    }
-                    return@launch
-                }
                 reviewRepository.insert(
                     Review(
                         id = 0,
                         bookId = bookId,
-                        readingRoundId = round.id,
                         content = text,
                         rating = state.rating,
                         createdAt = System.currentTimeMillis(),

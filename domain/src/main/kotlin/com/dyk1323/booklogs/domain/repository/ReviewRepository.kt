@@ -5,8 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface ReviewRepository {
     fun observeForBook(bookId: Long): Flow<List<Review>>
-    fun observeForRound(roundId: Long): Flow<List<Review>>
-    suspend fun getAllForRound(roundId: Long): List<Review>
     suspend fun insert(review: Review): Long
     suspend fun update(review: Review)
     suspend fun deleteById(reviewId: Long)

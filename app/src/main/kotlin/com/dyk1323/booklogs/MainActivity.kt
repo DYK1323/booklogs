@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
                 BookDetailViewModel(
                     bookRepository = container.bookRepository,
                     readingLogRepository = container.readingLogRepository,
+                    readingRoundRepository = container.readingRoundRepository,
                     quoteRepository = container.quoteRepository,
                     reviewRepository = container.reviewRepository,
                     quoteCommentRepository = container.quoteCommentRepository,
@@ -75,7 +76,7 @@ class MainActivity : ComponentActivity() {
                     deleteBookUseCase = container.deleteBookUseCase,
                     deleteLogUseCase = container.deleteLogUseCase,
                     editLogUseCase = container.editLogUseCase,
-                    undoRoundSplitUseCase = container.undoRoundSplitUseCase,
+                    editRoundUseCase = container.editRoundUseCase,
                 ) as T
         }
     }
@@ -120,7 +121,6 @@ class MainActivity : ComponentActivity() {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =
                 ReviewEditorViewModel(
-                    readingRoundRepository = container.readingRoundRepository,
                     reviewRepository = container.reviewRepository,
                 ) as T
         }

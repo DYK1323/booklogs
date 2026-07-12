@@ -5,10 +5,18 @@ import com.dyk1323.booklogs.data.local.entity.ReadingRoundEntity
 import com.dyk1323.booklogs.domain.model.ReadingRound
 import com.dyk1323.booklogs.domain.model.RoundEndReason
 import com.dyk1323.booklogs.domain.repository.ReadingRoundRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class ReadingRoundRepositoryImpl(
     private val readingRoundDao: ReadingRoundDao,
 ) : ReadingRoundRepository {
+    override fun observeAll(): Flow<List<ReadingRound>> =
+        readingRoundDao.observeAll().map { entities -> entities.map { it.toDomain() } }
+
+    override fun observeForBook(bookId: Long): Flow<List<ReadingRound>> =
+        readingRoundDao.observeForBook(bookId).map { entities -> entities.map { it.toDomain() } }
+
     override suspend fun getById(roundId: Long): ReadingRound? = readingRoundDao.getById(roundId)?.toDomain()
 
     override suspend fun getOpenRound(bookId: Long): ReadingRound? = readingRoundDao.getOpenRound(bookId)?.toDomain()
@@ -30,6 +38,7 @@ internal fun ReadingRoundEntity.toDomain(): ReadingRound = ReadingRound(
     startedAt = startedAt,
     finishedAt = finishedAt,
     endReason = endReason?.let { RoundEndReason.valueOf(it) },
+    startingPage = startingPage,
 )
 
 internal fun ReadingRound.toEntity(): ReadingRoundEntity = ReadingRoundEntity(
@@ -39,4 +48,5 @@ internal fun ReadingRound.toEntity(): ReadingRoundEntity = ReadingRoundEntity(
     startedAt = startedAt,
     finishedAt = finishedAt,
     endReason = endReason?.name,
+    startingPage = startingPage,
 )

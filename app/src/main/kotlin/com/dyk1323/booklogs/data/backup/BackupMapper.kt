@@ -44,6 +44,7 @@ internal fun ReadingRoundEntity.toBackupDto() = ReadingRoundBackupDto(
     startedAt = startedAt,
     finishedAt = finishedAt,
     endReason = endReason,
+    startingPage = startingPage,
 )
 
 internal fun ReadingRoundBackupDto.toEntity() = ReadingRoundEntity(
@@ -53,6 +54,7 @@ internal fun ReadingRoundBackupDto.toEntity() = ReadingRoundEntity(
     startedAt = startedAt,
     finishedAt = finishedAt,
     endReason = endReason,
+    startingPage = startingPage,
 )
 
 internal fun ReadingLogEntity.toBackupDto() = ReadingLogBackupDto(
@@ -94,7 +96,6 @@ internal fun QuoteBackupDto.toEntity() = QuoteEntity(
 internal fun ReviewEntity.toBackupDto() = ReviewBackupDto(
     id = id,
     bookId = bookId,
-    readingRoundId = readingRoundId,
     content = content,
     rating = rating,
     createdAt = createdAt,
@@ -103,7 +104,6 @@ internal fun ReviewEntity.toBackupDto() = ReviewBackupDto(
 internal fun ReviewBackupDto.toEntity() = ReviewEntity(
     id = id,
     bookId = bookId,
-    readingRoundId = readingRoundId,
     content = content,
     rating = rating,
     createdAt = createdAt,

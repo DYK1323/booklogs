@@ -81,4 +81,22 @@ class ComputeLogDeltasUseCaseTest {
     fun `empty list produces no deltas`() {
         assertEquals(emptyList<LogDelta>(), computeLogDeltas(emptyList()))
     }
+
+    @Test
+    fun `first log's delta is measured from a non-zero startingPage when given`() {
+        val logs = listOf(log(id = 1, page = 170, loggedAt = 100))
+
+        val deltas = computeLogDeltas(logs, startingPage = 165)
+
+        assertEquals(listOf(5), deltas.map { it.pagesRead })
+    }
+
+    @Test
+    fun `startingPage still clamps to zero if the first log's page is lower`() {
+        val logs = listOf(log(id = 1, page = 50, loggedAt = 100))
+
+        val deltas = computeLogDeltas(logs, startingPage = 165)
+
+        assertEquals(listOf(0), deltas.map { it.pagesRead })
+    }
 }

@@ -39,7 +39,8 @@ class BackupImporter(
             database.bookDao().deleteAll()
 
             // Parents first on the way back in. Original ids are preserved (Room only autogenerates
-            // when the provided id is 0), so bookId/readingRoundId/quoteId references in the JSON stay valid.
+            // when the provided id is 0), so bookId/readingRoundId(logs only)/quoteId references in the
+            // JSON stay valid — reviews only reference bookId now (see docs/PLAN.md "라운드 이력 편집").
             envelope.books.forEach { database.bookDao().insert(it.toEntity()) }
             envelope.rounds.forEach { database.readingRoundDao().insert(it.toEntity()) }
             envelope.logs.forEach { database.readingLogDao().insert(it.toEntity()) }

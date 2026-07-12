@@ -29,7 +29,7 @@ import com.dyk1323.booklogs.data.local.entity.ReviewEntity
         ReviewEntity::class,
         QuoteCommentEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class BooklogsDatabase : RoomDatabase() {

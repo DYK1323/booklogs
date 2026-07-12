@@ -26,4 +26,6 @@ data class ReadingRoundEntity(
     @ColumnInfo(name = "finished_at") val finishedAt: Long?,
     /** Serialized [com.dyk1323.booklogs.domain.model.RoundEndReason] name, null while the round is open. */
     @ColumnInfo(name = "end_reason") val endReason: String?,
+    /** Delta baseline for this round's first log — see [com.dyk1323.booklogs.domain.usecase.computeLogDeltas]. */
+    @ColumnInfo(name = "starting_page", defaultValue = "0") val startingPage: Int = 0,
 )

@@ -1,6 +1,7 @@
 package com.dyk1323.booklogs.domain.usecase
 
 import com.dyk1323.booklogs.domain.model.ReadingLog
+import com.dyk1323.booklogs.domain.model.ReadingRound
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -18,7 +19,7 @@ class AggregateDailyPagesUseCaseTest {
             log(id = 2, bookRoundId = 2, page = 15, day = 10), // book 2, round 2: +15
         )
 
-        val result = aggregateDailyPages(logs, startEpochDay = 10, endEpochDay = 10)
+        val result = aggregateDailyPages(logs, allRounds = emptyList(), startEpochDay = 10, endEpochDay = 10)
 
         assertEquals(1, result.size)
         assertEquals(35, result.single().totalPages)
@@ -28,7 +29,7 @@ class AggregateDailyPagesUseCaseTest {
     fun `zero-fills days with no logs instead of compressing gaps`() {
         val logs = listOf(log(id = 1, bookRoundId = 1, page = 20, day = 10))
 
-        val result = aggregateDailyPages(logs, startEpochDay = 8, endEpochDay = 12)
+        val result = aggregateDailyPages(logs, allRounds = emptyList(), startEpochDay = 8, endEpochDay = 12)
 
         assertEquals(listOf(8L, 9L, 10L, 11L, 12L), result.map { it.epochDay })
         assertEquals(listOf(0, 0, 20, 0, 0), result.map { it.totalPages })
@@ -42,7 +43,7 @@ class AggregateDailyPagesUseCaseTest {
             log(id = 2, bookRoundId = 1, page = 50, day = 10), // delta should be 20, not 50
         )
 
-        val result = aggregateDailyPages(logs, startEpochDay = 10, endEpochDay = 12)
+        val result = aggregateDailyPages(logs, allRounds = emptyList(), startEpochDay = 10, endEpochDay = 12)
 
         assertEquals(20, result.first { it.epochDay == 10L }.totalPages)
     }
@@ -54,7 +55,7 @@ class AggregateDailyPagesUseCaseTest {
             log(id = 2, bookRoundId = 1, page = 60, day = 2), // +10, below goal
         )
 
-        val result = aggregateDailyPages(logs, startEpochDay = 1, endEpochDay = 2, dailyGoalPages = 50)
+        val result = aggregateDailyPages(logs, allRounds = emptyList(), startEpochDay = 1, endEpochDay = 2, dailyGoalPages = 50)
 
         assertTrue(result.first { it.epochDay == 1L }.goalMet)
         assertFalse(result.first { it.epochDay == 2L }.goalMet)
@@ -64,8 +65,22 @@ class AggregateDailyPagesUseCaseTest {
     fun `no goal set means goalMet is always false`() {
         val logs = listOf(log(id = 1, bookRoundId = 1, page = 200, day = 1))
 
-        val result = aggregateDailyPages(logs, startEpochDay = 1, endEpochDay = 1, dailyGoalPages = null)
+        val result = aggregateDailyPages(logs, allRounds = emptyList(), startEpochDay = 1, endEpochDay = 1, dailyGoalPages = null)
 
         assertFalse(result.single().goalMet)
+    }
+
+    @Test
+    fun `a round's startingPage is the baseline for its first log's delta`() {
+        // e.g. round 1 was split by an accidental 완독 -> 다시 읽기; its startingPage was corrected to 165
+        // via the 라운드 이력 editor, so the first log logged into it (170) should read as +5, not +170.
+        val logs = listOf(log(id = 1, bookRoundId = 1, page = 170, day = 10))
+        val rounds = listOf(
+            ReadingRound(id = 1, bookId = 1, roundNumber = 2, startedAt = 0, finishedAt = null, endReason = null, startingPage = 165),
+        )
+
+        val result = aggregateDailyPages(logs, allRounds = rounds, startEpochDay = 10, endEpochDay = 10)
+
+        assertEquals(5, result.single().totalPages)
     }
 }

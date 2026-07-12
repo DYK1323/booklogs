@@ -7,6 +7,7 @@ import com.dyk1323.booklogs.data.backup.BackupExporter
 import com.dyk1323.booklogs.data.backup.BackupImporter
 import com.dyk1323.booklogs.data.local.BooklogsDatabase
 import com.dyk1323.booklogs.data.local.MIGRATION_1_2
+import com.dyk1323.booklogs.data.local.MIGRATION_2_3
 import com.dyk1323.booklogs.data.settings.AppSettingsDataStore
 import com.dyk1323.booklogs.data.remote.GoogleBooksApi
 import com.dyk1323.booklogs.data.remote.KakaoBooksApi
@@ -30,10 +31,10 @@ import com.dyk1323.booklogs.domain.usecase.ChangeBookStatusUseCase
 import com.dyk1323.booklogs.domain.usecase.DeleteBookUseCase
 import com.dyk1323.booklogs.domain.usecase.DeleteLogUseCase
 import com.dyk1323.booklogs.domain.usecase.EditLogUseCase
+import com.dyk1323.booklogs.domain.usecase.EditRoundUseCase
 import com.dyk1323.booklogs.domain.usecase.LogProgressUseCase
 import com.dyk1323.booklogs.domain.usecase.PickReminderBookUseCase
 import com.dyk1323.booklogs.domain.usecase.RegisterBookUseCase
-import com.dyk1323.booklogs.domain.usecase.UndoRoundSplitUseCase
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -49,7 +50,7 @@ class AppContainer(context: Context) {
         BooklogsDatabase::class.java,
         BooklogsDatabase.DATABASE_NAME,
     )
-        .addMigrations(MIGRATION_1_2)
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
         .build()
 
     val transactionRunner: TransactionRunner = RoomTransactionRunner(database)
@@ -94,9 +95,7 @@ class AppContainer(context: Context) {
     val deleteBookUseCase = DeleteBookUseCase(bookRepository)
     val registerBookUseCase = RegisterBookUseCase(bookRepository, changeBookStatusUseCase)
     val pickReminderBookUseCase = PickReminderBookUseCase()
-    val undoRoundSplitUseCase = UndoRoundSplitUseCase(
-        bookRepository, readingRoundRepository, readingLogRepository, reviewRepository, transactionRunner,
-    )
+    val editRoundUseCase = EditRoundUseCase(readingRoundRepository)
 
     // AggregateDailyPagesUseCase, AggregateBooksByAttributeUseCase, ComputeBookProgressUseCase,
     // ConvertPagePercentUseCase are plain top-level functions (see :domain/usecase) — no instance needed.

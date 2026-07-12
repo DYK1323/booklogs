@@ -115,11 +115,13 @@ class DashboardViewModel(
     val uiState: StateFlow<DashboardUiState> = combine(
         bookRepository.observeAll(),
         readingLogRepository.observeAll(),
+        readingRoundRepository.observeAll(),
         appSettingsDataStore.settings,
-    ) { books, logs, settings ->
+    ) { books, logs, rounds, settings ->
         val today = LocalDate.now(zoneId).toEpochDay()
         val weekTotals = aggregateDailyPages(
             allLogs = logs,
+            allRounds = rounds,
             startEpochDay = today - 6,
             endEpochDay = today,
             dailyGoalPages = settings.dailyGoalPages,

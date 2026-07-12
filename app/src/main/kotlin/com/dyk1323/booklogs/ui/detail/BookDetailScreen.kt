@@ -63,7 +63,9 @@ import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.domain.model.BookStatus
 import com.dyk1323.booklogs.domain.model.Quote
 import com.dyk1323.booklogs.domain.model.QuoteComment
+import com.dyk1323.booklogs.domain.model.ReadingRound
 import com.dyk1323.booklogs.domain.model.Review
+import com.dyk1323.booklogs.domain.model.RoundEndReason
 import com.dyk1323.booklogs.domain.usecase.ConvertPagePercentUseCase
 import com.dyk1323.booklogs.domain.usecase.LogDelta
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
@@ -101,17 +103,6 @@ fun BookDetailScreen(
                 duration = SnackbarDuration.Short,
             )
             if (result == SnackbarResult.ActionPerformed) viewModel.undoDeleteLog(log)
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.undoRoundSplitEvents.collect {
-            val result = snackbarHostState.showSnackbar(
-                message = "다시 읽기를 시작했어요 — 이전 라운드가 종료돼요",
-                actionLabel = "실행취소",
-                duration = SnackbarDuration.Long,
-            )
-            if (result == SnackbarResult.ActionPerformed) viewModel.undoRoundSplit()
         }
     }
 
@@ -182,6 +173,37 @@ fun BookDetailScreen(
                             }
                         },
                     )
+                }
+            }
+            item {
+                DetailSection(title = "라운드 이력") {
+                    if (uiState.rounds.isEmpty()) {
+                        Text(
+                            text = "아직 라운드가 없어요.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                        )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            uiState.rounds.forEach { round ->
+                                RoundRow(
+                                    round = round,
+                                    isExpanded = uiState.expandedRoundId == round.id,
+                                    startedAtText = uiState.roundEditStartedAtText,
+                                    finishedAtText = uiState.roundEditFinishedAtText,
+                                    endReason = uiState.roundEditEndReason,
+                                    startingPageText = uiState.roundEditStartingPageText,
+                                    onToggleExpand = { viewModel.toggleRoundExpanded(round.id) },
+                                    onStartedAtChanged = viewModel::updateRoundEditStartedAt,
+                                    onFinishedAtChanged = viewModel::updateRoundEditFinishedAt,
+                                    onEndReasonChanged = viewModel::updateRoundEditEndReason,
+                                    onStartingPageChanged = viewModel::updateRoundEditStartingPage,
+                                    onSave = viewModel::saveRoundEdit,
+                                    onCancel = viewModel::cancelRoundEdit,
+                                )
+                            }
+                        }
+                    }
                 }
             }
             item {
@@ -377,7 +399,7 @@ fun BookDetailScreen(
         AlertDialog(
             onDismissRequest = { pendingStatusChange = null },
             title = { Text(text = if (target == BookStatus.FINISHED) "완독으로 표시할까요?" else "읽기를 중단할까요?") },
-            text = { Text(text = "지금 라운드가 종료돼요. 나중에 \"다시 읽기\"를 시작하면 새 라운드로 기록되고, 진행 페이지는 0부터 다시 계산돼요.") },
+            text = { Text(text = "지금 라운드가 종료돼요. 나중에 \"다시 읽기\"를 시작하면 새 라운드가 만들어져요 — 날짜나 시작 페이지는 라운드 이력에서 언제든 고칠 수 있어요.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -550,6 +572,126 @@ private fun deltaLabel(book: Book, delta: LogDelta): String {
     } else {
         "+${delta.pagesRead}p"
     }
+}
+
+/**
+ * Tap to expand and correct a round's 시작일/종료일/종료 사유/시작 페이지 — this never opens or closes a
+ * round (see [EditRoundUseCase]), only fixes its recorded metadata. [startingPage] is the delta baseline
+ * for this round's first log (docs/PLAN.md "라운드 이력 편집") — the fix for a round that got split by an
+ * accidental 완독/중단 → 다시 읽기 is to correct it here to wherever the reader actually left off.
+ */
+@Composable
+private fun RoundRow(
+    round: ReadingRound,
+    isExpanded: Boolean,
+    startedAtText: String,
+    finishedAtText: String,
+    endReason: RoundEndReason?,
+    startingPageText: String,
+    onToggleExpand: () -> Unit,
+    onStartedAtChanged: (String) -> Unit,
+    onFinishedAtChanged: (String) -> Unit,
+    onEndReasonChanged: (RoundEndReason) -> Unit,
+    onStartingPageChanged: (String) -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val isOpen = round.finishedAt == null
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggleExpand),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Column {
+                Text(text = "${round.roundNumber}번째 라운드", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = roundPeriodText(round),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                )
+            }
+            Text(
+                text = if (isOpen) "읽는 중" else roundEndReasonLabel(round.endReason),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        if (isExpanded) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = startedAtText,
+                onValueChange = onStartedAtChanged,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("시작일 (yyyy.MM.dd)") },
+                singleLine = true,
+            )
+            if (!isOpen) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = finishedAtText,
+                    onValueChange = onFinishedAtChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("종료일 (yyyy.MM.dd)") },
+                    singleLine = true,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(RoundEndReason.COMPLETED to "완독", RoundEndReason.DROPPED to "중단").forEach { (reason, label) ->
+                        val selected = endReason == reason
+                        Button(
+                            onClick = { onEndReasonChanged(reason) },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                },
+                                contentColor = if (selected) {
+                                    MaterialTheme.colorScheme.onPrimary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                            ),
+                        ) {
+                            Text(text = label)
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = startingPageText,
+                onValueChange = onStartingPageChanged,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("시작 페이지") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onCancel) {
+                    Text(text = "취소")
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Button(onClick = onSave, shape = RoundedCornerShape(8.dp)) {
+                    Text(text = "저장")
+                }
+            }
+        }
+    }
+}
+
+private fun roundPeriodText(round: ReadingRound): String {
+    val started = formatDate(round.startedAt)
+    val finished = round.finishedAt?.let { formatDate(it) } ?: "진행 중"
+    return "$started ~ $finished · ${round.startingPage}p부터"
+}
+
+private fun roundEndReasonLabel(reason: RoundEndReason?): String = when (reason) {
+    RoundEndReason.COMPLETED -> "완독"
+    RoundEndReason.DROPPED -> "중단"
+    null -> "-"
 }
 
 /** Tapping the card toggles between a 4-line preview and the full quote text. */
