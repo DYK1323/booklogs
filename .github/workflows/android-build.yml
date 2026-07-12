@@ -35,6 +35,15 @@ jobs:
       - name: Run domain unit tests
         run: ./gradlew :domain:test --stacktrace
 
+      # BuildConfig generation reads these at configure time even for unit tests (see app/build.gradle.kts) —
+      # without them the compile step still succeeds (falls back to a blank string), so this isn't required
+      # for the tests to run, but keeping it consistent with the assemble step below avoids surprises.
+      - name: Run app unit tests
+        env:
+          KAKAO_API_KEY: ${{ secrets.KAKAO_API_KEY }}
+          GOOGLE_BOOKS_API_KEY: ${{ secrets.GOOGLE_BOOKS_API_KEY }}
+        run: ./gradlew :app:testDebugUnitTest --stacktrace
+
       - name: Build debug APK
         env:
           KAKAO_API_KEY: ${{ secrets.KAKAO_API_KEY }}
