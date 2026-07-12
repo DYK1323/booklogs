@@ -13,8 +13,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.EmptyState
 
@@ -28,7 +28,7 @@ fun LogListScreen(
     val book = uiState.book
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = BooklogsScreenBackground,
         topBar = {
             BooklogsTopBar(
                 title = "\uC9C4\uD589 \uC774\uB825 \uC804\uCCB4\uBCF4\uAE30",
@@ -40,7 +40,7 @@ fun LogListScreen(
             Box(
                 modifier = modifier
                     .fillMaxSize()
-                    .background(Color.White)
+                    .background(BooklogsScreenBackground)
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center,
             ) {
@@ -52,7 +52,7 @@ fun LogListScreen(
         LazyColumn(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color.White)
+                .background(BooklogsScreenBackground)
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),

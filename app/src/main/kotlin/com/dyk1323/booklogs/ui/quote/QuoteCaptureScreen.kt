@@ -9,6 +9,7 @@ import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,7 +48,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -67,6 +68,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.CameraCapturePreview
 import com.dyk1323.booklogs.ui.common.components.LoadingOverlay
 
@@ -112,6 +115,24 @@ fun QuoteCaptureScreen(
         viewModel.recognizeFullPage(bitmap)
     }
 
+    fun handleBack() {
+        when {
+            capturedBitmap != null -> {
+                viewModel.cancelSelection()
+                viewModel.discardCurrentCaptureText()
+                openCameraForNextCapture()
+            }
+            uiState.capturedPages.isNotEmpty() &&
+                uiState.editingPageIndex == null &&
+                !uiState.isManualEntry -> {
+                viewModel.returnToReviewFromCamera()
+            }
+            else -> onBack()
+        }
+    }
+
+    BackHandler(onBack = ::handleBack)
+
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
@@ -119,14 +140,11 @@ fun QuoteCaptureScreen(
     }
 
     Scaffold(
+        containerColor = BooklogsScreenBackground,
         topBar = {
-            TopAppBar(
-                title = { Text(text = "인용구 추가") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "뒤로")
-                    }
-                },
+            BooklogsTopBar(
+                title = "인용구 추가",
+                onBack = ::handleBack,
                 actions = {
                     if (capturedBitmap != null && uiState.editingPageIndex == null) {
                         TextButton(
@@ -145,7 +163,7 @@ fun QuoteCaptureScreen(
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(BooklogsScreenBackground)
                 .padding(innerPadding),
         ) {
             when {
@@ -332,7 +350,11 @@ private fun WordSelectPhotoContent(
     }
 
     if (startIndex != null && endIndex != null) {
-        ModalBottomSheet(onDismissRequest = onCancelSelection) {
+        ModalBottomSheet(
+            onDismissRequest = onCancelSelection,
+            containerColor = Color.White,
+            tonalElevation = 0.dp,
+        ) {
             GapAdjustmentSheetContent(
                 words = state.recognizedWords,
                 startIndex = startIndex,
@@ -433,6 +455,7 @@ private fun GapAdjustmentSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .padding(horizontal = 20.dp)
             .padding(bottom = 24.dp),
     ) {
@@ -511,18 +534,15 @@ private fun GapAdjustableText(
                 } else {
                     MaterialTheme.colorScheme.onPrimaryContainer
                 }
-                Box(
+                Text(
+                    text = pairText,
                     modifier = Modifier
                         .background(containerColor, RoundedCornerShape(4.dp))
                         .clickable { onGapToggle(gapIndex) }
-                        .padding(horizontal = 4.dp, vertical = 3.dp),
-                ) {
-                    Text(
-                        text = pairText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = contentColor,
-                    )
-                }
+                        .padding(horizontal = 4.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = contentColor,
+                )
                 i += 2
             } else {
                 Text(text = words[i].text, style = MaterialTheme.typography.bodyLarge)

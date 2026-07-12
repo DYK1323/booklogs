@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 
 private val RegistrationTitleTextStyle = TextStyle(
@@ -35,7 +36,7 @@ fun BookRegistrationScreen(
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
-        containerColor = Color.White,
+        containerColor = BooklogsScreenBackground,
         topBar = {
             BooklogsTopBar(title = "책 등록", onBack = onBack)
         },

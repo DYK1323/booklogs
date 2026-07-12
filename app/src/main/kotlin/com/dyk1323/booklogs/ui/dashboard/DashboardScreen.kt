@@ -25,9 +25,11 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -142,7 +144,7 @@ fun DashboardScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
-            containerColor = Color.White,
+            containerColor = BooklogsScreenBackground,
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { innerPadding ->
             Column(
@@ -152,6 +154,7 @@ fun DashboardScreen(
                     .padding(innerPadding)
                     .padding(horizontal = 16.dp, vertical = 20.dp),
             ) {
+                Spacer(modifier = Modifier.height(8.dp))
                 TodayPagesHero(
                     todayPages = uiState.todayPages,
                     dailyGoalPages = uiState.dailyGoalPages,
@@ -313,7 +316,7 @@ private fun PageCameraCapture(
         if (!hasCameraPermission) permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
-    Box(modifier = modifier.background(MaterialTheme.colorScheme.background)) {
+    Box(modifier = modifier.background(BooklogsScreenBackground)) {
         if (hasCameraPermission) {
             CameraCapturePreview(
                 captionText = "페이지를 맞춘 뒤 사진을 찍어주세요.",
@@ -349,6 +352,7 @@ private fun PageCameraCapture(
             onClick = onCancel,
             modifier = Modifier
                 .align(Alignment.TopStart)
+                .statusBarsPadding()
                 .padding(12.dp)
                 .background(Color.Black.copy(alpha = 0.4f), CircleShape),
         ) {
@@ -424,36 +428,45 @@ private fun TodayPagesHero(todayPages: Int, dailyGoalPages: Int?, totals: List<D
 
 @Composable
 private fun DailyPagesBarChart(totals: List<DayPageTotal>, dailyGoalPages: Int?, modifier: Modifier = Modifier) {
+    val plotHeight = 77.dp
     val maxValue = (totals.maxOfOrNull { it.totalPages }?.coerceAtLeast(dailyGoalPages ?: 0) ?: 0).coerceAtLeast(1)
-    Box(
+    Column(
         modifier = modifier.semantics {
             contentDescription = "최근 7일 동안 읽은 페이지 막대그래프"
         },
+        verticalArrangement = Arrangement.Top,
     ) {
-        if (dailyGoalPages != null && dailyGoalPages > 0) {
-            val ratio = dailyGoalPages.toFloat() / maxValue.toFloat()
-            val lineY = 77.dp - (77.dp * ratio.coerceIn(0f, 1f))
-            Canvas(
-                modifier = Modifier
-                    .width(208.dp)
-                    .height(1.dp)
-                    .offset(y = lineY),
-            ) {
-                drawLine(
-                    color = Color.White.copy(alpha = 0.47f),
-                    start = Offset(0.5f, size.height / 2f),
-                    end = Offset(size.width - 0.5f, size.height / 2f),
-                    strokeWidth = 1.dp.toPx(),
-                )
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom,
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(plotHeight),
+            contentAlignment = Alignment.BottomStart,
         ) {
-            totals.forEach { total ->
-                DashboardBarColumn(total = total, maxValue = maxValue)
+            if (dailyGoalPages != null && dailyGoalPages > 0) {
+                val ratio = dailyGoalPages.toFloat() / maxValue.toFloat()
+                val lineY = plotHeight - (plotHeight * ratio.coerceIn(0f, 1f))
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .offset(y = lineY),
+                ) {
+                    drawLine(
+                        color = Color.White.copy(alpha = 0.47f),
+                        start = Offset(0.5f, size.height / 2f),
+                        end = Offset(size.width - 0.5f, size.height / 2f),
+                        strokeWidth = 1.dp.toPx(),
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                totals.forEach { total ->
+                    DashboardBarColumn(total = total, maxValue = maxValue, plotHeight = plotHeight)
+                }
             }
         }
     }
@@ -541,25 +554,30 @@ private fun DashboardHeroBackground(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun DashboardBarColumn(total: DayPageTotal, maxValue: Int) {
+private fun DashboardBarColumn(total: DayPageTotal, maxValue: Int, plotHeight: androidx.compose.ui.unit.Dp) {
     val date = LocalDate.ofEpochDay(total.epochDay)
     val barHeight = ((total.totalPages.toFloat() / maxValue.toFloat()) * 77f).coerceAtLeast(4f)
     Column(
         modifier = Modifier.width(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
-            modifier = Modifier
-                .width(13.dp)
-                .height(barHeight.dp)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color.White, Color(0xFF8CC2FF)),
+            modifier = Modifier.height(plotHeight),
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(13.dp)
+                    .height(barHeight.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color.White, Color(0xFF8CC2FF)),
+                        ),
+                        shape = RoundedCornerShape(5.dp),
                     ),
-                    shape = RoundedCornerShape(5.dp),
-                ),
-        )
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -640,6 +658,7 @@ private fun QuickLogSheet(
         modifier = Modifier
             .fillMaxWidth()
             .background(BooklogsScreenBackground)
+            .navigationBarsPadding()
             .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 64.dp),
         verticalArrangement = Arrangement.spacedBy(36.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

@@ -10,6 +10,7 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,8 +20,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -35,9 +34,10 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import java.util.concurrent.Executors
 
-/** docs/PLAN.md 화면 흐름 #2 스캔 경로 — 첫 유효 ISBN 인식 즉시 [onIsbnScanned]를 호출한다. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BarcodeScanScreen(
@@ -59,24 +59,29 @@ fun BarcodeScanScreen(
     }
 
     Scaffold(
+        containerColor = BooklogsScreenBackground,
         topBar = {
-            TopAppBar(
-                title = { Text("바코드 스캔") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("취소") } },
-            )
+            BooklogsTopBar(title = "바코드 스캔", onBack = onBack)
         },
     ) { innerPadding ->
-        Box(modifier = modifier.fillMaxSize().padding(innerPadding)) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(BooklogsScreenBackground)
+                .padding(innerPadding),
+        ) {
             if (hasCameraPermission) {
                 BarcodeCameraPreview(onIsbnScanned = onIsbnScanned)
             } else {
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(24.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = "책 뒷면의 바코드를 스캔하려면 카메라 권한이 필요해요.",
+                        text = "책 후면의 바코드를 스캔하려면 카메라 권한이 필요해요.",
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }

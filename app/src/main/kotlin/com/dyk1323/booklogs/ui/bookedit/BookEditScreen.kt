@@ -1,5 +1,6 @@
 package com.dyk1323.booklogs.ui.bookedit
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,18 +9,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -28,9 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dyk1323.booklogs.domain.model.BookFormat
+import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.FormatChoiceButton
 
-/** Dedicated book metadata edit screen (docs/PLAN.md gap fix — see BookEditViewModel doc comment). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookEditScreen(
@@ -51,19 +50,18 @@ fun BookEditScreen(
     }
 
     Scaffold(
+        containerColor = BooklogsScreenBackground,
         topBar = {
-            TopAppBar(
-                title = { Text("책 정보 수정") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("취소") } },
-            )
+            BooklogsTopBar(title = "책 정보 수정", onBack = onBack)
         },
     ) { innerPadding ->
         Column(
             modifier = modifier
                 .fillMaxSize()
+                .background(BooklogsScreenBackground)
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             OutlinedTextField(
@@ -134,21 +132,20 @@ fun BookEditScreen(
                 )
             }
 
-            Button(
+            BooklogsFilledButton(
+                text = if (saveState is BookEditSaveState.Saving) "" else "저장",
                 onClick = viewModel::save,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(percent = 50),
+                primary = true,
                 enabled = saveState !is BookEditSaveState.Saving,
-            ) {
-                if (saveState is BookEditSaveState.Saving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Text("저장", style = MaterialTheme.typography.labelLarge)
-                }
+            )
+
+            if (saveState is BookEditSaveState.Saving) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 2.dp,
+                )
             }
         }
     }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -137,6 +138,13 @@ private val DetailQuoteTextStyle = TextStyle(
     letterSpacing = 0.sp,
 )
 
+private val DetailRowStatusTextStyle = TextStyle(
+    fontSize = 12.sp,
+    lineHeight = 12.sp,
+    fontWeight = FontWeight.Medium,
+    letterSpacing = 0.sp,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookDetailScreen(
@@ -178,7 +186,7 @@ fun BookDetailScreen(
     }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = BooklogsScreenBackground,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             BooklogsTopBar(
@@ -272,7 +280,12 @@ fun BookDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
                     } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
                             uiState.rounds.take(3).forEachIndexed { index, round ->
                                 RoundRow(
                                     round = round,
@@ -314,7 +327,12 @@ fun BookDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
                     } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
                             uiState.logDeltas.take(3).forEachIndexed { index, delta ->
                                 LogDeltaRow(
                                     book = book,
@@ -378,7 +396,12 @@ fun BookDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
                     } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
                             uiState.quotes.take(3).forEach { quote ->
                                 QuoteCard(
                                     quote = quote,
@@ -409,7 +432,12 @@ fun BookDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
                     } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
                             uiState.reviews.take(3).forEachIndexed { index, review ->
                                 ReviewCard(
                                     review = review,
@@ -571,24 +599,39 @@ private fun BookHeader(state: BookDetailUiState) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(text = book.title, style = DetailHeaderTitleTextStyle)
-            book.author?.let {
                 Text(
-                    text = it,
-                    style = DetailHeaderMetaTextStyle,
-                    color = Color(0xFF757575),
+                    text = book.title,
+                    style = DetailHeaderTitleTextStyle,
+                    color = Color.Black,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-            }
+                val authorPublisher = listOfNotNull(book.author, book.publisher).joinToString(" · ")
+                if (authorPublisher.isNotBlank()) {
+                    Text(
+                        text = authorPublisher,
+                        style = DetailHeaderMetaTextStyle,
+                        color = Color(0xFF757575),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(text = progressText(state), style = DetailProgressTextStyle)
-            book.genre?.let {
                 Text(
-                    text = it,
-                    style = DetailHeaderMetaTextStyle,
-                    color = Color(0xFF757575),
+                    text = progressText(state),
+                    style = DetailProgressTextStyle,
+                    color = Color.Black,
                 )
-            }
+                book.genre?.let {
+                    Text(
+                        text = it,
+                        style = DetailHeaderMetaTextStyle,
+                        color = Color(0xFF757575),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
@@ -644,7 +687,9 @@ private fun DetailSection(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -714,49 +759,55 @@ internal fun LogDeltaRow(
             .animateContentSize()
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(text = "p. ${delta.log.currentPage}", style = DetailListPrimaryTextStyle, color = Color.Black)
-            Text(
-                text = formatDate(delta.log.loggedAt),
-                style = DetailListSecondaryTextStyle,
-                color = Color(0xFF757575),
-            )
-        }
-        if (isExpanded) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = deltaLabel(book, delta),
-                style = DetailListSecondaryTextStyle,
-                color = Color(0xFF757575),
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            val inputLabel = if (book.format == BookFormat.EBOOK) "진행률" else "페이지"
-            val inputSuffix = if (book.format == BookFormat.EBOOK) "%" else "p"
-            OutlinedTextField(
-                value = editInputText,
-                onValueChange = onEditInputChanged,
+        Column {
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text(inputLabel) },
-                suffix = { Text(inputSuffix) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(onDone = { onSaveEdit() }),
-                isError = editErrorMessage != null,
-                supportingText = editErrorMessage?.let { { Text(it) } },
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = onDelete) {
-                    Text(text = "삭제", color = MaterialTheme.colorScheme.error)
-                }
-                Row {
-                    TextButton(onClick = onCancelEdit) { Text(text = "취소") }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Button(onClick = onSaveEdit, shape = RoundedCornerShape(8.dp)) {
-                        Text(text = "수정 저장")
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(text = "p. ${delta.log.currentPage}", style = DetailListPrimaryTextStyle, color = Color.Black)
+                Text(
+                    text = formatDate(delta.log.loggedAt),
+                    style = DetailListSecondaryTextStyle,
+                    color = Color(0xFF757575),
+                )
+            }
+            if (isExpanded) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = deltaLabel(book, delta),
+                    style = DetailListSecondaryTextStyle,
+                    color = Color(0xFF757575),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                val inputLabel = if (book.format == BookFormat.EBOOK) "진행률" else "페이지"
+                val inputSuffix = if (book.format == BookFormat.EBOOK) "%" else "p"
+                OutlinedTextField(
+                    value = editInputText,
+                    onValueChange = onEditInputChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(inputLabel) },
+                    suffix = { Text(inputSuffix) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { onSaveEdit() }),
+                    isError = editErrorMessage != null,
+                    supportingText = editErrorMessage?.let { { Text(it) } },
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(onClick = onDelete) {
+                        Text(text = "삭제", color = MaterialTheme.colorScheme.error)
+                    }
+                    Row {
+                        TextButton(onClick = onCancelEdit) { Text(text = "취소") }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Button(onClick = onSaveEdit, shape = RoundedCornerShape(8.dp)) {
+                            Text(text = "수정 저장")
+                        }
                     }
                 }
             }
@@ -803,82 +854,83 @@ internal fun RoundRow(
             .animateContentSize()
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column {
-                Text(text = "${round.roundNumber}번째 라운드", style = DetailListPrimaryTextStyle, color = Color.Black)
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column {
+                    Text(text = "${round.roundNumber}번째 라운드", style = DetailListPrimaryTextStyle, color = Color.Black)
+                    Text(
+                        text = roundPeriodText(round),
+                        style = DetailListSecondaryTextStyle,
+                        color = Color(0xFF757575),
+                    )
+                }
                 Text(
-                    text = roundPeriodText(round),
-                    style = DetailListSecondaryTextStyle,
-                    color = Color(0xFF757575),
+                    text = if (isOpen) "읽는 중" else roundEndReasonLabel(round.endReason),
+                    style = DetailRowStatusTextStyle,
+                    color = Color.Black,
                 )
             }
-            Text(
-                text = if (isOpen) "읽는 중" else roundEndReasonLabel(round.endReason),
-                style = TextStyle(
-                    fontSize = 12.sp,
-                    lineHeight = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.sp,
-                ),
-                color = Color.Black,
-            )
-        }
-        if (isExpanded) {
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = startedAtText,
-                onValueChange = onStartedAtChanged,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("시작일 (yyyy.MM.dd)") },
-                singleLine = true,
-            )
-            if (!isOpen) {
+            if (isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = finishedAtText,
-                    onValueChange = onFinishedAtChanged,
+                    value = startedAtText,
+                    onValueChange = onStartedAtChanged,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("종료일 (yyyy.MM.dd)") },
+                    label = { Text("시작일 (yyyy.MM.dd)") },
                     singleLine = true,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(RoundEndReason.COMPLETED to "완독", RoundEndReason.DROPPED to "중단").forEach { (reason, label) ->
-                        val selected = endReason == reason
-                        Button(
-                            onClick = { onEndReasonChanged(reason) },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                            ),
-                        ) {
-                            Text(text = label)
+                if (!isOpen) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = finishedAtText,
+                        onValueChange = onFinishedAtChanged,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("종료일 (yyyy.MM.dd)") },
+                        singleLine = true,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(RoundEndReason.COMPLETED to "완독", RoundEndReason.DROPPED to "중단").forEach { (reason, label) ->
+                            val selected = endReason == reason
+                            Button(
+                                onClick = { onEndReasonChanged(reason) },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                ),
+                            ) {
+                                Text(text = label)
+                            }
                         }
                     }
                 }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = startingPageText,
-                onValueChange = onStartingPageChanged,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("시작 페이지") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (!isOpen) {
-                    TextButton(onClick = onDelete) {
-                        Text(text = "삭제", color = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = startingPageText,
+                    onValueChange = onStartingPageChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("시작 페이지") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (!isOpen) {
+                        TextButton(onClick = onDelete) {
+                            Text(text = "삭제", color = MaterialTheme.colorScheme.error)
+                        }
                     }
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                TextButton(onClick = onCancel) { Text(text = "취소") }
-                Spacer(modifier = Modifier.width(4.dp))
-                Button(onClick = onSave, shape = RoundedCornerShape(8.dp)) {
-                    Text(text = "저장")
+                    Spacer(modifier = Modifier.weight(1f))
+                    TextButton(onClick = onCancel) { Text(text = "취소") }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Button(onClick = onSave, shape = RoundedCornerShape(8.dp)) {
+                        Text(text = "저장")
+                    }
                 }
             }
         }
@@ -907,30 +959,40 @@ internal fun QuoteCard(quote: Quote, onComments: () -> Unit, onEdit: () -> Unit,
             .clickable { expanded = !expanded }
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = quote.text,
-                style = DetailQuoteTextStyle,
-                color = Color.Black,
-                maxLines = if (expanded) Int.MAX_VALUE else 4,
-                overflow = TextOverflow.Ellipsis,
-            )
-            quotePageLabel(quote)?.let {
-                Spacer(modifier = Modifier.height(8.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 116.dp),
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f, fill = false),
+            ) {
                 Text(
-                    text = it,
-                    style = DetailListSecondaryTextStyle,
-                    color = Color(0xFF757575),
+                    text = quote.text,
+                    style = DetailQuoteTextStyle,
+                    color = Color.Black,
+                    maxLines = if (expanded) Int.MAX_VALUE else 4,
+                    overflow = TextOverflow.Ellipsis,
                 )
+                quotePageLabel(quote)?.let {
+                    Text(
+                        text = it,
+                        style = DetailListSecondaryTextStyle,
+                        color = Color(0xFF757575),
+                    )
+                }
             }
+            Spacer(modifier = Modifier.height(12.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(
-                    onClick = onComments,
-                    contentPadding = PaddingValues(0.dp),
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable(onClick = onComments),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         Icons.Outlined.ChatBubbleOutline,
@@ -939,19 +1001,29 @@ internal fun QuoteCard(quote: Quote, onComments: () -> Unit, onEdit: () -> Unit,
                         tint = Color(0xFF757575),
                     )
                 }
-                TextButton(onClick = onEdit, contentPadding = PaddingValues(0.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable(onClick = onEdit),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Icon(
                         Icons.Outlined.Edit,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(24.dp),
                         tint = Color(0xFF757575),
                     )
                 }
-                TextButton(onClick = onDelete, contentPadding = PaddingValues(0.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable(onClick = onDelete),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Icon(
                         Icons.Outlined.Delete,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(24.dp),
                         tint = Color(0xFF757575),
                     )
                 }
@@ -1017,18 +1089,27 @@ internal fun QuoteCommentsSheetContent(
             }
         }
         Spacer(modifier = Modifier.height(14.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.navigationBarsPadding(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             OutlinedTextField(
                 value = inputText,
                 onValueChange = onInputChanged,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
                 label = { Text("댓글 추가") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { onAdd() }),
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = onAdd, shape = RoundedCornerShape(8.dp)) {
+            Button(
+                onClick = onAdd,
+                modifier = Modifier.height(56.dp),
+                shape = RoundedCornerShape(8.dp),
+            ) {
                 Text(text = "추가")
             }
         }

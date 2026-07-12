@@ -79,6 +79,24 @@ class QuoteCaptureViewModel(
         }
     }
 
+    fun returnToReviewFromCamera() {
+        _uiState.update { state ->
+            val lastPage = state.capturedPages.lastOrNull() ?: return@update state
+            state.copy(
+                currentPageText = lastPage.pageText,
+                quoteText = joinQuotePages(state.capturedPages),
+                editingPageIndex = state.capturedPages.lastIndex,
+                isManualEntry = false,
+                recognizedWords = emptyList(),
+                selectionStartIndex = null,
+                selectionEndIndex = null,
+                mergedLineBreakGaps = emptySet(),
+                message = null,
+                isSaved = false,
+            )
+        }
+    }
+
     fun updateQuoteText(value: String) {
         _uiState.update { it.copy(quoteText = value, message = null, isSaved = false) }
     }

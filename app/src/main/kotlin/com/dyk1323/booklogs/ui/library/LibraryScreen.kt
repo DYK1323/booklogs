@@ -1,6 +1,5 @@
 package com.dyk1323.booklogs.ui.library
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -18,27 +17,25 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dyk1323.booklogs.domain.model.BookStatus
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.components.BooklogsSearchField
+import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.EmptyState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,30 +49,22 @@ fun LibraryScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
+        containerColor = BooklogsScreenBackground,
         topBar = {
-            TopAppBar(
-                title = { Text(text = "라이브러리") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "뒤로")
-                    }
-                },
-            )
+            BooklogsTopBar(title = "라이브러리", onBack = onBack)
         },
     ) { innerPadding ->
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 20.dp)
+                .padding(top = 16.dp),
         ) {
-            OutlinedTextField(
+            BooklogsSearchField(
                 value = uiState.query,
                 onValueChange = viewModel::updateQuery,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(text = "제목 또는 저자 검색") },
-                singleLine = true,
+                placeholder = "제목 또는 저자 검색",
             )
             Spacer(modifier = Modifier.height(12.dp))
             Row(
@@ -88,20 +77,10 @@ fun LibraryScreen(
                     val selected = uiState.selectedFilter == filter
                     AssistChip(
                         onClick = { viewModel.selectFilter(filter) },
-                        label = {
-                            Text(text = "${filter.label} ${uiState.countsByFilter[filter] ?: 0}")
-                        },
+                        label = { Text("${filter.label} ${uiState.countsByFilter[filter] ?: 0}") },
                         colors = AssistChipDefaults.assistChipColors(
-                            containerColor = if (selected) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant
-                            },
-                            labelColor = if (selected) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
+                            containerColor = if (selected) Color(0xFF0C7EFF) else Color(0xFFF5F5F5),
+                            labelColor = if (selected) Color.White else Color(0xFF757575),
                         ),
                     )
                 }
@@ -109,7 +88,7 @@ fun LibraryScreen(
             Spacer(modifier = Modifier.height(18.dp))
             if (uiState.books.isEmpty() && !uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    EmptyState(message = "조건에 맞는 책이 없어요.", icon = null)
+                    EmptyState(message = "조건에 맞는 책이 없어요", icon = null)
                 }
             } else {
                 LazyColumn(
@@ -156,14 +135,14 @@ private fun LibraryBookRow(item: LibraryBookItemUi, onClick: () -> Unit) {
                 Text(
                     text = statusLabel(item.book.status),
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color(0xFF0C7EFF),
                 )
             }
             item.book.author?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                    color = Color(0xFF757575),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -172,7 +151,7 @@ private fun LibraryBookRow(item: LibraryBookItemUi, onClick: () -> Unit) {
             Text(
                 text = progressCaption(item),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+                color = Color(0xFF757575),
             )
         }
     }

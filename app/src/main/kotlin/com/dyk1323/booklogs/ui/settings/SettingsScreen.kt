@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
 import androidx.core.content.ContextCompat
 import com.dyk1323.booklogs.data.settings.ThemeMode
 import java.time.LocalDate
@@ -80,7 +82,7 @@ fun SettingsScreen(
     ) { uri -> uri?.let { pendingImportUri = it } }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = BooklogsScreenBackground,
         topBar = { SettingsTopBar(onBack = onBack) },
     ) { innerPadding ->
         Column(
@@ -277,6 +279,7 @@ private fun SettingsTopBar(onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .background(Color.White)
             .drawBehind {
                 val stroke = 0.8.dp.toPx()

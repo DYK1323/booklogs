@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -21,7 +19,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -29,10 +26,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dyk1323.booklogs.domain.model.BookFormat
+import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.FormatChoiceButton
 import com.dyk1323.booklogs.ui.common.components.LoadingOverlay
 
-/** docs/PLAN.md 화면 흐름 #2 확인/수정 폼 — 모든 진입 경로(스캔/검색/수동)가 마지막에 이 화면으로 모인다. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookConfirmFormScreen(
@@ -59,163 +58,176 @@ fun BookConfirmFormScreen(
     }
 
     Scaffold(
+        containerColor = BooklogsScreenBackground,
         topBar = {
-            TopAppBar(
-                title = { Text("책 정보 확인") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("취소") } },
+            BooklogsTopBar(
+                title = "책 정보 확인",
+                onBack = onBack,
             )
         },
     ) { innerPadding ->
-        Box(modifier = modifier.fillMaxSize().padding(innerPadding)) {
-        Column(
-            modifier = Modifier
+        Box(
+            modifier = modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(innerPadding),
         ) {
-            when (lookupState) {
-                LookupUiState.NotFound -> Text(
-                    text = "책 정보를 찾지 못했어요, 직접 입력해주세요.",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                LookupUiState.NetworkError -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "인터넷 연결을 확인해주세요.",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    TextButton(onClick = onRetryLookup) { Text("정보 다시 불러오기") }
-                }
-                else -> Unit
-            }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                when (lookupState) {
+                    LookupUiState.NotFound -> {
+                        Text(
+                            text = "책 정보를 찾지 못했어요. 직접 입력해 주세요.",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
 
-            if (formState.duplicateOfTitle != null) {
-                Column {
-                    Text(
-                        text = "이미 등록된 책이에요 · 『${formState.duplicateOfTitle}』. 그래도 새로 등록할 수 있어요.",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    formState.duplicateOfBookId?.let { bookId ->
-                        TextButton(onClick = { onGoToDuplicateBook(bookId) }) {
-                            Text("그 책으로 이동")
+                    LookupUiState.NetworkError -> {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "인터넷 연결을 확인해 주세요.",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            TextButton(onClick = onRetryLookup) {
+                                Text("정보 다시 불러오기")
+                            }
+                        }
+                    }
+
+                    else -> Unit
+                }
+
+                if (formState.duplicateOfTitle != null) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "이미 등록된 책이에요. \"${formState.duplicateOfTitle}\" 이(가) 내 책장에 있어요.",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        formState.duplicateOfBookId?.let { bookId ->
+                            TextButton(onClick = { onGoToDuplicateBook(bookId) }) {
+                                Text("그 책으로 이동")
+                            }
                         }
                     }
                 }
-            }
 
-            OutlinedTextField(
-                value = formState.title,
-                onValueChange = onTitleChanged,
-                label = { Text("제목") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = formState.author,
-                onValueChange = onAuthorChanged,
-                label = { Text("저자") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = formState.publisher,
-                onValueChange = onPublisherChanged,
-                label = { Text("출판사") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = formState.totalPagesText,
-                onValueChange = onTotalPagesChanged,
-                label = { Text("총 페이지") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                supportingText = {
-                    // Lookup finishing successfully doesn't guarantee this field is filled — Google
-                    // Books (the only source for page count) often has no data for a given book,
-                    // especially Korean titles. Say so explicitly instead of leaving it silently
-                    // blank, which otherwise reads as "loading never finished."
-                    if (lookupState != LookupUiState.Loading && formState.totalPagesText.isBlank()) {
-                        Text("책 정보 API에서 페이지 수를 찾지 못했어요. 직접 입력해주세요.")
+                OutlinedTextField(
+                    value = formState.title,
+                    onValueChange = onTitleChanged,
+                    label = { Text("제목") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = formState.author,
+                    onValueChange = onAuthorChanged,
+                    label = { Text("저자") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = formState.publisher,
+                    onValueChange = onPublisherChanged,
+                    label = { Text("출판사") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = formState.totalPagesText,
+                    onValueChange = onTotalPagesChanged,
+                    label = { Text("총 페이지") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    supportingText = {
+                        if (lookupState != LookupUiState.Loading && formState.totalPagesText.isBlank()) {
+                            Text("책 정보 API에서 페이지 수를 찾지 못했어요. 직접 입력해 주세요.")
+                        }
+                    },
+                )
+                OutlinedTextField(
+                    value = formState.genre,
+                    onValueChange = onGenreChanged,
+                    label = { Text("장르") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = formState.country,
+                    onValueChange = onCountryChanged,
+                    label = { Text("국가") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("형식", style = MaterialTheme.typography.labelLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FormatChoiceButton(
+                            label = "종이책",
+                            selected = formState.format == BookFormat.PHYSICAL,
+                            onClick = { onFormatChanged(BookFormat.PHYSICAL) },
+                        )
+                        FormatChoiceButton(
+                            label = "전자책",
+                            selected = formState.format == BookFormat.EBOOK,
+                            onClick = { onFormatChanged(BookFormat.EBOOK) },
+                        )
                     }
-                },
-            )
-            OutlinedTextField(
-                value = formState.genre,
-                onValueChange = onGenreChanged,
-                label = { Text("장르") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = formState.country,
-                onValueChange = onCountryChanged,
-                label = { Text("국가") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
+                }
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("형식", style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FormatChoiceButton(
-                        label = "종이책",
-                        selected = formState.format == BookFormat.PHYSICAL,
-                        onClick = { onFormatChanged(BookFormat.PHYSICAL) },
-                    )
-                    FormatChoiceButton(
-                        label = "전자책",
-                        selected = formState.format == BookFormat.EBOOK,
-                        onClick = { onFormatChanged(BookFormat.EBOOK) },
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("바로 읽기 시작", style = MaterialTheme.typography.bodyLarge)
+                    Switch(
+                        checked = formState.startReadingImmediately,
+                        onCheckedChange = onStartReadingImmediatelyChanged,
                     )
                 }
-            }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("바로 읽기 시작", style = MaterialTheme.typography.bodyLarge)
-                Switch(
-                    checked = formState.startReadingImmediately,
-                    onCheckedChange = onStartReadingImmediatelyChanged,
+                if (saveState is SaveUiState.Error) {
+                    Text(
+                        text = saveState.message,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+
+                BooklogsFilledButton(
+                    text = "저장",
+                    onClick = onSave,
+                    modifier = Modifier.fillMaxWidth(),
+                    primary = true,
+                    enabled = saveState !is SaveUiState.Saving,
                 )
-            }
 
-            if (saveState is SaveUiState.Error) {
-                Text(
-                    text = saveState.message,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-
-            Button(
-                onClick = onSave,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(percent = 50),
-                enabled = saveState !is SaveUiState.Saving,
-            ) {
                 if (saveState is SaveUiState.Saving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Text("저장", style = MaterialTheme.typography.labelLarge)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 2.dp,
+                        )
+                    }
                 }
             }
-        }
 
-        if (lookupState == LookupUiState.Loading) {
-            LoadingOverlay(message = "책 정보를 찾고 있어요")
-        }
+            if (lookupState == LookupUiState.Loading) {
+                LoadingOverlay(message = "책 정보를 찾고 있어요.")
+            }
         }
     }
 }
