@@ -30,7 +30,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -133,6 +135,8 @@ fun QuoteCaptureScreen(
 
     BackHandler(onBack = ::handleBack)
 
+    val isLiveCameraStage = capturedBitmap == null && uiState.editingPageIndex == null && !uiState.isManualEntry && hasCameraPermission
+
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
@@ -142,22 +146,24 @@ fun QuoteCaptureScreen(
     Scaffold(
         containerColor = BooklogsScreenBackground,
         topBar = {
-            BooklogsTopBar(
-                title = "인용구 추가",
-                onBack = ::handleBack,
-                actions = {
-                    if (capturedBitmap != null && uiState.editingPageIndex == null) {
-                        TextButton(
-                            onClick = {
-                                viewModel.discardCurrentCaptureText()
-                                openCameraForNextCapture()
-                            },
-                        ) {
-                            Text(text = "다시 촬영")
+            if (!isLiveCameraStage) {
+                BooklogsTopBar(
+                    title = "인용구 추가",
+                    onBack = ::handleBack,
+                    actions = {
+                        if (capturedBitmap != null && uiState.editingPageIndex == null) {
+                            TextButton(
+                                onClick = {
+                                    viewModel.discardCurrentCaptureText()
+                                    openCameraForNextCapture()
+                                },
+                            ) {
+                                Text(text = "다시 촬영")
+                            }
                         }
-                    }
-                },
-            )
+                    },
+                )
+            }
         },
     ) { innerPadding ->
         Box(
@@ -209,6 +215,7 @@ fun QuoteCaptureScreen(
                     Column(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
+                            .statusBarsPadding()
                             .padding(16.dp),
                         horizontalAlignment = Alignment.End,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -232,6 +239,22 @@ fun QuoteCaptureScreen(
                             Icon(Icons.Outlined.Edit, contentDescription = null, tint = Color.White)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(text = "직접 입력", color = Color.White)
+                        }
+                    }
+                    if (hasCameraPermission) {
+                        IconButton(
+                            onClick = ::handleBack,
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .statusBarsPadding()
+                                .padding(12.dp)
+                                .background(Color.Black.copy(alpha = 0.4f), CircleShape),
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Outlined.ArrowBack,
+                                contentDescription = "뒤로가기",
+                                tint = Color.White,
+                            )
                         }
                     }
                 }

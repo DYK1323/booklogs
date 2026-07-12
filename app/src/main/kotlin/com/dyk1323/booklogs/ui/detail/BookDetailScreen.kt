@@ -295,6 +295,7 @@ fun BookDetailScreen(
                                     finishedAtText = uiState.roundEditFinishedAtText,
                                     endReason = uiState.roundEditEndReason,
                                     startingPageText = uiState.roundEditStartingPageText,
+                                    message = uiState.message,
                                     onToggleExpand = { viewModel.toggleRoundExpanded(round.id) },
                                     onStartedAtChanged = viewModel::updateRoundEditStartedAt,
                                     onFinishedAtChanged = viewModel::updateRoundEditFinishedAt,
@@ -836,6 +837,7 @@ internal fun RoundRow(
     finishedAtText: String,
     endReason: RoundEndReason?,
     startingPageText: String,
+    message: String?,
     onToggleExpand: () -> Unit,
     onStartedAtChanged: (String) -> Unit,
     onFinishedAtChanged: (String) -> Unit,
@@ -918,6 +920,14 @@ internal fun RoundRow(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                 )
+                message?.let {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     if (!isOpen) {

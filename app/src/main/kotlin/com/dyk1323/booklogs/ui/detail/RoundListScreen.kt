@@ -73,6 +73,7 @@ fun RoundListScreen(
                     finishedAtText = uiState.roundEditFinishedAtText,
                     endReason = uiState.roundEditEndReason,
                     startingPageText = uiState.roundEditStartingPageText,
+                    message = uiState.message,
                     onToggleExpand = { viewModel.toggleRoundExpanded(round.id) },
                     onStartedAtChanged = viewModel::updateRoundEditStartedAt,
                     onFinishedAtChanged = viewModel::updateRoundEditFinishedAt,
