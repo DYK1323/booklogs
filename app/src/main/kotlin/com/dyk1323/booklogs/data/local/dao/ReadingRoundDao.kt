@@ -26,6 +26,9 @@ interface ReadingRoundDao {
     @Update
     suspend fun update(round: ReadingRoundEntity)
 
+    @Query("DELETE FROM reading_rounds WHERE id = :roundId")
+    suspend fun deleteById(roundId: Long)
+
     @Query("DELETE FROM reading_rounds")
     suspend fun deleteAll()
 }

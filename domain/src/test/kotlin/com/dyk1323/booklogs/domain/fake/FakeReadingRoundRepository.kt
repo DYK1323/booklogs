@@ -26,5 +26,9 @@ class FakeReadingRoundRepository(initial: List<ReadingRound> = emptyList()) : Re
         rounds[round.id] = round
     }
 
+    override suspend fun deleteById(roundId: Long) {
+        rounds.remove(roundId)
+    }
+
     fun all(): List<ReadingRound> = rounds.values.toList()
 }

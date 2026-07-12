@@ -10,4 +10,5 @@ interface ReadingRoundRepository {
     suspend fun getRoundsForBook(bookId: Long): List<ReadingRound>
     suspend fun insert(round: ReadingRound): Long
     suspend fun update(round: ReadingRound)
+    suspend fun deleteById(roundId: Long)
 }

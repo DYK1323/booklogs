@@ -33,6 +33,7 @@ import com.dyk1323.booklogs.domain.usecase.EditLogUseCase
 import com.dyk1323.booklogs.domain.usecase.LogProgressUseCase
 import com.dyk1323.booklogs.domain.usecase.PickReminderBookUseCase
 import com.dyk1323.booklogs.domain.usecase.RegisterBookUseCase
+import com.dyk1323.booklogs.domain.usecase.UndoRoundSplitUseCase
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -93,6 +94,9 @@ class AppContainer(context: Context) {
     val deleteBookUseCase = DeleteBookUseCase(bookRepository)
     val registerBookUseCase = RegisterBookUseCase(bookRepository, changeBookStatusUseCase)
     val pickReminderBookUseCase = PickReminderBookUseCase()
+    val undoRoundSplitUseCase = UndoRoundSplitUseCase(
+        bookRepository, readingRoundRepository, readingLogRepository, reviewRepository, transactionRunner,
+    )
 
     // AggregateDailyPagesUseCase, AggregateBooksByAttributeUseCase, ComputeBookProgressUseCase,
     // ConvertPagePercentUseCase are plain top-level functions (see :domain/usecase) — no instance needed.

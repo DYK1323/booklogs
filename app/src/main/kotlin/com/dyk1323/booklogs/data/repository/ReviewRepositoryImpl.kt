@@ -16,6 +16,9 @@ class ReviewRepositoryImpl(
     override fun observeForRound(roundId: Long): Flow<List<Review>> =
         reviewDao.observeForRound(roundId).map { entities -> entities.map { it.toDomain() } }
 
+    override suspend fun getAllForRound(roundId: Long): List<Review> =
+        reviewDao.getAllForRound(roundId).map { it.toDomain() }
+
     override suspend fun insert(review: Review): Long = reviewDao.insert(review.toEntity())
 
     override suspend fun update(review: Review) = reviewDao.update(review.toEntity())

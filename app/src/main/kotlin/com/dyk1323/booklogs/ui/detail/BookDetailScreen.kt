@@ -104,6 +104,17 @@ fun BookDetailScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.undoRoundSplitEvents.collect {
+            val result = snackbarHostState.showSnackbar(
+                message = "다시 읽기를 시작했어요 — 이전 라운드가 종료돼요",
+                actionLabel = "실행취소",
+                duration = SnackbarDuration.Long,
+            )
+            if (result == SnackbarResult.ActionPerformed) viewModel.undoRoundSplit()
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {

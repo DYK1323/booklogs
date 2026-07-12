@@ -19,6 +19,8 @@ class ReadingRoundRepositoryImpl(
     override suspend fun insert(round: ReadingRound): Long = readingRoundDao.insert(round.toEntity())
 
     override suspend fun update(round: ReadingRound) = readingRoundDao.update(round.toEntity())
+
+    override suspend fun deleteById(roundId: Long) = readingRoundDao.deleteById(roundId)
 }
 
 internal fun ReadingRoundEntity.toDomain(): ReadingRound = ReadingRound(

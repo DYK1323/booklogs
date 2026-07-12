@@ -21,6 +21,7 @@ import com.dyk1323.booklogs.domain.usecase.DeleteLogUseCase
 import com.dyk1323.booklogs.domain.usecase.EditLogUseCase
 import com.dyk1323.booklogs.domain.usecase.LogDelta
 import com.dyk1323.booklogs.domain.usecase.ResolveLoggedPageResult
+import com.dyk1323.booklogs.domain.usecase.UndoRoundSplitUseCase
 import com.dyk1323.booklogs.domain.usecase.computeBookProgress
 import com.dyk1323.booklogs.domain.usecase.computeLogDeltas
 import com.dyk1323.booklogs.domain.usecase.resolveLoggedPage
@@ -95,6 +96,7 @@ class BookDetailViewModel(
     private val deleteBookUseCase: DeleteBookUseCase,
     private val deleteLogUseCase: DeleteLogUseCase,
     private val editLogUseCase: EditLogUseCase,
+    private val undoRoundSplitUseCase: UndoRoundSplitUseCase,
 ) : ViewModel() {
 
     private val selectedBookId = MutableStateFlow<Long?>(null)
@@ -110,6 +112,10 @@ class BookDetailViewModel(
 
     private val _undoLogEvents = Channel<ReadingLog>(Channel.BUFFERED)
     val undoLogEvents: Flow<ReadingLog> = _undoLogEvents.receiveAsFlow()
+
+    /** Fires right after a 완독/중단 → 다시 읽기 transition, which silently starts a new round. */
+    private val _undoRoundSplitEvents = Channel<Unit>(Channel.BUFFERED)
+    val undoRoundSplitEvents: Flow<Unit> = _undoRoundSplitEvents.receiveAsFlow()
 
     private val quotes = selectedBookId.flatMapLatest { bookId ->
         if (bookId == null) flowOf(emptyList()) else quoteRepository.observeForBook(bookId)
@@ -257,6 +263,7 @@ class BookDetailViewModel(
 
     fun changeStatus(newStatus: BookStatus) {
         val bookId = selectedBookId.value ?: return
+        val previousStatus = uiState.value.book?.status
         viewModelScope.launch {
             val result = changeBookStatusUseCase(
                 bookId = bookId,
@@ -268,6 +275,23 @@ class BookDetailViewModel(
                 onFailure = { error ->
                     error.message?.let { "상태를 변경하지 못했어요. $it" } ?: "상태를 변경하지 못했어요."
                 },
+            )
+            val startedNewRound = result.isSuccess && newStatus == BookStatus.READING &&
+                (previousStatus == BookStatus.FINISHED || previousStatus == BookStatus.DROPPED)
+            if (startedNewRound) {
+                _undoRoundSplitEvents.send(Unit)
+            }
+        }
+    }
+
+    /** "실행취소" on the 다시 읽기 snackbar — merges the round it just created back into the previous one. */
+    fun undoRoundSplit() {
+        val bookId = selectedBookId.value ?: return
+        viewModelScope.launch {
+            val result = undoRoundSplitUseCase(bookId)
+            message.value = result.fold(
+                onSuccess = { "다시 읽기를 취소하고 이전 라운드로 되돌렸어요." },
+                onFailure = { "되돌리지 못했어요." },
             )
         }
     }
