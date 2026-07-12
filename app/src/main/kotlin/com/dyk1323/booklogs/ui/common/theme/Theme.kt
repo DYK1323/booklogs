@@ -1,10 +1,14 @@
 package com.dyk1323.booklogs.ui.common.theme
 
+import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import com.dyk1323.booklogs.data.settings.ThemeMode
 
 // Every role is specified explicitly (not just the ones a screen references by name) — Material 3
@@ -96,6 +100,21 @@ fun BooklogsTheme(
         ThemeMode.DARK -> true
     }
     val colorScheme = if (darkTheme) DarkColors else LightColors
+
+    // `Theme.Booklogs` (themes.xml) is a plain always-light window theme, so the OS otherwise decides
+    // status/nav bar icon color from the *system* dark-mode setting — which desyncs from `darkTheme`
+    // whenever 설정 > 화면 테마 overrides SYSTEM (e.g. system dark + app forced light leaves light
+    // icons sitting on this screen's light background, invisible either direction).
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
+
     MaterialTheme(
         colorScheme = colorScheme,
         typography = BooklogsTypography,
