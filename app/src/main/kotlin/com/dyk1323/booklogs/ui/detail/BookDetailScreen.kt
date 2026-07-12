@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -142,7 +143,7 @@ fun BookDetailScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 20.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
             item {
@@ -362,9 +363,14 @@ private fun StatusActions(status: BookStatus, onStatusClick: (BookStatus) -> Uni
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         availableStatusActions(status).forEach { target ->
-            TextButton(
+            Button(
                 onClick = { onStatusClick(target) },
                 modifier = Modifier.weight(1f, fill = false),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
             ) {
                 Text(text = statusActionLabel(status, target))
             }

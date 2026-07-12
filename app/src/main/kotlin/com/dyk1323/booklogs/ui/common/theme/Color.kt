@@ -22,6 +22,14 @@ val SurfaceCardDark = Color(0xFF1D1D1F) // dark-mode cards lift via this tone, n
 val SurfaceVariantLight = Color(0xFFE5E5EA)
 val SurfaceVariantDark = Color(0xFF3A3A3C)
 
+// iOS systemGray4 — one step darker/lighter than SurfaceVariant, for the "active/selected" state of a
+// gray fill pair (e.g. a toggled chip) so it reads as pressed against the neutral default fill. Used in
+// place of Material 3's default primary/secondary/tertiary "Container" roles, which are a light purple
+// baked into `lightColorScheme()`/`darkColorScheme()` when left unspecified — clashing with the app's
+// single blue accent (see docs/PLAN.md "비주얼 디자인 원칙").
+val ContainerAccentLight = Color(0xFFD1D1D6)
+val ContainerAccentDark = Color(0xFF48484A)
+
 val OnSurfaceLight = Color(0xFF1D1D1F)
 val OnSurfaceDark = Color(0xFFFFFFFF)
 
