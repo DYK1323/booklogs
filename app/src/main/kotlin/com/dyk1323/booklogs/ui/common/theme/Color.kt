@@ -50,3 +50,15 @@ val StatusGoodDark = Color(0xFF30D158)
 
 val StatusCriticalLight = Color(0xFFFF3B30)
 val StatusCriticalDark = Color(0xFFFF453A)
+
+// Fills the remaining Material 3 ColorScheme roles that `Theme.kt` didn't already override (surface
+// containers, secondary/tertiary, outlineVariant, inverse*, scrim) — all of these fall back to
+// `lightColorScheme()`/`darkColorScheme()`'s baseline purple-seeded tokens when left unspecified, which
+// is exactly how `surfaceContainerHigh` ended up as the light-purple tint on QuoteCard/ReviewCard even
+// though the app is supposed to have a single blue accent (see "ContainerAccent" comment above — same
+// root cause, different roles this time; ModalBottomSheet/Snackbar pull these roles internally even
+// though no screen references them by name directly).
+val SurfaceContainerLowLight = Color(0xFFF2F2F7) // iOS systemGray6
+val SurfaceContainerHighestLight = Color(0xFFC7C7CC) // iOS systemGray3
+val SurfaceContainerHighestDark = Color(0xFF636366) // iOS systemGray2 (dark)
+val ScrimColor = Color(0xFF000000)
