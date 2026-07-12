@@ -30,6 +30,7 @@ import com.dyk1323.booklogs.domain.repository.TransactionRunner
 import com.dyk1323.booklogs.domain.usecase.ChangeBookStatusUseCase
 import com.dyk1323.booklogs.domain.usecase.DeleteBookUseCase
 import com.dyk1323.booklogs.domain.usecase.DeleteLogUseCase
+import com.dyk1323.booklogs.domain.usecase.DeleteRoundUseCase
 import com.dyk1323.booklogs.domain.usecase.EditLogUseCase
 import com.dyk1323.booklogs.domain.usecase.EditRoundUseCase
 import com.dyk1323.booklogs.domain.usecase.LogProgressUseCase
@@ -96,6 +97,7 @@ class AppContainer(context: Context) {
     val registerBookUseCase = RegisterBookUseCase(bookRepository, changeBookStatusUseCase)
     val pickReminderBookUseCase = PickReminderBookUseCase()
     val editRoundUseCase = EditRoundUseCase(readingRoundRepository)
+    val deleteRoundUseCase = DeleteRoundUseCase(readingRoundRepository)
 
     // AggregateDailyPagesUseCase, AggregateBooksByAttributeUseCase, ComputeBookProgressUseCase,
     // ConvertPagePercentUseCase are plain top-level functions (see :domain/usecase) — no instance needed.

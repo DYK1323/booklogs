@@ -96,6 +96,7 @@ fun BookDetailScreen(
     var showDeleteBookDialog by remember { mutableStateOf(false) }
     var pendingDeleteQuoteId by remember { mutableStateOf<Long?>(null) }
     var pendingDeleteReviewId by remember { mutableStateOf<Long?>(null) }
+    var pendingDeleteRoundId by remember { mutableStateOf<Long?>(null) }
     var pendingStatusChange by remember { mutableStateOf<BookStatus?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -204,6 +205,7 @@ fun BookDetailScreen(
                                     onStartingPageChanged = viewModel::updateRoundEditStartingPage,
                                     onSave = viewModel::saveRoundEdit,
                                     onCancel = viewModel::cancelRoundEdit,
+                                    onDelete = { pendingDeleteRoundId = round.id },
                                 )
                             }
                         }
@@ -396,6 +398,29 @@ fun BookDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { pendingDeleteReviewId = null }) {
+                    Text(text = "취소")
+                }
+            },
+        )
+    }
+
+    pendingDeleteRoundId?.let { roundId ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteRoundId = null },
+            title = { Text(text = "라운드를 삭제할까요?") },
+            text = { Text(text = "이 라운드에 기록된 진행 이력도 함께 삭제돼요.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDeleteRoundId = null
+                        viewModel.deleteRound(roundId)
+                    },
+                ) {
+                    Text(text = "삭제", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteRoundId = null }) {
                     Text(text = "취소")
                 }
             },
@@ -643,6 +668,8 @@ private fun deltaLabel(book: Book, delta: LogDelta): String {
  * round (see [EditRoundUseCase]), only fixes its recorded metadata. [startingPage] is the delta baseline
  * for this round's first log (docs/PLAN.md "라운드 이력 편집") — the fix for a round that got split by an
  * accidental 완독/중단 → 다시 읽기 is to correct it here to wherever the reader actually left off.
+ * [onDelete] is only offered for closed rounds — see [DeleteRoundUseCase] for why the currently open
+ * round can't be deleted here (deleting it would leave a READING/PAUSED book with no open round).
  */
 @Composable
 private fun RoundRow(
@@ -659,6 +686,7 @@ private fun RoundRow(
     onStartingPageChanged: (String) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val isOpen = round.finishedAt == null
     Column(
@@ -733,7 +761,13 @@ private fun RoundRow(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             )
             Spacer(modifier = Modifier.height(6.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (!isOpen) {
+                    TextButton(onClick = onDelete) {
+                        Text(text = "삭제", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                Spacer(modifier = Modifier.weight(1f))
                 TextButton(onClick = onCancel) {
                     Text(text = "취소")
                 }

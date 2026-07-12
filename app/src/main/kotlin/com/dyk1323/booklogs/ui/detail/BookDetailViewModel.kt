@@ -21,6 +21,7 @@ import com.dyk1323.booklogs.domain.usecase.ChangeBookStatusUseCase
 import com.dyk1323.booklogs.domain.usecase.ConvertPagePercentUseCase
 import com.dyk1323.booklogs.domain.usecase.DeleteBookUseCase
 import com.dyk1323.booklogs.domain.usecase.DeleteLogUseCase
+import com.dyk1323.booklogs.domain.usecase.DeleteRoundUseCase
 import com.dyk1323.booklogs.domain.usecase.EditLogUseCase
 import com.dyk1323.booklogs.domain.usecase.EditRoundUseCase
 import com.dyk1323.booklogs.domain.usecase.LogDelta
@@ -128,6 +129,7 @@ class BookDetailViewModel(
     private val deleteLogUseCase: DeleteLogUseCase,
     private val editLogUseCase: EditLogUseCase,
     private val editRoundUseCase: EditRoundUseCase,
+    private val deleteRoundUseCase: DeleteRoundUseCase,
 ) : ViewModel() {
 
     private val selectedBookId = MutableStateFlow<Long?>(null)
@@ -564,6 +566,18 @@ class BookDetailViewModel(
                 onFailure = { "라운드 정보를 수정하지 못했어요." },
             )
             if (result.isSuccess) collapseRoundEdit()
+        }
+    }
+
+    /** Only closed rounds can be deleted here — see [DeleteRoundUseCase] for why the open round is protected. */
+    fun deleteRound(roundId: Long) {
+        viewModelScope.launch {
+            val result = deleteRoundUseCase(roundId)
+            message.value = result.fold(
+                onSuccess = { "라운드를 삭제했어요." },
+                onFailure = { "라운드를 삭제하지 못했어요." },
+            )
+            if (result.isSuccess && expandedRoundId.value == roundId) collapseRoundEdit()
         }
     }
 

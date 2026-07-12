@@ -77,6 +77,7 @@ class MainActivity : ComponentActivity() {
                     deleteLogUseCase = container.deleteLogUseCase,
                     editLogUseCase = container.editLogUseCase,
                     editRoundUseCase = container.editRoundUseCase,
+                    deleteRoundUseCase = container.deleteRoundUseCase,
                 ) as T
         }
     }
