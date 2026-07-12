@@ -90,6 +90,7 @@ fun BookDetailScreen(
     val book = uiState.book
     var showDeleteBookDialog by remember { mutableStateOf(false) }
     var pendingDeleteQuoteId by remember { mutableStateOf<Long?>(null) }
+    var pendingStatusChange by remember { mutableStateOf<BookStatus?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -159,7 +160,16 @@ fun BookDetailScreen(
                 DetailSection(title = "상태") {
                     StatusActions(
                         status = book.status,
-                        onStatusClick = viewModel::changeStatus,
+                        onStatusClick = { target ->
+                            // 완독/중단은 현재 라운드를 끝내는 동작이라, 실수로 눌렀다가 "다시 읽기"로
+                            // 되돌려도 진행 페이지가 0부터 다시 계산되는 새 라운드가 시작돼버림 —
+                            // 되돌릴 수 없는 결과라 확정 전에 한 번 더 확인.
+                            if (target == BookStatus.FINISHED || target == BookStatus.DROPPED) {
+                                pendingStatusChange = target
+                            } else {
+                                viewModel.changeStatus(target)
+                            }
+                        },
                     )
                 }
             }
@@ -350,6 +360,29 @@ fun BookDetailScreen(
                 onDelete = viewModel::deleteComment,
             )
         }
+    }
+
+    pendingStatusChange?.let { target ->
+        AlertDialog(
+            onDismissRequest = { pendingStatusChange = null },
+            title = { Text(text = if (target == BookStatus.FINISHED) "완독으로 표시할까요?" else "읽기를 중단할까요?") },
+            text = { Text(text = "지금 라운드가 종료돼요. 나중에 \"다시 읽기\"를 시작하면 새 라운드로 기록되고, 진행 페이지는 0부터 다시 계산돼요.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingStatusChange = null
+                        viewModel.changeStatus(target)
+                    },
+                ) {
+                    Text(text = if (target == BookStatus.FINISHED) "완독" else "중단", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingStatusChange = null }) {
+                    Text(text = "취소")
+                }
+            },
+        )
     }
 }
 
