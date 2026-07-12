@@ -487,7 +487,8 @@ private fun GapAdjustableText(
     val to = maxOf(startIndex, endIndex).coerceIn(words.indices)
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         var i = from
         while (i <= to) {
@@ -510,15 +511,18 @@ private fun GapAdjustableText(
                 } else {
                     MaterialTheme.colorScheme.onPrimaryContainer
                 }
-                Text(
-                    text = pairText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = contentColor,
+                Box(
                     modifier = Modifier
                         .background(containerColor, RoundedCornerShape(4.dp))
                         .clickable { onGapToggle(gapIndex) }
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                )
+                        .padding(horizontal = 4.dp, vertical = 3.dp),
+                ) {
+                    Text(
+                        text = pairText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = contentColor,
+                    )
+                }
                 i += 2
             } else {
                 Text(text = words[i].text, style = MaterialTheme.typography.bodyLarge)

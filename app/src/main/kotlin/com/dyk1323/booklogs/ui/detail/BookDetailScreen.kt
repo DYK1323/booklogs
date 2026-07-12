@@ -1,5 +1,6 @@
 package com.dyk1323.booklogs.ui.detail
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -710,6 +711,7 @@ internal fun LogDeltaRow(
             .fillMaxWidth()
             .background(if (highlighted) Color(0xFFF5F5F5) else Color.White, RoundedCornerShape(5.dp))
             .clickable(onClick = onToggleExpand)
+            .animateContentSize()
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -798,6 +800,7 @@ internal fun RoundRow(
             .fillMaxWidth()
             .background(if (highlighted) Color(0xFFF5F5F5) else Color.White, RoundedCornerShape(5.dp))
             .clickable(onClick = onToggleExpand)
+            .animateContentSize()
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
