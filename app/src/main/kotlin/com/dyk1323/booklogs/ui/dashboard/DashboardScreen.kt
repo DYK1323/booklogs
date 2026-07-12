@@ -580,7 +580,15 @@ private fun QuickLogSheet(
             }
         }
         Spacer(modifier = Modifier.height(18.dp))
-        TextButton(onClick = onCaptureQuote, modifier = Modifier.fillMaxWidth()) {
+        Button(
+            onClick = onCaptureQuote,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+        ) {
             Text(text = "인용구 촬영")
         }
         Spacer(modifier = Modifier.height(8.dp))
