@@ -84,6 +84,7 @@ fun BookDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val book = uiState.book
     var showDeleteBookDialog by remember { mutableStateOf(false) }
+    var pendingDeleteQuoteId by remember { mutableStateOf<Long?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -246,7 +247,7 @@ fun BookDetailScreen(
                                 QuoteCard(
                                     quote = quote,
                                     onEdit = { viewModel.startEditQuote(quote) },
-                                    onDelete = { viewModel.deleteQuote(quote.id) },
+                                    onDelete = { pendingDeleteQuoteId = quote.id },
                                 )
                             }
                         }
@@ -307,6 +308,28 @@ fun BookDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteBookDialog = false }) {
+                    Text(text = "취소")
+                }
+            },
+        )
+    }
+
+    pendingDeleteQuoteId?.let { quoteId ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteQuoteId = null },
+            title = { Text(text = "인용구를 삭제할까요?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDeleteQuoteId = null
+                        viewModel.deleteQuote(quoteId)
+                    },
+                ) {
+                    Text(text = "삭제", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteQuoteId = null }) {
                     Text(text = "취소")
                 }
             },
