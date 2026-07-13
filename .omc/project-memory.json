@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1783846739267,
+  "lastScanned": 1783939744351,
   "projectRoot": "c:\\Users\\DAYOUNG\\booklogs",
   "techStack": {
     "languages": [
@@ -48,7 +48,7 @@
       "path": "app",
       "purpose": "Application code",
       "fileCount": 2,
-      "lastAccessed": 1783846739236,
+      "lastAccessed": 1783939744320,
       "keyFiles": [
         "booklogs-dev.keystore",
         "build.gradle.kts"
@@ -58,7 +58,7 @@
       "path": "build",
       "purpose": "Build output",
       "fileCount": 2,
-      "lastAccessed": 1783846739236,
+      "lastAccessed": 1783939744320,
       "keyFiles": [
         "diagnostic-default-debug-signed.apk",
         "diagnostic-default-debug-signed.apk.idsig"
@@ -68,7 +68,7 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 1,
-      "lastAccessed": 1783846739237,
+      "lastAccessed": 1783939744321,
       "keyFiles": [
         "PLAN.md"
       ]
@@ -77,7 +77,7 @@
       "path": "domain",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783846739237,
+      "lastAccessed": 1783939744321,
       "keyFiles": [
         "build.gradle.kts"
       ]
@@ -86,7 +86,7 @@
       "path": "gradle",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783846739238,
+      "lastAccessed": 1783939744322,
       "keyFiles": [
         "libs.versions.toml"
       ]
@@ -95,7 +95,7 @@
       "path": "licenses",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783846739238,
+      "lastAccessed": 1783939744322,
       "keyFiles": [
         "PRETENDARD_LICENSE.txt"
       ]
@@ -104,35 +104,35 @@
       "path": "app\\build",
       "purpose": "Build output",
       "fileCount": 0,
-      "lastAccessed": 1783846739239,
+      "lastAccessed": 1783939744323,
       "keyFiles": []
     },
     "app\\schemas": {
       "path": "app\\schemas",
       "purpose": "Schema definitions",
       "fileCount": 0,
-      "lastAccessed": 1783846739240,
+      "lastAccessed": 1783939744323,
       "keyFiles": []
     },
     "app\\src": {
       "path": "app\\src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1783846739240,
+      "lastAccessed": 1783939744324,
       "keyFiles": []
     },
     "domain\\build": {
       "path": "domain\\build",
       "purpose": "Build output",
       "fileCount": 0,
-      "lastAccessed": 1783846739241,
+      "lastAccessed": 1783939744325,
       "keyFiles": []
     },
     "domain\\src": {
       "path": "domain\\src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1783846739241,
+      "lastAccessed": 1783939744325,
       "keyFiles": []
     }
   },
