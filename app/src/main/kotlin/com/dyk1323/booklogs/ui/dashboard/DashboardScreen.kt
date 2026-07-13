@@ -465,8 +465,18 @@ private fun DailyPagesBarChart(totals: List<DayPageTotal>, dailyGoalPages: Int?,
                 verticalAlignment = Alignment.Bottom,
             ) {
                 totals.forEach { total ->
-                    DashboardBarColumn(total = total, maxValue = maxValue, plotHeight = plotHeight)
+                    DashboardBarColumn(total = total, maxValue = maxValue)
                 }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
+        ) {
+            totals.forEach { total ->
+                DashboardBarLabel(total = total)
             }
         }
     }
@@ -554,55 +564,54 @@ private fun DashboardHeroBackground(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun DashboardBarColumn(total: DayPageTotal, maxValue: Int, plotHeight: androidx.compose.ui.unit.Dp) {
-    val date = LocalDate.ofEpochDay(total.epochDay)
+private fun DashboardBarColumn(total: DayPageTotal, maxValue: Int) {
     val barHeight = ((total.totalPages.toFloat() / maxValue.toFloat()) * 77f).coerceAtLeast(4f)
+    Box(
+        modifier = Modifier.width(24.dp),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(13.dp)
+                .height(barHeight.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color.White, Color(0xFF8CC2FF)),
+                    ),
+                    shape = RoundedCornerShape(5.dp),
+                ),
+        )
+    }
+}
+
+@Composable
+private fun DashboardBarLabel(total: DayPageTotal) {
+    val date = LocalDate.ofEpochDay(total.epochDay)
     Column(
         modifier = Modifier.width(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Box(
-            modifier = Modifier.height(plotHeight),
-            contentAlignment = Alignment.BottomCenter,
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(13.dp)
-                    .height(barHeight.dp)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(Color.White, Color(0xFF8CC2FF)),
-                        ),
-                        shape = RoundedCornerShape(5.dp),
-                    ),
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = 11.sp,
-                    lineHeight = 11.sp,
-                    fontWeight = FontWeight.Normal,
-                ),
-                color = Color.White,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).uppercase(Locale.ENGLISH),
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 8.sp,
-                    lineHeight = 8.sp,
-                    fontWeight = FontWeight.Normal,
-                ),
-                color = Color.White,
-                textAlign = TextAlign.Center,
-            )
-        }
+        Text(
+            text = date.dayOfMonth.toString(),
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = 11.sp,
+                lineHeight = 11.sp,
+                fontWeight = FontWeight.Normal,
+            ),
+            color = Color.White,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).uppercase(Locale.ENGLISH),
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = 8.sp,
+                lineHeight = 8.sp,
+                fontWeight = FontWeight.Normal,
+            ),
+            color = Color.White,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
