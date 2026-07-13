@@ -44,12 +44,12 @@ jobs:
           GOOGLE_BOOKS_API_KEY: ${{ secrets.GOOGLE_BOOKS_API_KEY }}
         run: ./gradlew :app:testDebugUnitTest --stacktrace
 
-      - name: Build debug APK
+      - name: Build preview APK
         env:
           KAKAO_API_KEY: ${{ secrets.KAKAO_API_KEY }}
           GOOGLE_BOOKS_API_KEY: ${{ secrets.GOOGLE_BOOKS_API_KEY }}
         run: |
-          ./gradlew :app:assembleDebug --stacktrace \
+          ./gradlew :app:assemblePreview --stacktrace \
             -PversionCode=${{ github.run_number }} \
             -PversionName="0.1.0-preview.${{ github.run_number }}+${{ github.sha }}"
 
@@ -57,6 +57,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: booklogs-preview-${{ github.run_number }}.apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/preview/app-preview.apk
           archive: false
           if-no-files-found: error
