@@ -46,7 +46,6 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -90,12 +89,21 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.dyk1323.booklogs.domain.usecase.DayPageTotal
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
+import com.dyk1323.booklogs.ui.common.components.BooklogsAccent
+import com.dyk1323.booklogs.ui.common.components.BooklogsBodyEmphasisTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsButtonTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsCaptionTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetBottomPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetHorizontalPadding
+import com.dyk1323.booklogs.ui.common.components.BooklogsSurfaceMuted
 import com.dyk1323.booklogs.ui.common.components.BooklogsTextAction
+import com.dyk1323.booklogs.ui.common.components.BooklogsTextPlaceholder
+import com.dyk1323.booklogs.ui.common.components.BooklogsTextSecondary
+import com.dyk1323.booklogs.ui.common.components.BooklogsTitleTextStyle
 import com.dyk1323.booklogs.ui.common.components.CameraCapturePreview
 import com.dyk1323.booklogs.ui.common.components.EmptyState
 import com.dyk1323.booklogs.ui.common.formatRelativeTime
@@ -158,7 +166,7 @@ fun DashboardScreen(
             Column(
                 modifier = modifier
                     .fillMaxSize()
-                    .background(Color.White)
+                    .background(BooklogsScreenBackground)
                     .padding(innerPadding)
                     .padding(
                         horizontal = BooklogsScreenHorizontalPadding,
@@ -338,11 +346,7 @@ private fun DashboardShelfHeader(
     ) {
         Text(
             text = "내 책장",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 16.sp,
-                lineHeight = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-            ),
+            style = BooklogsBodyEmphasisTextStyle.copy(fontWeight = FontWeight.SemiBold),
         )
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -350,12 +354,8 @@ private fun DashboardShelfHeader(
         ) {
             Text(
                 text = "${bookCount}권",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = 10.sp,
-                    lineHeight = 10.sp,
-                    fontWeight = FontWeight.Normal,
-                ),
-                color = Color(0xFF757575),
+                style = BooklogsCaptionTextStyle,
+                color = BooklogsTextSecondary,
             )
             BooklogsTextAction(
                 text = "라이브러리",
@@ -375,7 +375,7 @@ private fun TodayPagesHero(todayPages: Int, dailyGoalPages: Int?, totals: List<D
             .fillMaxWidth()
             .height(149.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFF0C7EFF)),
+            .background(BooklogsAccent),
     ) {
         DashboardHeroBackground(
             modifier = Modifier
@@ -393,11 +393,7 @@ private fun TodayPagesHero(todayPages: Int, dailyGoalPages: Int?, totals: List<D
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = "오늘 읽은 페이지",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 16.sp,
-                        lineHeight = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                    style = BooklogsBodyEmphasisTextStyle.copy(fontWeight = FontWeight.Bold),
                     color = Color.White,
                 )
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -413,11 +409,7 @@ private fun TodayPagesHero(todayPages: Int, dailyGoalPages: Int?, totals: List<D
                     Text(
                         text = " / ${dailyGoalPages ?: 0}p",
                         modifier = Modifier.padding(bottom = 3.dp),
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = 12.sp,
-                            lineHeight = 12.sp,
-                            fontWeight = FontWeight.Normal,
-                        ),
+                        style = BooklogsCaptionTextStyle,
                         color = Color.White.copy(alpha = 0.86f),
                     )
                 }
@@ -521,12 +513,7 @@ private fun BookShelfTile(item: BookShelfItemUi, onClick: () -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = item.book.title,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = 12.sp,
-                lineHeight = 14.sp,
-                fontWeight = FontWeight.Normal,
-                color = MaterialTheme.colorScheme.onSurface,
-            ),
+            style = BooklogsCaptionTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 2.dp),
@@ -534,12 +521,8 @@ private fun BookShelfTile(item: BookShelfItemUi, onClick: () -> Unit) {
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = progressCaption(item),
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = 10.sp,
-                lineHeight = 10.sp,
-                fontWeight = FontWeight.Normal,
-            ),
-            color = Color(0xFF757575),
+            style = BooklogsCaptionTextStyle,
+            color = BooklogsTextSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 2.dp),
@@ -640,8 +623,8 @@ private fun DashboardSettingsIcon(modifier: Modifier = Modifier) {
     }
     Canvas(modifier = modifier.size(20.dp)) {
         scale(scaleX = size.width / 18.1611f, scaleY = size.height / 17.2122f, pivot = Offset.Zero) {
-            drawPath(path = outerPath, color = Color(0xFF757575), style = Stroke(width = 1.5f))
-            drawPath(path = innerPath, color = Color(0xFF757575), style = Stroke(width = 1.5f))
+            drawPath(path = outerPath, color = BooklogsTextSecondary, style = Stroke(width = 1.5f))
+            drawPath(path = innerPath, color = BooklogsTextSecondary, style = Stroke(width = 1.5f))
         }
     }
 }
@@ -683,7 +666,7 @@ private fun QuickLogSheet(
             modifier = Modifier
                 .width(24.dp)
                 .height(4.dp)
-                .background(Color(0xFF757575), RoundedCornerShape(999.dp)),
+                .background(BooklogsTextSecondary, RoundedCornerShape(999.dp)),
         )
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -691,12 +674,7 @@ private fun QuickLogSheet(
         ) {
             Text(
                 text = state.book.title,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 20.sp,
-                    lineHeight = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.sp,
-                ),
+                style = BooklogsTitleTextStyle,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -708,13 +686,8 @@ private fun QuickLogSheet(
                         progress = state.progress,
                     ),
                 ),
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = 14.sp,
-                    lineHeight = 14.sp,
-                    fontWeight = FontWeight.Normal,
-                    letterSpacing = 0.sp,
-                ),
-                color = Color(0xFF757575),
+                style = BooklogsCaptionTextStyle,
+                color = BooklogsTextSecondary,
             )
         }
         QuickLogPageInput(
@@ -730,29 +703,14 @@ private fun QuickLogSheet(
             onDone = onSave,
             onCapturePage = onCapturePage,
         )
-        Button(
+        BooklogsFilledButton(
+            text = "인용구 추가",
             onClick = onCaptureQuote,
             modifier = Modifier
-                .fillMaxWidth()
-                .height(43.dp),
-            shape = RoundedCornerShape(5.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFF5F5F5),
-                contentColor = Color(0xFF757575),
-            ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp),
-        ) {
-            Text(
-                text = "인용구 추가",
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = 14.sp,
-                    lineHeight = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.sp,
-                ),
-            )
-        }
+                .fillMaxWidth(),
+            height = 43.dp,
+            compact = true,
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -764,65 +722,31 @@ private fun QuickLogSheet(
             Text(
                 text = "상세 보기",
                 modifier = Modifier.clickable(onClick = onOpenDetail),
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = 14.sp,
-                    lineHeight = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.sp,
-                ),
-                color = Color(0xFF0C7EFF),
+                style = BooklogsButtonTextStyle.copy(fontSize = 14.sp, lineHeight = 14.sp),
+                color = BooklogsAccent,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Button(
+                BooklogsFilledButton(
+                    text = "취소",
                     onClick = onDismiss,
                     modifier = Modifier
-                        .width(64.dp)
-                        .height(43.dp),
-                    shape = RoundedCornerShape(5.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFF5F5F5),
-                        contentColor = Color(0xFF757575),
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp),
-                ) {
-                    Text(
-                        text = "취소",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 14.sp,
-                            lineHeight = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 0.sp,
-                        ),
-                    )
-                }
-                Button(
+                        .width(64.dp),
+                    height = 43.dp,
+                    compact = true,
+                )
+                BooklogsFilledButton(
+                    text = if (showSuccessCheck) "저장" else state.saveButtonLabel,
                     onClick = onSave,
                     enabled = !state.isSaving,
                     modifier = Modifier
-                        .width(64.dp)
-                        .height(43.dp),
-                    shape = RoundedCornerShape(5.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF0C7EFF),
-                        contentColor = Color.White,
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp),
-                ) {
-                    Text(
-                        text = if (showSuccessCheck) "저장" else state.saveButtonLabel,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 14.sp,
-                            lineHeight = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 0.sp,
-                        ),
-                    )
-                }
+                        .width(64.dp),
+                    primary = true,
+                    height = 43.dp,
+                    compact = true,
+                )
             }
         }
     }
@@ -842,13 +766,8 @@ private fun QuickLogPageInput(
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = inputLabel,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = 12.sp,
-                lineHeight = 12.sp,
-                fontWeight = FontWeight.Normal,
-                letterSpacing = 0.sp,
-            ),
-            color = Color(0xFF757575),
+            style = BooklogsCaptionTextStyle,
+            color = BooklogsTextSecondary,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Row(
@@ -877,7 +796,7 @@ private fun QuickLogPageInput(
                             .background(Color.White, RoundedCornerShape(4.dp))
                             .border(
                                 width = 0.5.dp,
-                                color = if (errorMessage != null) MaterialTheme.colorScheme.error else Color(0xFF757575),
+                                color = if (errorMessage != null) MaterialTheme.colorScheme.error else BooklogsTextSecondary,
                                 shape = RoundedCornerShape(5.dp),
                             )
                             .padding(horizontal = 12.dp),
@@ -887,26 +806,16 @@ private fun QuickLogPageInput(
                             if (value.text.isEmpty()) {
                                 Text(
                                     text = "현재까지 읽은 페이지",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontSize = 12.sp,
-                                        lineHeight = 12.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        letterSpacing = 0.sp,
-                                    ),
-                                    color = Color(0xFFB3B3B3),
+                                    style = BooklogsCaptionTextStyle,
+                                    color = BooklogsTextPlaceholder,
                                 )
                             }
                             innerTextField()
                         }
                         Text(
                             text = inputSuffix,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = 12.sp,
-                                lineHeight = 12.sp,
-                                fontWeight = FontWeight.Normal,
-                                letterSpacing = 0.sp,
-                            ),
-                            color = Color(0xFFB3B3B3),
+                            style = BooklogsCaptionTextStyle,
+                            color = BooklogsTextPlaceholder,
                         )
                     }
                 },
@@ -915,7 +824,7 @@ private fun QuickLogPageInput(
                 Box(
                     modifier = Modifier
                         .size(42.dp)
-                        .background(Color(0xFFF5F5F5), RoundedCornerShape(5.dp))
+                        .background(BooklogsSurfaceMuted, RoundedCornerShape(5.dp))
                         .clickable(onClick = onCapturePage),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -923,7 +832,7 @@ private fun QuickLogPageInput(
                         Icons.Outlined.PhotoCamera,
                         contentDescription = "사진으로 페이지 인식",
                         modifier = Modifier.size(28.dp),
-                        tint = Color(0xFF757575),
+                        tint = BooklogsTextSecondary,
                     )
                 }
             }
@@ -932,12 +841,7 @@ private fun QuickLogPageInput(
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = it,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = 12.sp,
-                    lineHeight = 12.sp,
-                    fontWeight = FontWeight.Normal,
-                    letterSpacing = 0.sp,
-                ),
+                style = BooklogsCaptionTextStyle,
                 color = MaterialTheme.colorScheme.error,
             )
         }

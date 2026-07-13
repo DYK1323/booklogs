@@ -46,7 +46,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -70,6 +69,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.dyk1323.booklogs.ui.common.components.BooklogsLabeledTextField
+import com.dyk1323.booklogs.ui.common.components.BooklogsNumberTextField
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.CameraCapturePreview
@@ -409,23 +410,24 @@ private fun FinalTextContent(
     ) {
         CapturedPagesSummary(pages = state.capturedPages)
         Spacer(modifier = Modifier.height(10.dp))
-        OutlinedTextField(
+        BooklogsNumberTextField(
             value = state.currentPageText,
             onValueChange = onPageChanged,
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(text = "현재 페이지") },
-            singleLine = true,
+            label = "현재 페이지",
             enabled = !state.isSaved,
         )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
+        BooklogsLabeledTextField(
             value = state.quoteText,
             onValueChange = onQuoteChanged,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            label = { Text(text = "최종 인용구") },
+            label = "최종 인용구",
+            singleLine = false,
             enabled = !state.isSaved,
+            fieldWeight = 1f,
         )
         state.message?.let {
             Spacer(modifier = Modifier.height(6.dp))

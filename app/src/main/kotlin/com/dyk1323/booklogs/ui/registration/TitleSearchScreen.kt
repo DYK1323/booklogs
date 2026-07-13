@@ -1,5 +1,6 @@
 package com.dyk1323.booklogs.ui.registration
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dyk1323.booklogs.domain.model.BookMetadata
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSearchField
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.SkeletonBox
@@ -41,11 +45,21 @@ fun TitleSearchScreen(
     var query by remember { mutableStateOf("") }
 
     Scaffold(
+        containerColor = BooklogsScreenBackground,
         topBar = {
             BooklogsTopBar(title = "제목으로 검색", onBack = onBack)
         },
     ) { innerPadding ->
-        Column(modifier = modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 24.dp, vertical = 36.dp)) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(BooklogsScreenBackground)
+                .padding(innerPadding)
+                .padding(
+                    horizontal = BooklogsScreenHorizontalPadding,
+                    vertical = BooklogsScreenVerticalPadding,
+                ),
+        ) {
             BooklogsSearchField(
                 value = query,
                 onValueChange = {

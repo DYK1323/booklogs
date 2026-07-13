@@ -9,12 +9,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -23,10 +21,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
+import com.dyk1323.booklogs.ui.common.components.BooklogsLabeledTextField
+import com.dyk1323.booklogs.ui.common.components.BooklogsNumberTextField
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.FormatChoiceButton
@@ -118,53 +117,46 @@ fun BookConfirmFormScreen(
                     }
                 }
 
-                OutlinedTextField(
+                BooklogsLabeledTextField(
                     value = formState.title,
                     onValueChange = onTitleChanged,
-                    label = { Text("제목") },
+                    label = "제목",
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
                 )
-                OutlinedTextField(
+                BooklogsLabeledTextField(
                     value = formState.author,
                     onValueChange = onAuthorChanged,
-                    label = { Text("저자") },
+                    label = "저자",
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
                 )
-                OutlinedTextField(
+                BooklogsLabeledTextField(
                     value = formState.publisher,
                     onValueChange = onPublisherChanged,
-                    label = { Text("출판사") },
+                    label = "출판사",
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
                 )
-                OutlinedTextField(
+                BooklogsNumberTextField(
                     value = formState.totalPagesText,
                     onValueChange = onTotalPagesChanged,
-                    label = { Text("총 페이지") },
+                    label = "총 페이지",
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    supportingText = {
-                        if (lookupState != LookupUiState.Loading && formState.totalPagesText.isBlank()) {
-                            Text("책 정보 API에서 페이지 수를 찾지 못했어요. 직접 입력해 주세요.")
-                        }
+                    supportingText = if (lookupState != LookupUiState.Loading && formState.totalPagesText.isBlank()) {
+                        "책 정보 API에서 페이지 수를 찾지 못했어요. 직접 입력해 주세요."
+                    } else {
+                        null
                     },
                 )
-                OutlinedTextField(
+                BooklogsLabeledTextField(
                     value = formState.genre,
                     onValueChange = onGenreChanged,
-                    label = { Text("장르") },
+                    label = "장르",
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
                 )
-                OutlinedTextField(
+                BooklogsLabeledTextField(
                     value = formState.country,
                     onValueChange = onCountryChanged,
-                    label = { Text("국가") },
+                    label = "국가",
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

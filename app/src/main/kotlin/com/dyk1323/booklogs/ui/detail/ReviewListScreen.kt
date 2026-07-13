@@ -31,23 +31,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSearchField
+import com.dyk1323.booklogs.ui.common.components.BooklogsTextActionTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.EmptyState
-
-private val ReviewListActionTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 14.sp,
-    fontWeight = FontWeight.Light,
-    letterSpacing = 0.sp,
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,7 +140,7 @@ fun ReviewListScreen(
             },
             dismissButton = {
                 TextButton(onClick = { pendingDeleteReviewId = null }) {
-                    Text(text = "취소", style = ReviewListActionTextStyle, color = Color.Black)
+                    Text(text = "취소", style = BooklogsTextActionTextStyle, color = BooklogsTextPrimary)
                 }
             },
         )

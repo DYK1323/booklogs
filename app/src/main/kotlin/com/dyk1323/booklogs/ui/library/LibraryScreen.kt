@@ -33,8 +33,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dyk1323.booklogs.domain.model.BookStatus
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
+import com.dyk1323.booklogs.ui.common.components.BooklogsAccent
+import com.dyk1323.booklogs.ui.common.components.BooklogsSurfaceMuted
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSearchField
+import com.dyk1323.booklogs.ui.common.components.BooklogsTextSecondary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.EmptyState
 
@@ -58,8 +63,10 @@ fun LibraryScreen(
             modifier = modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp)
-                .padding(top = 16.dp),
+                .padding(
+                    horizontal = BooklogsScreenHorizontalPadding,
+                    vertical = BooklogsScreenVerticalPadding,
+                ),
         ) {
             BooklogsSearchField(
                 value = uiState.query,
@@ -79,8 +86,8 @@ fun LibraryScreen(
                         onClick = { viewModel.selectFilter(filter) },
                         label = { Text("${filter.label} ${uiState.countsByFilter[filter] ?: 0}") },
                         colors = AssistChipDefaults.assistChipColors(
-                            containerColor = if (selected) Color(0xFF0C7EFF) else Color(0xFFF5F5F5),
-                            labelColor = if (selected) Color.White else Color(0xFF757575),
+                            containerColor = if (selected) BooklogsAccent else BooklogsSurfaceMuted,
+                            labelColor = if (selected) Color.White else BooklogsTextSecondary,
                         ),
                     )
                 }
@@ -135,14 +142,14 @@ private fun LibraryBookRow(item: LibraryBookItemUi, onClick: () -> Unit) {
                 Text(
                     text = statusLabel(item.book.status),
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFF0C7EFF),
+                    color = BooklogsAccent,
                 )
             }
             item.book.author?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFF757575),
+                    color = BooklogsTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -151,7 +158,7 @@ private fun LibraryBookRow(item: LibraryBookItemUi, onClick: () -> Unit) {
             Text(
                 text = progressCaption(item),
                 style = MaterialTheme.typography.labelMedium,
-                color = Color(0xFF757575),
+                color = BooklogsTextSecondary,
             )
         }
     }

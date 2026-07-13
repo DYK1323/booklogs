@@ -6,10 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,23 +31,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSearchField
+import com.dyk1323.booklogs.ui.common.components.BooklogsTextActionTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.EmptyState
-
-private val ListActionTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 14.sp,
-    fontWeight = FontWeight.Light,
-    letterSpacing = 0.sp,
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,20 +102,6 @@ fun QuoteListScreen(
                 placeholder = "내용 또는 페이지 검색",
             )
 
-            if (uiState.editingQuoteId != null) {
-                Column {
-                    QuoteEditForm(
-                        quoteText = uiState.quoteText,
-                        quotePageText = uiState.quotePageText,
-                        onQuoteTextChanged = viewModel::updateQuoteText,
-                        onQuotePageTextChanged = viewModel::updateQuotePageText,
-                        onCancel = viewModel::cancelEditQuote,
-                        onSave = viewModel::saveQuote,
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                }
-            }
-
             if (filteredQuotes.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
@@ -143,6 +119,7 @@ fun QuoteListScreen(
                         QuoteCard(
                             quote = quote,
                             onComments = { viewModel.openComments(quote.id) },
+                            onOpen = { viewModel.startEditQuote(quote) },
                             onEdit = { viewModel.startEditQuote(quote) },
                             onDelete = { pendingDeleteQuoteId = quote.id },
                         )
@@ -168,10 +145,28 @@ fun QuoteListScreen(
             },
             dismissButton = {
                 TextButton(onClick = { pendingDeleteQuoteId = null }) {
-                    Text(text = "취소", style = ListActionTextStyle, color = Color.Black)
+                    Text(text = "취소", style = BooklogsTextActionTextStyle, color = BooklogsTextPrimary)
                 }
             },
         )
+    }
+
+    if (uiState.editingQuoteId != null) {
+        ModalBottomSheet(
+            onDismissRequest = { viewModel.cancelEditQuote() },
+            containerColor = BooklogsScreenBackground,
+            tonalElevation = 0.dp,
+        ) {
+            QuoteEditSheetContent(
+                quoteText = uiState.quoteText,
+                quotePageText = uiState.quotePageText,
+                message = uiState.message,
+                onQuoteTextChanged = viewModel::updateQuoteText,
+                onQuotePageTextChanged = viewModel::updateQuotePageText,
+                onCancel = viewModel::cancelEditQuote,
+                onSave = viewModel::saveQuote,
+            )
+        }
     }
 
     if (uiState.expandedCommentsQuoteId != null) {

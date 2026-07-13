@@ -54,13 +54,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dyk1323.booklogs.domain.model.Book
 import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.domain.model.BookStatus
@@ -72,74 +70,32 @@ import com.dyk1323.booklogs.domain.model.RoundEndReason
 import com.dyk1323.booklogs.domain.usecase.ConvertPagePercentUseCase
 import com.dyk1323.booklogs.domain.usecase.LogDelta
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
+import com.dyk1323.booklogs.ui.common.components.BooklogsBodyEmphasisTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsBodyTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsCaptionEmphasisTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsCaptionTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsContentCard
+import com.dyk1323.booklogs.ui.common.components.BooklogsIconAction
+import com.dyk1323.booklogs.ui.common.components.BooklogsLabeledTextField
 import com.dyk1323.booklogs.ui.common.components.BooklogsListBlock
+import com.dyk1323.booklogs.ui.common.components.BooklogsNumberTextField
 import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentRow
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetBottomPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetHorizontalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
+import com.dyk1323.booklogs.ui.common.components.BooklogsSectionEmptyText
+import com.dyk1323.booklogs.ui.common.components.BooklogsSectionTitleTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsSurfaceMuted
 import com.dyk1323.booklogs.ui.common.components.BooklogsTextAction
+import com.dyk1323.booklogs.ui.common.components.BooklogsTextPrimary
+import com.dyk1323.booklogs.ui.common.components.BooklogsTextSecondary
+import com.dyk1323.booklogs.ui.common.components.BooklogsTitleTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-
-private val DetailHeaderTitleTextStyle = TextStyle(
-    fontSize = 20.sp,
-    lineHeight = 20.sp,
-    fontWeight = FontWeight.SemiBold,
-    letterSpacing = 0.sp,
-)
-
-private val DetailHeaderMetaTextStyle = TextStyle(
-    fontSize = 12.sp,
-    lineHeight = 12.sp,
-    fontWeight = FontWeight.Light,
-    letterSpacing = 0.sp,
-)
-
-private val DetailSectionTitleTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 14.sp,
-    fontWeight = FontWeight.Light,
-    letterSpacing = 0.sp,
-)
-
-private val DetailProgressTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 14.sp,
-    fontWeight = FontWeight.Medium,
-    letterSpacing = 0.sp,
-)
-
-private val DetailListPrimaryTextStyle = TextStyle(
-    fontSize = 16.sp,
-    lineHeight = 16.sp,
-    fontWeight = FontWeight.Medium,
-    letterSpacing = 0.sp,
-)
-
-private val DetailListSecondaryTextStyle = TextStyle(
-    fontSize = 12.sp,
-    lineHeight = 12.sp,
-    fontWeight = FontWeight.Light,
-    letterSpacing = 0.sp,
-)
-
-private val DetailQuoteTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 21.sp,
-    fontWeight = FontWeight.Light,
-    letterSpacing = 0.sp,
-)
-
-private val DetailRowStatusTextStyle = TextStyle(
-    fontSize = 12.sp,
-    lineHeight = 12.sp,
-    fontWeight = FontWeight.Medium,
-    letterSpacing = 0.sp,
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -201,7 +157,7 @@ fun BookDetailScreen(
                                     Icons.Outlined.Edit,
                                     contentDescription = "책 정보 수정",
                                     modifier = Modifier.size(24.dp),
-                                    tint = Color.Black,
+                                    tint = BooklogsTextPrimary,
                                 )
                             }
                             Box(
@@ -214,7 +170,7 @@ fun BookDetailScreen(
                                     Icons.Outlined.Delete,
                                     contentDescription = "책 삭제",
                                     modifier = Modifier.size(24.dp),
-                                    tint = Color.Black,
+                                    tint = BooklogsTextPrimary,
                                 )
                             }
                         }
@@ -238,7 +194,7 @@ fun BookDetailScreen(
         LazyColumn(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color.White)
+                .background(BooklogsScreenBackground)
                 .padding(innerPadding)
                 .padding(
                     horizontal = BooklogsScreenHorizontalPadding,
@@ -271,11 +227,7 @@ fun BookDetailScreen(
                     },
                 ) {
                     if (uiState.rounds.isEmpty()) {
-                        Text(
-                            text = "아직 라운드가 없어요",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
-                        )
+                        BooklogsSectionEmptyText(text = "아직 라운드가 없어요")
                     } else {
                         Column(
                             modifier = Modifier
@@ -317,14 +269,7 @@ fun BookDetailScreen(
                     },
                 ) {
                     if (uiState.logDeltas.isEmpty()) {
-                        Text(
-                            text = "아직 진행 기록이 없어요",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 6.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
-                        )
+                        BooklogsSectionEmptyText(text = "아직 진행 기록이 없어요")
                     } else {
                         Column(
                             modifier = Modifier
@@ -369,29 +314,14 @@ fun BookDetailScreen(
                                     Icons.Outlined.Add,
                                     contentDescription = "인용구 추가",
                                     modifier = Modifier.size(22.dp),
-                                    tint = Color.Black,
+                                    tint = BooklogsTextPrimary,
                                 )
                             }
                         }
                     },
                 ) {
-                    if (uiState.editingQuoteId != null) {
-                        QuoteEditForm(
-                            quoteText = uiState.quoteText,
-                            quotePageText = uiState.quotePageText,
-                            onQuoteTextChanged = viewModel::updateQuoteText,
-                            onQuotePageTextChanged = viewModel::updateQuotePageText,
-                            onCancel = viewModel::cancelEditQuote,
-                            onSave = viewModel::saveQuote,
-                        )
-                        Spacer(modifier = Modifier.height(14.dp))
-                    }
                     if (uiState.quotes.isEmpty()) {
-                        Text(
-                            text = "저장된 인용구가 없어요",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
-                        )
+                        BooklogsSectionEmptyText(text = "저장된 인용구가 없어요")
                     } else {
                         Column(
                             modifier = Modifier
@@ -403,6 +333,7 @@ fun BookDetailScreen(
                                 QuoteCard(
                                     quote = quote,
                                     onComments = { viewModel.openComments(quote.id) },
+                                    onOpen = { viewModel.startEditQuote(quote) },
                                     onEdit = { viewModel.startEditQuote(quote) },
                                     onDelete = { pendingDeleteQuoteId = quote.id },
                                 )
@@ -421,11 +352,7 @@ fun BookDetailScreen(
                     },
                 ) {
                     if (uiState.reviews.isEmpty()) {
-                        Text(
-                            text = "저장된 독후감이 없어요",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
-                        )
+                        BooklogsSectionEmptyText(text = "저장된 독후감이 없어요")
                     } else {
                         Column(
                             modifier = Modifier
@@ -554,6 +481,24 @@ fun BookDetailScreen(
         }
     }
 
+    if (uiState.editingQuoteId != null) {
+        ModalBottomSheet(
+            onDismissRequest = { viewModel.cancelEditQuote() },
+            containerColor = BooklogsScreenBackground,
+            tonalElevation = 0.dp,
+        ) {
+            QuoteEditSheetContent(
+                quoteText = uiState.quoteText,
+                quotePageText = uiState.quotePageText,
+                message = uiState.message,
+                onQuoteTextChanged = viewModel::updateQuoteText,
+                onQuotePageTextChanged = viewModel::updateQuotePageText,
+                onCancel = viewModel::cancelEditQuote,
+                onSave = viewModel::saveQuote,
+            )
+        }
+    }
+
     pendingStatusChange?.let { target ->
         AlertDialog(
             onDismissRequest = { pendingStatusChange = null },
@@ -596,8 +541,8 @@ private fun BookHeader(state: BookDetailUiState) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = book.title,
-                    style = DetailHeaderTitleTextStyle,
-                    color = Color.Black,
+                    style = BooklogsTitleTextStyle,
+                    color = BooklogsTextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -605,8 +550,8 @@ private fun BookHeader(state: BookDetailUiState) {
                 if (authorPublisher.isNotBlank()) {
                     Text(
                         text = authorPublisher,
-                        style = DetailHeaderMetaTextStyle,
-                        color = Color(0xFF757575),
+                        style = BooklogsCaptionTextStyle,
+                        color = BooklogsTextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -615,14 +560,14 @@ private fun BookHeader(state: BookDetailUiState) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = progressText(state),
-                    style = DetailProgressTextStyle,
-                    color = Color.Black,
+                    style = BooklogsBodyTextStyle.copy(fontWeight = FontWeight.Medium),
+                    color = BooklogsTextPrimary,
                 )
                 book.genre?.let {
                     Text(
                         text = it,
-                        style = DetailHeaderMetaTextStyle,
-                        color = Color(0xFF757575),
+                        style = BooklogsCaptionTextStyle,
+                        color = BooklogsTextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -633,40 +578,59 @@ private fun BookHeader(state: BookDetailUiState) {
 }
 
 @Composable
-internal fun QuoteEditForm(
+internal fun QuoteEditSheetContent(
     quoteText: String,
     quotePageText: String,
+    message: String?,
     onQuoteTextChanged: (String) -> Unit,
     onQuotePageTextChanged: (String) -> Unit,
     onCancel: () -> Unit,
     onSave: () -> Unit,
 ) {
-    Column {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 520.dp)
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+    ) {
         Text(
-            text = "인용구 수정 중",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
+            text = "인용구 수정",
+            style = MaterialTheme.typography.titleLarge,
+            color = BooklogsTextPrimary,
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        OutlinedTextField(
-            value = quoteText,
-            onValueChange = onQuoteTextChanged,
+        Spacer(modifier = Modifier.height(10.dp))
+        BooklogsNumberTextField(
+            value = quotePageText,
+            onValueChange = onQuotePageTextChanged,
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("인용구") },
-            minLines = 2,
+            label = "현재 페이지",
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = quotePageText,
-                onValueChange = onQuotePageTextChanged,
-                modifier = Modifier.weight(1f),
-                label = { Text("페이지") },
-                singleLine = true,
+        BooklogsLabeledTextField(
+            value = quoteText,
+            onValueChange = onQuoteTextChanged,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            label = "최종 인용구",
+            singleLine = false,
+            fieldWeight = 1f,
+        )
+        message?.let {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
             )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onCancel) {
+                Text(text = "취소")
+            }
             Spacer(modifier = Modifier.width(8.dp))
-            TextButton(onClick = onCancel) { Text(text = "취소") }
-            Spacer(modifier = Modifier.width(4.dp))
             Button(onClick = onSave, shape = RoundedCornerShape(8.dp)) {
                 Text(text = "수정 저장")
             }
@@ -690,8 +654,8 @@ private fun DetailSection(
         ) {
             Text(
                 text = title,
-                style = DetailSectionTitleTextStyle,
-                color = Color(0xFF757575),
+                style = BooklogsSectionTitleTextStyle,
+                color = BooklogsTextSecondary,
             )
             actions?.invoke()
         }
@@ -711,21 +675,16 @@ private fun StatusActions(status: BookStatus, onStatusClick: (BookStatus) -> Uni
                 enabled = target != status,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (target == status) Color.White else Color.Transparent,
-                    contentColor = if (target == status) Color(0xFF111111) else Color(0xFF757575),
+                    contentColor = if (target == status) BooklogsTextPrimary else BooklogsTextSecondary,
                     disabledContainerColor = Color.White,
-                    disabledContentColor = Color(0xFF111111),
+                    disabledContentColor = BooklogsTextPrimary,
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
                 contentPadding = PaddingValues(vertical = 8.dp),
             ) {
                 Text(
                     text = statusTabLabel(target),
-                    style = TextStyle(
-                        fontSize = 16.sp,
-                        lineHeight = 16.sp,
-                        fontWeight = FontWeight.Normal,
-                        letterSpacing = 0.sp,
-                    ),
+                    style = BooklogsBodyEmphasisTextStyle.copy(fontWeight = FontWeight.Normal),
                 )
             }
         }
@@ -749,7 +708,7 @@ internal fun LogDeltaRow(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (highlighted) Color(0xFFF5F5F5) else Color.White, RoundedCornerShape(5.dp))
+            .background(if (highlighted) BooklogsSurfaceMuted else BooklogsScreenBackground, RoundedCornerShape(5.dp))
             .clickable(onClick = onToggleExpand)
             .animateContentSize()
             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -760,19 +719,19 @@ internal fun LogDeltaRow(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = "p. ${delta.log.currentPage}", style = DetailListPrimaryTextStyle, color = Color.Black)
+                Text(text = "p. ${delta.log.currentPage}", style = BooklogsBodyEmphasisTextStyle, color = BooklogsTextPrimary)
                 Text(
                     text = formatDate(delta.log.loggedAt),
-                    style = DetailListSecondaryTextStyle,
-                    color = Color(0xFF757575),
+                    style = BooklogsCaptionTextStyle,
+                    color = BooklogsTextSecondary,
                 )
             }
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = deltaLabel(book, delta),
-                    style = DetailListSecondaryTextStyle,
-                    color = Color(0xFF757575),
+                    style = BooklogsCaptionTextStyle,
+                    color = BooklogsTextSecondary,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 val inputLabel = if (book.format == BookFormat.EBOOK) "진행률" else "페이지"
@@ -845,7 +804,7 @@ internal fun RoundRow(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (highlighted) Color(0xFFF5F5F5) else Color.White, RoundedCornerShape(5.dp))
+            .background(if (highlighted) BooklogsSurfaceMuted else BooklogsScreenBackground, RoundedCornerShape(5.dp))
             .clickable(onClick = onToggleExpand)
             .animateContentSize()
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -857,17 +816,17 @@ internal fun RoundRow(
                 verticalAlignment = Alignment.Top,
             ) {
                 Column {
-                    Text(text = "${round.roundNumber}번째 라운드", style = DetailListPrimaryTextStyle, color = Color.Black)
+                    Text(text = "${round.roundNumber}번째 라운드", style = BooklogsBodyEmphasisTextStyle, color = BooklogsTextPrimary)
                     Text(
                         text = roundPeriodText(round),
-                        style = DetailListSecondaryTextStyle,
-                        color = Color(0xFF757575),
+                        style = BooklogsCaptionTextStyle,
+                        color = BooklogsTextSecondary,
                     )
                 }
                 Text(
                     text = if (isOpen) "읽는 중" else roundEndReasonLabel(round.endReason),
-                    style = DetailRowStatusTextStyle,
-                    color = Color.Black,
+                    style = BooklogsCaptionEmphasisTextStyle,
+                    color = BooklogsTextPrimary,
                 )
             }
             if (isExpanded) {
@@ -954,19 +913,20 @@ private fun roundEndReasonLabel(reason: RoundEndReason?): String = when (reason)
 }
 
 @Composable
-internal fun QuoteCard(quote: Quote, onComments: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
-    var expanded by remember(quote.id) { mutableStateOf(false) }
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF5F5F5), RoundedCornerShape(5.dp))
-            .clickable { expanded = !expanded }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+internal fun QuoteCard(
+    quote: Quote,
+    onComments: () -> Unit,
+    onOpen: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    BooklogsContentCard(
+        highlighted = true,
+        minHeight = 116.dp,
+        onClick = onOpen,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 116.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -974,16 +934,16 @@ internal fun QuoteCard(quote: Quote, onComments: () -> Unit, onEdit: () -> Unit,
             ) {
                 Text(
                     text = quote.text,
-                    style = DetailQuoteTextStyle,
-                    color = Color.Black,
-                    maxLines = if (expanded) Int.MAX_VALUE else 4,
+                    style = BooklogsBodyTextStyle,
+                    color = BooklogsTextPrimary,
+                    maxLines = 4,
                     overflow = TextOverflow.Ellipsis,
                 )
                 quotePageLabel(quote)?.let {
                     Text(
                         text = it,
-                        style = DetailListSecondaryTextStyle,
-                        color = Color(0xFF757575),
+                        style = BooklogsCaptionTextStyle,
+                        color = BooklogsTextSecondary,
                     )
                 }
             }
@@ -992,45 +952,9 @@ internal fun QuoteCard(quote: Quote, onComments: () -> Unit, onEdit: () -> Unit,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clickable(onClick = onComments),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Outlined.ChatBubbleOutline,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = Color(0xFF757575),
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clickable(onClick = onEdit),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Outlined.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = Color(0xFF757575),
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clickable(onClick = onDelete),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Outlined.Delete,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = Color(0xFF757575),
-                    )
-                }
+                BooklogsIconAction(Icons.Outlined.ChatBubbleOutline, "댓글", onComments)
+                BooklogsIconAction(Icons.Outlined.Edit, "인용구 수정", onEdit, iconSize = 24.dp)
+                BooklogsIconAction(Icons.Outlined.Delete, "인용구 삭제", onDelete, iconSize = 24.dp)
             }
         }
     }
@@ -1128,30 +1052,27 @@ internal fun ReviewCard(
     onDelete: () -> Unit,
 ) {
     var expanded by remember(review.id) { mutableStateOf(false) }
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(if (highlighted) Color(0xFFF5F5F5) else Color.White, RoundedCornerShape(5.dp))
-            .clickable { expanded = !expanded }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+    BooklogsContentCard(
+        highlighted = highlighted,
+        onClick = { expanded = !expanded },
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             if (expanded) {
-                Text(text = review.content, style = DetailQuoteTextStyle, color = Color.Black)
+                Text(text = review.content, style = BooklogsBodyTextStyle, color = BooklogsTextPrimary)
             } else {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
                         text = reviewTitle(review),
                         modifier = Modifier.weight(1f),
-                        style = DetailListPrimaryTextStyle,
-                        color = Color.Black,
+                        style = BooklogsBodyEmphasisTextStyle,
+                        color = BooklogsTextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = formatDate(review.createdAt),
-                        style = DetailListSecondaryTextStyle,
-                        color = Color(0xFF757575),
+                        style = BooklogsCaptionTextStyle,
+                        color = BooklogsTextSecondary,
                     )
                 }
             }
@@ -1167,30 +1088,16 @@ internal fun ReviewCard(
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = formatDate(review.createdAt),
-                    style = DetailListSecondaryTextStyle,
-                    color = Color(0xFF757575),
+                    style = BooklogsCaptionTextStyle,
+                    color = BooklogsTextSecondary,
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = onEdit, contentPadding = PaddingValues(0.dp)) {
-                        Icon(
-                            Icons.Outlined.Edit,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = Color(0xFF757575),
-                        )
-                    }
-                    TextButton(onClick = onDelete, contentPadding = PaddingValues(0.dp)) {
-                        Icon(
-                            Icons.Outlined.Delete,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = Color(0xFF757575),
-                        )
-                    }
+                    BooklogsIconAction(Icons.Outlined.Edit, "독후감 수정", onEdit)
+                    BooklogsIconAction(Icons.Outlined.Delete, "독후감 삭제", onDelete)
                 }
             }
         }
