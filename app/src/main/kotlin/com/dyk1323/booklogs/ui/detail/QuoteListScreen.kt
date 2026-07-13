@@ -47,6 +47,7 @@ fun QuoteListScreen(
     viewModel: BookDetailViewModel,
     onBack: () -> Unit,
     onCaptureQuoteClick: () -> Unit,
+    onEditQuoteClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -119,8 +120,7 @@ fun QuoteListScreen(
                         QuoteCard(
                             quote = quote,
                             onComments = { viewModel.openComments(quote.id) },
-                            onOpen = { viewModel.startEditQuote(quote) },
-                            onEdit = { viewModel.startEditQuote(quote) },
+                            onEdit = { onEditQuoteClick(quote.id) },
                             onDelete = { pendingDeleteQuoteId = quote.id },
                         )
                     }
@@ -149,24 +149,6 @@ fun QuoteListScreen(
                 }
             },
         )
-    }
-
-    if (uiState.editingQuoteId != null) {
-        ModalBottomSheet(
-            onDismissRequest = { viewModel.cancelEditQuote() },
-            containerColor = BooklogsScreenBackground,
-            tonalElevation = 0.dp,
-        ) {
-            QuoteEditSheetContent(
-                quoteText = uiState.quoteText,
-                quotePageText = uiState.quotePageText,
-                message = uiState.message,
-                onQuoteTextChanged = viewModel::updateQuoteText,
-                onQuotePageTextChanged = viewModel::updateQuotePageText,
-                onCancel = viewModel::cancelEditQuote,
-                onSave = viewModel::saveQuote,
-            )
-        }
     }
 
     if (uiState.expandedCommentsQuoteId != null) {

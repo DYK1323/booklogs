@@ -24,7 +24,6 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,78 +57,78 @@ val BooklogsSheetHorizontalPadding = 16.dp
 val BooklogsSheetBottomPadding = 20.dp
 
 val BooklogsTopBarTitleTextStyle = TextStyle(
-    fontSize = 20.sp,
-    lineHeight = 20.sp,
+    fontSize = 27.sp,
+    lineHeight = 27.sp,
     fontWeight = FontWeight.Normal,
     letterSpacing = 0.sp,
 )
 
 val BooklogsButtonTextStyle = TextStyle(
-    fontSize = 16.sp,
-    lineHeight = 16.sp,
+    fontSize = 21.sp,
+    lineHeight = 21.sp,
     fontWeight = FontWeight.SemiBold,
     letterSpacing = 0.sp,
 )
 
 val BooklogsCompactButtonTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 14.sp,
+    fontSize = 19.sp,
+    lineHeight = 19.sp,
     fontWeight = FontWeight.SemiBold,
     letterSpacing = 0.sp,
 )
 
 val BooklogsTextActionTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 14.sp,
+    fontSize = 19.sp,
+    lineHeight = 19.sp,
     fontWeight = FontWeight.Light,
     letterSpacing = 0.sp,
 )
 
 val BooklogsSearchTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 18.sp,
+    fontSize = 19.sp,
+    lineHeight = 24.sp,
     fontWeight = FontWeight.Normal,
     letterSpacing = 0.sp,
 )
 
 val BooklogsSectionTitleTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 14.sp,
+    fontSize = 19.sp,
+    lineHeight = 19.sp,
     fontWeight = FontWeight.Light,
     letterSpacing = 0.sp,
 )
 
 val BooklogsTitleTextStyle = TextStyle(
-    fontSize = 20.sp,
-    lineHeight = 22.sp,
+    fontSize = 27.sp,
+    lineHeight = 29.sp,
     fontWeight = FontWeight.SemiBold,
     letterSpacing = 0.sp,
 )
 
 val BooklogsBodyEmphasisTextStyle = TextStyle(
-    fontSize = 16.sp,
-    lineHeight = 20.sp,
+    fontSize = 21.sp,
+    lineHeight = 27.sp,
     fontWeight = FontWeight.Medium,
     letterSpacing = 0.sp,
 )
 
 val BooklogsBodyTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 21.sp,
+    fontSize = 19.sp,
+    lineHeight = 28.sp,
     fontWeight = FontWeight.Light,
     letterSpacing = 0.sp,
 )
 
 val BooklogsCaptionTextStyle = TextStyle(
-    fontSize = 12.sp,
-    lineHeight = 16.sp,
+    fontSize = 16.sp,
+    lineHeight = 21.sp,
     fontWeight = FontWeight.Normal,
     letterSpacing = 0.sp,
 )
 
 val BooklogsCaptionEmphasisTextStyle = TextStyle(
-    fontSize = 12.sp,
-    lineHeight = 16.sp,
+    fontSize = 16.sp,
+    lineHeight = 21.sp,
     fontWeight = FontWeight.Medium,
     letterSpacing = 0.sp,
 )
@@ -215,8 +214,13 @@ fun BooklogsFilledButton(
 }
 
 @Composable
-fun BooklogsTextAction(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    TextButton(onClick = onClick, modifier = modifier.height(36.dp)) {
+fun BooklogsTextAction(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    height: Dp = 36.dp,
+) {
+    TextButton(onClick = onClick, modifier = modifier.height(height)) {
         Text(
             text = text,
             style = BooklogsTextActionTextStyle,
@@ -232,8 +236,8 @@ fun BooklogsSectionEmptyText(text: String, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 6.dp, vertical = 4.dp),
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+        style = BooklogsBodyTextStyle,
+        color = BooklogsTextSecondary,
     )
 }
 
@@ -412,6 +416,19 @@ fun BooklogsIconAction(
 }
 
 @Composable
+fun BooklogsCardActions(
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        content = content,
+    )
+}
+
+@Composable
 fun BooklogsSegmentRow(modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
     Row(
         modifier = modifier
@@ -444,7 +461,7 @@ fun RowScope.BooklogsSegmentButton(
     ) {
         Text(
             text = text,
-            style = BooklogsCompactButtonTextStyle.copy(fontWeight = FontWeight.Normal),
+            style = BooklogsCompactButtonTextStyle,
             color = if (selected) BooklogsTextPrimary else BooklogsTextSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

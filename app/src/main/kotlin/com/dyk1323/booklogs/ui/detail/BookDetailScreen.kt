@@ -45,6 +45,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -72,9 +73,11 @@ import com.dyk1323.booklogs.domain.usecase.LogDelta
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
 import com.dyk1323.booklogs.ui.common.components.BooklogsBodyEmphasisTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsBodyTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsCardActions
 import com.dyk1323.booklogs.ui.common.components.BooklogsCaptionEmphasisTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsCaptionTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsContentCard
+import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsIconAction
 import com.dyk1323.booklogs.ui.common.components.BooklogsLabeledTextField
 import com.dyk1323.booklogs.ui.common.components.BooklogsListBlock
@@ -105,6 +108,7 @@ fun BookDetailScreen(
     onBack: () -> Unit,
     onDeleted: () -> Unit,
     onCaptureQuoteClick: () -> Unit,
+    onEditQuoteClick: (Long) -> Unit,
     onViewAllRoundsClick: () -> Unit,
     onViewAllLogsClick: () -> Unit,
     onViewAllQuotesClick: () -> Unit,
@@ -333,8 +337,7 @@ fun BookDetailScreen(
                                 QuoteCard(
                                     quote = quote,
                                     onComments = { viewModel.openComments(quote.id) },
-                                    onOpen = { viewModel.startEditQuote(quote) },
-                                    onEdit = { viewModel.startEditQuote(quote) },
+                                    onEdit = { onEditQuoteClick(quote.id) },
                                     onDelete = { pendingDeleteQuoteId = quote.id },
                                 )
                             }
@@ -346,8 +349,23 @@ fun BookDetailScreen(
                 DetailSection(
                     title = "독후감",
                     actions = {
-                        if (uiState.reviews.isNotEmpty()) {
-                            BooklogsTextAction(text = "전체 보기", onClick = onViewAllReviewsClick)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (uiState.reviews.isNotEmpty()) {
+                                BooklogsTextAction(text = "전체 보기", onClick = onViewAllReviewsClick)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clickable(onClick = onWriteReviewClick),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Add,
+                                    contentDescription = "독후감 작성",
+                                    modifier = Modifier.size(22.dp),
+                                    tint = BooklogsTextPrimary,
+                                )
+                            }
                         }
                     },
                 ) {
@@ -481,24 +499,6 @@ fun BookDetailScreen(
         }
     }
 
-    if (uiState.editingQuoteId != null) {
-        ModalBottomSheet(
-            onDismissRequest = { viewModel.cancelEditQuote() },
-            containerColor = BooklogsScreenBackground,
-            tonalElevation = 0.dp,
-        ) {
-            QuoteEditSheetContent(
-                quoteText = uiState.quoteText,
-                quotePageText = uiState.quotePageText,
-                message = uiState.message,
-                onQuoteTextChanged = viewModel::updateQuoteText,
-                onQuotePageTextChanged = viewModel::updateQuotePageText,
-                onCancel = viewModel::cancelEditQuote,
-                onSave = viewModel::saveQuote,
-            )
-        }
-    }
-
     pendingStatusChange?.let { target ->
         AlertDialog(
             onDismissRequest = { pendingStatusChange = null },
@@ -578,61 +578,113 @@ private fun BookHeader(state: BookDetailUiState) {
 }
 
 @Composable
-internal fun QuoteEditSheetContent(
-    quoteText: String,
-    quotePageText: String,
-    message: String?,
-    onQuoteTextChanged: (String) -> Unit,
-    onQuotePageTextChanged: (String) -> Unit,
-    onCancel: () -> Unit,
-    onSave: () -> Unit,
+fun QuoteEditScreen(
+    bookId: Long,
+    quoteId: Long,
+    viewModel: BookDetailViewModel,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 520.dp)
-            .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-    ) {
-        Text(
-            text = "인용구 수정",
-            style = MaterialTheme.typography.titleLarge,
-            color = BooklogsTextPrimary,
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-        BooklogsNumberTextField(
-            value = quotePageText,
-            onValueChange = onQuotePageTextChanged,
-            modifier = Modifier.fillMaxWidth(),
-            label = "현재 페이지",
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        BooklogsLabeledTextField(
-            value = quoteText,
-            onValueChange = onQuoteTextChanged,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            label = "최종 인용구",
-            singleLine = false,
-            fieldWeight = 1f,
-        )
-        message?.let {
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = it,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.error,
-            )
+    val uiState by viewModel.uiState.collectAsState()
+    val quote = uiState.quotes.firstOrNull { it.id == quoteId }
+    var editLoaded by remember(quoteId) { mutableStateOf(false) }
+    var saveRequested by remember(quoteId) { mutableStateOf(false) }
+
+    DisposableEffect(quoteId) {
+        onDispose { viewModel.cancelEditQuote() }
+    }
+    LaunchedEffect(bookId) {
+        viewModel.selectBook(bookId)
+    }
+    LaunchedEffect(quote?.id) {
+        if (!editLoaded && quote != null) {
+            viewModel.startEditQuote(quote)
+            editLoaded = true
         }
-        Spacer(modifier = Modifier.height(10.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onCancel) {
-                Text(text = "취소")
+    }
+    LaunchedEffect(saveRequested, uiState.editingQuoteId, uiState.message) {
+        if (saveRequested && uiState.editingQuoteId == null && uiState.message == "인용구를 수정했어요.") {
+            onBack()
+        }
+    }
+
+    Scaffold(
+        containerColor = BooklogsScreenBackground,
+        topBar = {
+            BooklogsTopBar(
+                title = "인용구 수정",
+                onBack = {
+                    viewModel.cancelEditQuote()
+                    onBack()
+                },
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(BooklogsScreenBackground)
+                .padding(innerPadding)
+                .padding(horizontal = BooklogsScreenHorizontalPadding, vertical = BooklogsScreenVerticalPadding),
+        ) {
+            if (quote == null && !editLoaded) {
+                Text(
+                    text = "인용구를 찾지 못했어요.",
+                    style = BooklogsBodyTextStyle,
+                    color = BooklogsTextSecondary,
+                )
+                return@Column
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = onSave, shape = RoundedCornerShape(8.dp)) {
-                Text(text = "수정 저장")
+            BooklogsNumberTextField(
+                value = uiState.quotePageText,
+                onValueChange = viewModel::updateQuotePageText,
+                label = "현재 페이지",
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            BooklogsLabeledTextField(
+                value = uiState.quoteText,
+                onValueChange = viewModel::updateQuoteText,
+                label = "최종 인용구",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                singleLine = false,
+                fieldWeight = 1f,
+            )
+            uiState.message?.takeUnless { it == "인용구를 수정했어요." }?.let {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = it,
+                    style = BooklogsCaptionTextStyle,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BooklogsFilledButton(
+                    text = "취소",
+                    onClick = {
+                        viewModel.cancelEditQuote()
+                        onBack()
+                    },
+                    modifier = Modifier.width(72.dp),
+                    compact = true,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                BooklogsFilledButton(
+                    text = "수정 저장",
+                    onClick = {
+                        saveRequested = true
+                        viewModel.saveQuote()
+                    },
+                    modifier = Modifier.width(96.dp),
+                    primary = true,
+                    compact = true,
+                )
             }
         }
     }
@@ -916,14 +968,14 @@ private fun roundEndReasonLabel(reason: RoundEndReason?): String = when (reason)
 internal fun QuoteCard(
     quote: Quote,
     onComments: () -> Unit,
-    onOpen: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    var expanded by remember(quote.id) { mutableStateOf(false) }
     BooklogsContentCard(
         highlighted = true,
         minHeight = 116.dp,
-        onClick = onOpen,
+        onClick = { expanded = !expanded },
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -936,7 +988,7 @@ internal fun QuoteCard(
                     text = quote.text,
                     style = BooklogsBodyTextStyle,
                     color = BooklogsTextPrimary,
-                    maxLines = 4,
+                    maxLines = if (expanded) Int.MAX_VALUE else 4,
                     overflow = TextOverflow.Ellipsis,
                 )
                 quotePageLabel(quote)?.let {
@@ -948,10 +1000,7 @@ internal fun QuoteCard(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            BooklogsCardActions {
                 BooklogsIconAction(Icons.Outlined.ChatBubbleOutline, "댓글", onComments)
                 BooklogsIconAction(Icons.Outlined.Edit, "인용구 수정", onEdit, iconSize = 24.dp)
                 BooklogsIconAction(Icons.Outlined.Delete, "인용구 삭제", onDelete, iconSize = 24.dp)
@@ -1091,13 +1140,9 @@ internal fun ReviewCard(
                     style = BooklogsCaptionTextStyle,
                     color = BooklogsTextSecondary,
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    BooklogsIconAction(Icons.Outlined.Edit, "독후감 수정", onEdit)
-                    BooklogsIconAction(Icons.Outlined.Delete, "독후감 삭제", onDelete)
+                BooklogsCardActions {
+                    BooklogsIconAction(Icons.Outlined.Edit, "독후감 수정", onEdit, iconSize = 24.dp)
+                    BooklogsIconAction(Icons.Outlined.Delete, "독후감 삭제", onDelete, iconSize = 24.dp)
                 }
             }
         }

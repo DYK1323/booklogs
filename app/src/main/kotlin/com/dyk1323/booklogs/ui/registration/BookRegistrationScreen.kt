@@ -20,8 +20,8 @@ import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 
 private val RegistrationTitleTextStyle = TextStyle(
-    fontSize = 20.sp,
-    lineHeight = 20.sp,
+    fontSize = 27.sp,
+    lineHeight = 27.sp,
     fontWeight = FontWeight.SemiBold,
     letterSpacing = 0.sp,
 )

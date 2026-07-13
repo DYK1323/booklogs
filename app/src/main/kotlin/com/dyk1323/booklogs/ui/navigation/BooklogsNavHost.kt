@@ -17,6 +17,7 @@ import com.dyk1323.booklogs.ui.dashboard.DashboardViewModel
 import com.dyk1323.booklogs.ui.detail.BookDetailScreen
 import com.dyk1323.booklogs.ui.detail.BookDetailViewModel
 import com.dyk1323.booklogs.ui.detail.LogListScreen
+import com.dyk1323.booklogs.ui.detail.QuoteEditScreen
 import com.dyk1323.booklogs.ui.detail.QuoteListScreen
 import com.dyk1323.booklogs.ui.detail.RoundListScreen
 import com.dyk1323.booklogs.ui.detail.ReviewListScreen
@@ -108,6 +109,9 @@ fun BooklogsNavHost(
                 onCaptureQuoteClick = {
                     navController.navigate(Destinations.quoteCapture(bookId))
                 },
+                onEditQuoteClick = { quoteId ->
+                    navController.navigate(Destinations.quoteEditor(bookId, quoteId))
+                },
                 onViewAllRoundsClick = {
                     navController.navigate(Destinations.roundList(bookId))
                 },
@@ -163,6 +167,26 @@ fun BooklogsNavHost(
                 onCaptureQuoteClick = {
                     navController.navigate(Destinations.quoteCapture(bookId))
                 },
+                onEditQuoteClick = { quoteId ->
+                    navController.navigate(Destinations.quoteEditor(bookId, quoteId))
+                },
+            )
+        }
+
+        composable(
+            route = Destinations.QUOTE_EDITOR,
+            arguments = listOf(
+                navArgument("bookId") { type = NavType.LongType },
+                navArgument("quoteId") { type = NavType.LongType },
+            ),
+        ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getLong("bookId") ?: return@composable
+            val quoteId = backStackEntry.arguments?.getLong("quoteId") ?: return@composable
+            QuoteEditScreen(
+                bookId = bookId,
+                quoteId = quoteId,
+                viewModel = bookDetailViewModel,
+                onBack = { navController.popBackStack() },
             )
         }
 

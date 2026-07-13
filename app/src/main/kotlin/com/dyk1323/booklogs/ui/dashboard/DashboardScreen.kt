@@ -91,7 +91,7 @@ import com.dyk1323.booklogs.domain.usecase.DayPageTotal
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
 import com.dyk1323.booklogs.ui.common.components.BooklogsAccent
 import com.dyk1323.booklogs.ui.common.components.BooklogsBodyEmphasisTextStyle
-import com.dyk1323.booklogs.ui.common.components.BooklogsButtonTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsBodyTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsCaptionTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
@@ -513,7 +513,7 @@ private fun BookShelfTile(item: BookShelfItemUi, onClick: () -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = item.book.title,
-            style = BooklogsCaptionTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
+            style = BooklogsBodyTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 2.dp),
@@ -719,11 +719,10 @@ private fun QuickLogSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "상세 보기",
-                modifier = Modifier.clickable(onClick = onOpenDetail),
-                style = BooklogsButtonTextStyle.copy(fontSize = 14.sp, lineHeight = 14.sp),
-                color = BooklogsAccent,
+            BooklogsTextAction(
+                text = "상세보기",
+                onClick = onOpenDetail,
+                height = 43.dp,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,

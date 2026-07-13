@@ -379,35 +379,35 @@ private fun GoalInput(
 }
 
 private val SettingsSectionTitleTextStyle = TextStyle(
-    fontSize = 20.sp,
-    lineHeight = 20.sp,
+    fontSize = 27.sp,
+    lineHeight = 27.sp,
     fontWeight = FontWeight.SemiBold,
     letterSpacing = 0.sp,
 )
 
 private val SettingsBodyTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 14.sp,
+    fontSize = 19.sp,
+    lineHeight = 19.sp,
     fontWeight = FontWeight.Normal,
     letterSpacing = 0.sp,
 )
 
 private val SettingsActionTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 14.sp,
+    fontSize = 19.sp,
+    lineHeight = 19.sp,
     letterSpacing = 0.sp,
 )
 
 private val SettingsInputTextStyle = TextStyle(
-    fontSize = 12.sp,
-    lineHeight = 12.sp,
+    fontSize = 16.sp,
+    lineHeight = 16.sp,
     fontWeight = FontWeight.Normal,
     letterSpacing = 0.sp,
 )
 
 private val SettingsCaptionTextStyle = TextStyle(
-    fontSize = 12.sp,
-    lineHeight = 12.sp,
+    fontSize = 16.sp,
+    lineHeight = 16.sp,
     fontWeight = FontWeight.Normal,
     letterSpacing = 0.sp,
 )
