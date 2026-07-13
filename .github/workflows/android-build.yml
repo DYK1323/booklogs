@@ -44,6 +44,9 @@ jobs:
           GOOGLE_BOOKS_API_KEY: ${{ secrets.GOOGLE_BOOKS_API_KEY }}
         run: ./gradlew :app:testDebugUnitTest --stacktrace
 
+      - name: Show preview build config
+        run: grep -n -A8 'create("preview")' app/build.gradle.kts
+
       - name: Build preview APK
         env:
           KAKAO_API_KEY: ${{ secrets.KAKAO_API_KEY }}
