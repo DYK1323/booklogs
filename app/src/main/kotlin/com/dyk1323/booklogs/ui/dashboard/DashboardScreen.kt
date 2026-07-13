@@ -58,7 +58,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -92,8 +91,11 @@ import androidx.core.content.ContextCompat
 import com.dyk1323.booklogs.domain.usecase.DayPageTotal
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetBottomPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetHorizontalPadding
+import com.dyk1323.booklogs.ui.common.components.BooklogsTextAction
 import com.dyk1323.booklogs.ui.common.components.CameraCapturePreview
 import com.dyk1323.booklogs.ui.common.components.EmptyState
 import com.dyk1323.booklogs.ui.common.formatRelativeTime
@@ -158,7 +160,10 @@ fun DashboardScreen(
                     .fillMaxSize()
                     .background(Color.White)
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp, vertical = 20.dp),
+                    .padding(
+                        horizontal = BooklogsScreenHorizontalPadding,
+                        vertical = BooklogsScreenVerticalPadding,
+                    ),
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
                 TodayPagesHero(
@@ -167,49 +172,11 @@ fun DashboardScreen(
                     totals = uiState.weekTotals,
                 )
                 Spacer(modifier = Modifier.height(36.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "내 책장",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 16.sp,
-                            lineHeight = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        ),
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Text(
-                            text = "${uiState.readingBooks.size}권",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = 10.sp,
-                                lineHeight = 10.sp,
-                                fontWeight = FontWeight.Normal,
-                            ),
-                            color = Color(0xFF757575),
-                        )
-                        Text(
-                            text = "라이브러리",
-                            modifier = Modifier.clickable(onClick = onLibraryClick),
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontSize = 12.sp,
-                                lineHeight = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                            ),
-                            color = Color(0xFF0C7EFF),
-                        )
-                        Box(modifier = Modifier.clickable(onClick = onSettingsClick)) {
-                            DashboardSettingsIcon()
-                        }
-                    }
-                }
+                DashboardShelfHeader(
+                    bookCount = uiState.readingBooks.size,
+                    onLibraryClick = onLibraryClick,
+                    onSettingsClick = onSettingsClick,
+                )
                 Spacer(modifier = Modifier.height(16.dp))
                 if (uiState.readingBooks.isEmpty() && !uiState.isLoading) {
                     EmptyState(
@@ -233,20 +200,11 @@ fun DashboardScreen(
                             }
                         }
                         Spacer(modifier = Modifier.height(12.dp))
-                        TextButton(
+                        BooklogsTextAction(
+                            text = "새 책 추가",
                             onClick = onRegisterBookClick,
                             modifier = Modifier.align(Alignment.CenterHorizontally),
-                        ) {
-                            Text(
-                                text = "새 책 추가",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = 12.sp,
-                                    lineHeight = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                ),
-                                color = Color(0xFF0C7EFF),
-                            )
-                        }
+                        )
                     }
                 }
             }
@@ -361,6 +319,51 @@ private fun PageCameraCapture(
                 .background(Color.Black.copy(alpha = 0.4f), CircleShape),
         ) {
             Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "취소", tint = Color.White)
+        }
+    }
+}
+
+@Composable
+private fun DashboardShelfHeader(
+    bookCount: Int,
+    onLibraryClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "내 책장",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 16.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+            ),
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "${bookCount}권",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 10.sp,
+                    lineHeight = 10.sp,
+                    fontWeight = FontWeight.Normal,
+                ),
+                color = Color(0xFF757575),
+            )
+            BooklogsTextAction(
+                text = "라이브러리",
+                onClick = onLibraryClick,
+            )
+            Box(modifier = Modifier.clickable(onClick = onSettingsClick)) {
+                DashboardSettingsIcon()
+            }
         }
     }
 }

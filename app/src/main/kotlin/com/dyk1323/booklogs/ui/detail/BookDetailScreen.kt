@@ -77,6 +77,9 @@ import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentRow
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetBottomPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetHorizontalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
+import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
+import com.dyk1323.booklogs.ui.common.components.BooklogsTextAction
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import java.time.Instant
 import java.time.ZoneId
@@ -120,13 +123,6 @@ private val DetailListPrimaryTextStyle = TextStyle(
 private val DetailListSecondaryTextStyle = TextStyle(
     fontSize = 12.sp,
     lineHeight = 12.sp,
-    fontWeight = FontWeight.Light,
-    letterSpacing = 0.sp,
-)
-
-private val DetailSectionActionTextStyle = TextStyle(
-    fontSize = 14.sp,
-    lineHeight = 14.sp,
     fontWeight = FontWeight.Light,
     letterSpacing = 0.sp,
 )
@@ -244,7 +240,10 @@ fun BookDetailScreen(
                 .fillMaxSize()
                 .background(Color.White)
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 20.dp),
+                .padding(
+                    horizontal = BooklogsScreenHorizontalPadding,
+                    vertical = BooklogsScreenVerticalPadding,
+                ),
             verticalArrangement = Arrangement.spacedBy(36.dp),
         ) {
             item { BookHeader(state = uiState) }
@@ -267,9 +266,7 @@ fun BookDetailScreen(
                     title = "라운드 이력",
                     actions = {
                         if (uiState.rounds.size > 3) {
-                            TextButton(onClick = onViewAllRoundsClick) {
-                                Text(text = "전체 보기", style = DetailSectionActionTextStyle, color = Color(0xFF0C7EFF))
-                            }
+                            BooklogsTextAction(text = "전체 보기", onClick = onViewAllRoundsClick)
                         }
                     },
                 ) {
@@ -315,9 +312,7 @@ fun BookDetailScreen(
                     title = "진행 이력",
                     actions = {
                         if (uiState.logDeltas.size > 3) {
-                            TextButton(onClick = onViewAllLogsClick) {
-                                Text(text = "전체 보기", style = DetailSectionActionTextStyle, color = Color(0xFF0C7EFF))
-                            }
+                            BooklogsTextAction(text = "전체 보기", onClick = onViewAllLogsClick)
                         }
                     },
                 ) {
@@ -362,9 +357,7 @@ fun BookDetailScreen(
                     actions = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (uiState.quotes.isNotEmpty()) {
-                                TextButton(onClick = onViewAllQuotesClick) {
-                                    Text(text = "전체 보기", style = DetailSectionActionTextStyle, color = Color(0xFF0C7EFF))
-                                }
+                                BooklogsTextAction(text = "전체 보기", onClick = onViewAllQuotesClick)
                             }
                             Box(
                                 modifier = Modifier
@@ -423,9 +416,7 @@ fun BookDetailScreen(
                     title = "독후감",
                     actions = {
                         if (uiState.reviews.isNotEmpty()) {
-                            TextButton(onClick = onViewAllReviewsClick) {
-                                Text(text = "전체 보기", style = DetailSectionActionTextStyle, color = Color(0xFF0C7EFF))
-                            }
+                            BooklogsTextAction(text = "전체 보기", onClick = onViewAllReviewsClick)
                         }
                     },
                 ) {

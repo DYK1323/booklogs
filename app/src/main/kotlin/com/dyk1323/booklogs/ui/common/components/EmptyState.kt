@@ -11,7 +11,6 @@ import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,9 +48,7 @@ fun EmptyState(
         )
         if (actionLabel != null && onActionClick != null) {
             Spacer(modifier = Modifier.height(12.dp))
-            TextButton(onClick = onActionClick) {
-                Text(text = actionLabel)
-            }
+            BooklogsTextAction(text = actionLabel, onClick = onActionClick)
         }
     }
 }
