@@ -112,6 +112,9 @@ class DashboardViewModel(
     private val _quickLogSaveSucceeded = Channel<Unit>(Channel.BUFFERED)
     val quickLogSaveSucceeded: Flow<Unit> = _quickLogSaveSucceeded.receiveAsFlow()
 
+    private val _quickLogSaveThenCaptureQuoteSucceeded = Channel<Long>(Channel.BUFFERED)
+    val quickLogSaveThenCaptureQuoteSucceeded: Flow<Long> = _quickLogSaveThenCaptureQuoteSucceeded.receiveAsFlow()
+
     val uiState: StateFlow<DashboardUiState> = combine(
         bookRepository.observeAll(),
         readingLogRepository.observeAll(),
@@ -261,6 +264,23 @@ class DashboardViewModel(
     }
 
     fun saveQuickLog() {
+        saveQuickLog(onSaved = { _quickLogSaveSucceeded.send(Unit) })
+    }
+
+    fun saveQuickLogThenCaptureQuote() {
+        val sheet = quickLogSheetState.value ?: return
+        val unchangedInput =
+            sheet.editingLogId == null && sheet.inputText == inputTextFor(sheet.book, sheet.currentPage)
+        if (sheet.inputText.isBlank() || unchangedInput) {
+            viewModelScope.launch {
+                _quickLogSaveThenCaptureQuoteSucceeded.send(sheet.book.id)
+            }
+            return
+        }
+        saveQuickLog(onSaved = { bookId -> _quickLogSaveThenCaptureQuoteSucceeded.send(bookId) })
+    }
+
+    private fun saveQuickLog(onSaved: suspend (Long) -> Unit) {
         val sheet = quickLogSheetState.value ?: return
         val inputValue = sheet.inputText.toIntOrNull()
         if (inputValue == null) {
@@ -284,7 +304,7 @@ class DashboardViewModel(
                 editLogUseCase(editingId, currentPage)
                 quickLogSaving.value = false
                 editingLogId.value = null
-                _quickLogSaveSucceeded.send(Unit)
+                onSaved(sheet.book.id)
                 return@launch
             }
 
@@ -304,7 +324,7 @@ class DashboardViewModel(
                 logDateEpochDay = LocalDate.now(zoneId).toEpochDay(),
             )
             quickLogSaving.value = false
-            _quickLogSaveSucceeded.send(Unit)
+            onSaved(sheet.book.id)
         }
     }
 

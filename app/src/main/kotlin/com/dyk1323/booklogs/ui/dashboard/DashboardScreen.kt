@@ -141,6 +141,12 @@ fun DashboardScreen(
             viewModel.closeQuickLog()
         }
     }
+    LaunchedEffect(Unit) {
+        viewModel.quickLogSaveThenCaptureQuoteSucceeded.collect { bookId ->
+            viewModel.closeQuickLog()
+            onCaptureQuoteClick(bookId)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -281,9 +287,7 @@ fun DashboardScreen(
                             onBookDetailClick(bookId)
                         },
                         onCaptureQuote = {
-                            val bookId = sheetState.book.id
-                            viewModel.closeQuickLog()
-                            onCaptureQuoteClick(bookId)
+                            viewModel.saveQuickLogThenCaptureQuote()
                         },
                         onCapturePage = { isCapturingPage = true },
                         onEditLatestLog = viewModel::startEditLatestLog,

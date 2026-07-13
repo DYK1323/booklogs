@@ -324,6 +324,9 @@ fun BookDetailScreen(
                     if (uiState.logDeltas.isEmpty()) {
                         Text(
                             text = "아직 진행 기록이 없어요",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 6.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
                         )
