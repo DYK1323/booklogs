@@ -218,6 +218,7 @@ fun BookDetailScreen(
                     end = BooklogsScreenHorizontalPadding,
                     bottom = booklogsScreenBottomPadding(),
                 ),
+            contentPadding = PaddingValues(bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(36.dp),
         ) {
             item { BookHeader(state = uiState) }

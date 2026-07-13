@@ -60,6 +60,7 @@ import com.dyk1323.booklogs.data.settings.ThemeMode
 import com.dyk1323.booklogs.ui.common.theme.BooklogsAccent
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
 import com.dyk1323.booklogs.ui.common.theme.BooklogsHairline
+import com.dyk1323.booklogs.ui.common.theme.BooklogsInputTextStyle
 import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.theme.BooklogsSectionTitleTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentButton
@@ -436,7 +437,7 @@ private fun GoalInput(
             .heightIn(min = minHeight)
             .onFocusChanged { isFocused = it.isFocused },
         singleLine = true,
-        textStyle = SettingsInputTextStyle.copy(color = BooklogsTextPrimary),
+        textStyle = BooklogsInputTextStyle.copy(color = BooklogsTextPrimary),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         decorationBox = { innerTextField ->
             Row(
@@ -454,7 +455,7 @@ private fun GoalInput(
                     if (value.isEmpty()) {
                         Text(
                             text = "하루에 읽을 페이지 수 목표",
-                            style = SettingsInputTextStyle,
+                            style = BooklogsInputTextStyle,
                             color = BooklogsTextPlaceholder,
                         )
                     }
@@ -462,7 +463,7 @@ private fun GoalInput(
                 }
                 Text(
                     text = "p",
-                    style = SettingsInputTextStyle,
+                    style = BooklogsInputTextStyle,
                     color = BooklogsTextPlaceholder,
                 )
             }
@@ -480,13 +481,6 @@ private val SettingsBodyTextStyle = TextStyle(
 private val SettingsActionTextStyle = TextStyle(
     fontSize = 19.sp,
     lineHeight = 19.sp,
-    letterSpacing = 0.sp,
-)
-
-private val SettingsInputTextStyle = TextStyle(
-    fontSize = 16.sp,
-    lineHeight = 16.sp,
-    fontWeight = FontWeight.Normal,
     letterSpacing = 0.sp,
 )
 

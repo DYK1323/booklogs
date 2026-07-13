@@ -116,11 +116,7 @@ val BooklogsCompactButtonTextStyle = booklogsTextStyle(
     fontWeight = FontWeight.Medium,
 )
 
-val BooklogsSegmentTextStyle = booklogsTextStyle(
-    fontSize = 15,
-    lineHeight = 17,
-    fontWeight = FontWeight.Medium,
-)
+val BooklogsSegmentTextStyle = BooklogsCompactButtonTextStyle
 
 val BooklogsTextActionTextStyle = booklogsTextStyle(
     fontSize = 17,
@@ -128,9 +124,9 @@ val BooklogsTextActionTextStyle = booklogsTextStyle(
     fontWeight = FontWeight.Medium,
 )
 
-val BooklogsSearchTextStyle = booklogsTextStyle(
-    fontSize = 17,
-    lineHeight = 24,
+val BooklogsInputTextStyle = booklogsTextStyle(
+    fontSize = 16,
+    lineHeight = 16,
     fontWeight = FontWeight.Normal,
 )
 

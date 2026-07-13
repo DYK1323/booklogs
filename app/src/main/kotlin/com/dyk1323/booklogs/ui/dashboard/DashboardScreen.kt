@@ -100,6 +100,8 @@ import com.dyk1323.booklogs.ui.common.theme.BooklogsBodyEmphasisTextStyle
 import com.dyk1323.booklogs.ui.common.theme.BooklogsBodyTextStyle
 import com.dyk1323.booklogs.ui.common.theme.BooklogsCaptionTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
+import com.dyk1323.booklogs.ui.common.theme.BooklogsHairline
+import com.dyk1323.booklogs.ui.common.theme.BooklogsInputTextStyle
 import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
@@ -110,6 +112,7 @@ import com.dyk1323.booklogs.ui.common.components.BooklogsTextAction
 import com.dyk1323.booklogs.ui.common.components.booklogsScreenBottomPadding
 import com.dyk1323.booklogs.ui.common.components.booklogsScaledDp
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPlaceholder
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTitleTextStyle
 import com.dyk1323.booklogs.ui.common.components.CameraCapturePreview
@@ -776,7 +779,7 @@ private fun QuickLogPageInput(
     val activeBorderColor = when {
         errorMessage != null -> MaterialTheme.colorScheme.error
         isFocused -> BooklogsAccent
-        else -> BooklogsTextSecondary
+        else -> BooklogsHairline
     }
     val activeBorderWidth = if (isFocused && errorMessage == null) 1.dp else 0.5.dp
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -802,7 +805,7 @@ private fun QuickLogPageInput(
                     .heightIn(min = inputMinHeight)
                     .onFocusChanged { isFocused = it.isFocused },
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                textStyle = BooklogsInputTextStyle.copy(color = BooklogsTextPrimary),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number,
                     imeAction = ImeAction.Done,
@@ -829,7 +832,7 @@ private fun QuickLogPageInput(
                             if (value.text.isEmpty()) {
                                 Text(
                                     text = "현재까지 읽은 페이지",
-                                    style = BooklogsCaptionTextStyle,
+                                    style = BooklogsInputTextStyle,
                                     color = BooklogsTextPlaceholder,
                                 )
                             }
@@ -837,7 +840,7 @@ private fun QuickLogPageInput(
                         }
                         Text(
                             text = inputSuffix,
-                            style = BooklogsCaptionTextStyle,
+                            style = BooklogsInputTextStyle,
                             color = BooklogsTextPlaceholder,
                         )
                     }

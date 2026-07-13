@@ -53,9 +53,9 @@ import com.dyk1323.booklogs.ui.common.theme.BooklogsButtonTextStyle
 import com.dyk1323.booklogs.ui.common.theme.BooklogsCaptionTextStyle
 import com.dyk1323.booklogs.ui.common.theme.BooklogsCompactButtonTextStyle
 import com.dyk1323.booklogs.ui.common.theme.BooklogsHairline
+import com.dyk1323.booklogs.ui.common.theme.BooklogsInputTextStyle
 import com.dyk1323.booklogs.ui.common.theme.BooklogsOnAccent
 import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
-import com.dyk1323.booklogs.ui.common.theme.BooklogsSearchTextStyle
 import com.dyk1323.booklogs.ui.common.theme.BooklogsSegmentTextStyle
 import com.dyk1323.booklogs.ui.common.theme.BooklogsSurfaceMuted
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextActionTextStyle
@@ -219,7 +219,7 @@ fun BooklogsSearchField(
 ) {
     val minHeight = booklogsScaledDp(48.dp)
     var isFocused by remember { mutableStateOf(false) }
-    val borderColor = if (isFocused) BooklogsAccent else BooklogsTextSecondary
+    val borderColor = if (isFocused) BooklogsAccent else BooklogsHairline
     val borderWidth = if (isFocused) 1.dp else 0.5.dp
     BasicTextField(
         value = value,
@@ -231,7 +231,7 @@ fun BooklogsSearchField(
             .border(borderWidth, borderColor, BooklogsBlockShape)
             .onFocusChanged { isFocused = it.isFocused },
         singleLine = true,
-        textStyle = BooklogsSearchTextStyle.copy(color = BooklogsTextPrimary),
+        textStyle = BooklogsInputTextStyle.copy(color = BooklogsTextPrimary),
         decorationBox = { innerTextField ->
             Row(
                 modifier = Modifier
@@ -247,7 +247,7 @@ fun BooklogsSearchField(
                     if (value.isEmpty()) {
                         Text(
                             text = placeholder,
-                            style = BooklogsSearchTextStyle,
+                            style = BooklogsInputTextStyle,
                             color = BooklogsTextPlaceholder,
                         )
                     }
@@ -285,7 +285,7 @@ fun BooklogsLabeledTextField(
     val horizontalPadding = booklogsScaledDp(12.dp)
     val multilineVerticalPadding = booklogsScaledDp(12.dp)
     var isFocused by remember { mutableStateOf(false) }
-    val borderColor = if (isFocused) BooklogsAccent else BooklogsTextSecondary
+    val borderColor = if (isFocused) BooklogsAccent else BooklogsHairline
     val borderWidth = if (isFocused) 1.dp else 0.5.dp
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -308,7 +308,7 @@ fun BooklogsLabeledTextField(
             modifier = fieldModifier,
             enabled = enabled,
             singleLine = singleLine,
-            textStyle = BooklogsSearchTextStyle.copy(
+            textStyle = BooklogsInputTextStyle.copy(
                 color = if (enabled) BooklogsTextPrimary else BooklogsTextSecondary,
             ),
             keyboardOptions = keyboardOptions,
@@ -331,8 +331,8 @@ fun BooklogsLabeledTextField(
                         suffix?.let {
                             Text(
                                 text = it,
-                                style = BooklogsSearchTextStyle,
-                                color = BooklogsTextSecondary,
+                                style = BooklogsInputTextStyle,
+                                color = BooklogsTextPlaceholder,
                             )
                         }
                     }
@@ -378,14 +378,14 @@ fun BooklogsReadOnlyTextField(
                 .fillMaxWidth()
                 .heightIn(min = scaledMinHeight)
                 .background(containerColor, BooklogsBlockShape)
-                .border(0.5.dp, BooklogsTextSecondary, BooklogsBlockShape)
+                .border(0.5.dp, BooklogsHairline, BooklogsBlockShape)
                 .clickable(onClick = onClick)
-                .padding(horizontal = booklogsScaledDp(12.dp), vertical = booklogsScaledDp(10.dp)),
+                .padding(horizontal = booklogsScaledDp(12.dp)),
             contentAlignment = Alignment.CenterStart,
         ) {
             Text(
                 text = value,
-                style = BooklogsSearchTextStyle,
+                style = BooklogsInputTextStyle,
                 color = BooklogsTextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
