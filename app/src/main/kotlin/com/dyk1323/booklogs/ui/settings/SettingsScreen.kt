@@ -1,6 +1,7 @@
 ﻿package com.dyk1323.booklogs.ui.settings
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -39,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.dyk1323.booklogs.BuildConfig
 import com.dyk1323.booklogs.data.settings.ThemeMode
 import com.dyk1323.booklogs.ui.common.theme.BooklogsAccent
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
@@ -66,6 +69,12 @@ import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.booklogsScaledDp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -78,8 +87,11 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var showTimePicker by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
+    var isCheckingUpdate by remember { mutableStateOf(false) }
+    var updateDialog by remember { mutableStateOf<UpdateDialogState?>(null) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -231,6 +243,32 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            SettingsSection(title = "앱 업데이트") {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(booklogsScaledDp(8.dp)),
+                ) {
+                    BooklogsFilledButton(
+                        text = if (isCheckingUpdate) "업데이트 확인 중" else "업데이트 확인",
+                        onClick = {
+                            coroutineScope.launch {
+                                isCheckingUpdate = true
+                                updateDialog = checkGitHubReleaseUpdate()
+                                isCheckingUpdate = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        compact = true,
+                        enabled = !isCheckingUpdate,
+                    )
+                    Text(
+                        text = "현재 버전 ${BuildConfig.VERSION_NAME}",
+                        style = SettingsCaptionTextStyle,
+                        color = BooklogsTextSecondary,
+                    )
+                }
+            }
         }
     }
 
@@ -274,6 +312,33 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { pendingImportUri = null }) { Text(text = "취소") }
+            },
+        )
+    }
+
+    updateDialog?.let { dialogState ->
+        AlertDialog(
+            onDismissRequest = { updateDialog = null },
+            title = { Text(text = dialogState.title) },
+            text = { Text(text = dialogState.message) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        dialogState.releaseUrl?.let { url ->
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        }
+                        updateDialog = null
+                    },
+                ) {
+                    Text(text = if (dialogState.releaseUrl == null) "확인" else "릴리즈 열기")
+                }
+            },
+            dismissButton = if (dialogState.releaseUrl == null) {
+                null
+            } else {
+                {
+                    TextButton(onClick = { updateDialog = null }) { Text(text = "닫기") }
+                }
             },
         )
     }
@@ -436,6 +501,77 @@ private val SettingsCaptionTextStyle = TextStyle(
     fontWeight = FontWeight.Normal,
     letterSpacing = 0.sp,
 )
+
+private data class GitHubRelease(
+    val tagName: String,
+    val htmlUrl: String,
+)
+
+private data class UpdateDialogState(
+    val title: String,
+    val message: String,
+    val releaseUrl: String? = null,
+)
+
+private const val GitHubLatestReleaseUrl = "https://api.github.com/repos/DYK1323/booklogs/releases/latest"
+
+private val GitHubReleaseHttpClient = OkHttpClient()
+
+private suspend fun checkGitHubReleaseUpdate(): UpdateDialogState {
+    val latestRelease = runCatching { fetchLatestGitHubRelease() }.getOrElse {
+        return UpdateDialogState(
+            title = "업데이트 확인 실패",
+            message = "업데이트 정보를 가져오지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해주세요.",
+        )
+    }
+
+    if (latestRelease == null) {
+        return UpdateDialogState(
+            title = "릴리즈 없음",
+            message = "아직 GitHub Release에 등록된 APK가 없어요.",
+        )
+    }
+
+    val currentVersion = BuildConfig.VERSION_NAME.normalizedReleaseVersion()
+    val latestVersion = latestRelease.tagName.normalizedReleaseVersion()
+
+    return if (latestVersion == currentVersion) {
+        UpdateDialogState(
+            title = "최신 버전",
+            message = "현재 최신 버전을 사용 중이에요.\n${BuildConfig.VERSION_NAME}",
+        )
+    } else {
+        UpdateDialogState(
+            title = "업데이트 가능",
+            message = "새 릴리즈가 있어요.\n현재: ${BuildConfig.VERSION_NAME}\n최신: ${latestRelease.tagName}",
+            releaseUrl = latestRelease.htmlUrl,
+        )
+    }
+}
+
+private suspend fun fetchLatestGitHubRelease(): GitHubRelease? = withContext(Dispatchers.IO) {
+    val request = Request.Builder()
+        .url(GitHubLatestReleaseUrl)
+        .header("Accept", "application/vnd.github+json")
+        .build()
+
+    GitHubReleaseHttpClient.newCall(request).execute().use { response ->
+        if (response.code == 404) return@withContext null
+        if (!response.isSuccessful) error("GitHub release request failed: ${response.code}")
+
+        val body = response.body?.string().orEmpty()
+        val json = JSONObject(body)
+        GitHubRelease(
+            tagName = json.optString("tag_name"),
+            htmlUrl = json.optString("html_url"),
+        )
+    }
+}
+
+private fun String.normalizedReleaseVersion(): String =
+    trim()
+        .removePrefix("v")
+        .substringBefore("+")
 
 private fun defaultBackupFileName(): String =
     "booklogs_backup_${LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.json"
