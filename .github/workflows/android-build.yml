@@ -54,7 +54,7 @@ jobs:
         run: |
           ./gradlew :app:assemblePreview --stacktrace \
             -PversionCode=${{ github.run_number }} \
-            -PversionName="0.1.0-preview.${{ github.run_number }}+${{ github.sha }}"
+            -PversionName="0.1.1-preview.${{ github.run_number }}+${{ github.sha }}"
 
       - name: Show preview APK size
         run: |

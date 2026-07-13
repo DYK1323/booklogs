@@ -32,6 +32,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -102,6 +103,7 @@ import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTitleTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
+import com.dyk1323.booklogs.ui.common.components.booklogsScreenBottomPadding
 import com.dyk1323.booklogs.ui.common.components.booklogsScaledDp
 import java.time.Instant
 import java.time.LocalDate
@@ -211,8 +213,10 @@ fun BookDetailScreen(
                 .background(BooklogsScreenBackground)
                 .padding(innerPadding)
                 .padding(
-                    horizontal = BooklogsScreenHorizontalPadding,
-                    vertical = BooklogsScreenVerticalPadding,
+                    start = BooklogsScreenHorizontalPadding,
+                    top = BooklogsScreenVerticalPadding,
+                    end = BooklogsScreenHorizontalPadding,
+                    bottom = booklogsScreenBottomPadding(),
                 ),
             verticalArrangement = Arrangement.spacedBy(36.dp),
         ) {
@@ -635,7 +639,12 @@ fun QuoteEditScreen(
                 .fillMaxSize()
                 .background(BooklogsScreenBackground)
                 .padding(innerPadding)
-                .padding(horizontal = BooklogsScreenHorizontalPadding, vertical = BooklogsScreenVerticalPadding),
+                .padding(
+                    start = BooklogsScreenHorizontalPadding,
+                    top = BooklogsScreenVerticalPadding,
+                    end = BooklogsScreenHorizontalPadding,
+                    bottom = booklogsScreenBottomPadding(),
+                ),
         ) {
             if (quote == null && !editLoaded) {
                 Text(
@@ -997,6 +1006,9 @@ private fun RoundDatePickerField(
         )
         DatePickerDialog(
             onDismissRequest = { showPicker = false },
+            colors = DatePickerDefaults.colors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -1015,7 +1027,12 @@ private fun RoundDatePickerField(
                 }
             },
         ) {
-            DatePicker(state = datePickerState)
+            DatePicker(
+                state = datePickerState,
+                colors = DatePickerDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+            )
         }
     }
 }

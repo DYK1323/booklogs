@@ -32,6 +32,7 @@ import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSearchField
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.SkeletonBox
+import com.dyk1323.booklogs.ui.common.components.booklogsScreenBottomPadding
 import com.dyk1323.booklogs.ui.common.theme.BooklogsBodyTextStyle
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
 
@@ -59,8 +60,10 @@ fun TitleSearchScreen(
                 .background(BooklogsScreenBackground)
                 .padding(innerPadding)
                 .padding(
-                    horizontal = BooklogsScreenHorizontalPadding,
-                    vertical = BooklogsScreenVerticalPadding,
+                    start = BooklogsScreenHorizontalPadding,
+                    top = BooklogsScreenVerticalPadding,
+                    end = BooklogsScreenHorizontalPadding,
+                    bottom = booklogsScreenBottomPadding(),
                 ),
         ) {
             BooklogsSearchField(

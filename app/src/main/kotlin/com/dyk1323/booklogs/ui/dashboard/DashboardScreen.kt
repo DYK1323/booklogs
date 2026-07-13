@@ -107,6 +107,7 @@ import com.dyk1323.booklogs.ui.common.components.BooklogsSheetBottomPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetHorizontalPadding
 import com.dyk1323.booklogs.ui.common.theme.BooklogsSurfaceMuted
 import com.dyk1323.booklogs.ui.common.components.BooklogsTextAction
+import com.dyk1323.booklogs.ui.common.components.booklogsScreenBottomPadding
 import com.dyk1323.booklogs.ui.common.components.booklogsScaledDp
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPlaceholder
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
@@ -176,8 +177,10 @@ fun DashboardScreen(
                     .background(BooklogsScreenBackground)
                     .padding(innerPadding)
                     .padding(
-                        horizontal = BooklogsScreenHorizontalPadding,
-                        vertical = BooklogsScreenVerticalPadding,
+                        start = BooklogsScreenHorizontalPadding,
+                        top = BooklogsScreenVerticalPadding,
+                        end = BooklogsScreenHorizontalPadding,
+                        bottom = booklogsScreenBottomPadding(),
                     ),
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -768,7 +771,7 @@ private fun QuickLogPageInput(
     onDone: () -> Unit,
     onCapturePage: () -> Unit,
 ) {
-    val inputMinHeight = booklogsScaledDp(42.dp)
+    val inputMinHeight = booklogsScaledDp(48.dp)
     var isFocused by remember { mutableStateOf(false) }
     val activeBorderColor = when {
         errorMessage != null -> MaterialTheme.colorScheme.error

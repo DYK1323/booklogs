@@ -69,6 +69,7 @@ import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPlaceholder
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
+import com.dyk1323.booklogs.ui.common.components.booklogsScreenBottomPadding
 import com.dyk1323.booklogs.ui.common.components.booklogsScaledDp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -113,7 +114,7 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .background(BooklogsScreenBackground)
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp, vertical = 36.dp),
+                .padding(start = 24.dp, top = 36.dp, end = 24.dp, bottom = booklogsScreenBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(36.dp),
         ) {
             SettingsSection(title = "리마인더") {
@@ -423,7 +424,7 @@ private fun GoalInput(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val minHeight = booklogsScaledDp(42.dp)
+    val minHeight = booklogsScaledDp(48.dp)
     var isFocused by remember { mutableStateOf(false) }
     val borderColor = if (isFocused) BooklogsAccent else BooklogsHairline
     val borderWidth = if (isFocused) 1.dp else 0.5.dp

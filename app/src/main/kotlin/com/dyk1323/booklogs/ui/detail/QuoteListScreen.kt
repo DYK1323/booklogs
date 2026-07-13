@@ -40,6 +40,7 @@ import com.dyk1323.booklogs.ui.common.theme.BooklogsTextActionTextStyle
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.EmptyState
+import com.dyk1323.booklogs.ui.common.components.booklogsScreenBottomPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,7 +95,12 @@ fun QuoteListScreen(
                 .fillMaxSize()
                 .background(BooklogsScreenBackground)
                 .padding(innerPadding)
-                .padding(horizontal = BooklogsScreenHorizontalPadding, vertical = BooklogsScreenVerticalPadding),
+                .padding(
+                    start = BooklogsScreenHorizontalPadding,
+                    top = BooklogsScreenVerticalPadding,
+                    end = BooklogsScreenHorizontalPadding,
+                    bottom = booklogsScreenBottomPadding(),
+                ),
             verticalArrangement = Arrangement.spacedBy(36.dp),
         ) {
             BooklogsSearchField(

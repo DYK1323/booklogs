@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.EmptyState
+import com.dyk1323.booklogs.ui.common.components.booklogsScreenBottomPadding
 
 @Composable
 fun LogListScreen(
@@ -54,7 +55,7 @@ fun LogListScreen(
                 .fillMaxSize()
                 .background(BooklogsScreenBackground)
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 20.dp),
+                .padding(start = 16.dp, top = 20.dp, end = 16.dp, bottom = booklogsScreenBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             itemsIndexed(uiState.logDeltas, key = { _, delta -> delta.log.id }) { index, delta ->

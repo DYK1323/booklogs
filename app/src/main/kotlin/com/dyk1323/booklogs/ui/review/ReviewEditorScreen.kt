@@ -27,6 +27,7 @@ import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsLabeledTextField
 import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
+import com.dyk1323.booklogs.ui.common.components.booklogsScreenBottomPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +61,7 @@ fun ReviewEditorScreen(
                 .fillMaxSize()
                 .background(BooklogsScreenBackground)
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = booklogsScreenBottomPadding()),
         ) {
             RatingSelector(rating = uiState.rating, onRatingChanged = viewModel::updateRating)
             Spacer(modifier = Modifier.height(16.dp))

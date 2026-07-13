@@ -18,6 +18,7 @@ import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
 import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
+import com.dyk1323.booklogs.ui.common.components.booklogsScreenBottomPadding
 
 private val RegistrationTitleTextStyle = TextStyle(
     fontSize = 27.sp,
@@ -45,7 +46,7 @@ fun BookRegistrationScreen(
             modifier = modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp, vertical = 36.dp),
+                .padding(start = 24.dp, top = 36.dp, end = 24.dp, bottom = booklogsScreenBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(

@@ -75,6 +75,7 @@ import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.CameraCapturePreview
 import com.dyk1323.booklogs.ui.common.components.LoadingOverlay
+import com.dyk1323.booklogs.ui.common.components.booklogsScreenBottomPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -406,7 +407,7 @@ private fun FinalTextContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = booklogsScreenBottomPadding()),
     ) {
         CapturedPagesSummary(pages = state.capturedPages)
         Spacer(modifier = Modifier.height(10.dp))

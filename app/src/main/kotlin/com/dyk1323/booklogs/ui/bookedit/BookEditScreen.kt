@@ -28,6 +28,7 @@ import com.dyk1323.booklogs.ui.common.components.BooklogsNumberTextField
 import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.FormatChoiceButton
+import com.dyk1323.booklogs.ui.common.components.booklogsScreenBottomPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +61,7 @@ fun BookEditScreen(
                 .background(BooklogsScreenBackground)
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 20.dp),
+                .padding(start = 16.dp, top = 20.dp, end = 16.dp, bottom = booklogsScreenBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             BooklogsLabeledTextField(

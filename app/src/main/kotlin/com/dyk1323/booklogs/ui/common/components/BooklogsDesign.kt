@@ -82,6 +82,9 @@ fun booklogsScaledDp(value: Dp): Dp {
 }
 
 @Composable
+fun booklogsScreenBottomPadding(): Dp = with(LocalDensity.current) { 64.toDp() }
+
+@Composable
 fun BooklogsTopBar(
     title: String,
     onBack: () -> Unit,
@@ -273,7 +276,7 @@ fun BooklogsLabeledTextField(
     supportingText: String? = null,
     suffix: String? = null,
     enabled: Boolean = true,
-    minHeight: Dp = if (singleLine) 44.dp else 140.dp,
+    minHeight: Dp = if (singleLine) 48.dp else 140.dp,
     fieldWeight: Float? = null,
     containerColor: Color = Color.Transparent,
 ) {
@@ -356,7 +359,7 @@ fun BooklogsReadOnlyTextField(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    minHeight: Dp = 44.dp,
+    minHeight: Dp = 48.dp,
     containerColor: Color = Color.Transparent,
 ) {
     val labelSpacing = booklogsScaledDp(4.dp)
