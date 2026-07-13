@@ -12,6 +12,7 @@ import com.dyk1323.booklogs.domain.repository.BookMetadataRepository
 import com.dyk1323.booklogs.domain.repository.BookRepository
 import com.dyk1323.booklogs.domain.usecase.RegisterBookUseCase
 import com.dyk1323.booklogs.domain.usecase.validateBookForm
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -81,7 +82,12 @@ class BookRegistrationViewModel(
     private val _saveState = MutableStateFlow<SaveUiState>(SaveUiState.Idle)
     val saveState: StateFlow<SaveUiState> = _saveState.asStateFlow()
 
+    private var searchJob: Job? = null
+    private var latestSearchQuery: String = ""
+
     fun reset() {
+        searchJob?.cancel()
+        latestSearchQuery = ""
         _lookupState.value = LookupUiState.Idle
         _searchState.value = SearchUiState.Idle
         _formState.value = BookFormState()
@@ -101,16 +107,23 @@ class BookRegistrationViewModel(
     }
 
     fun searchByTitle(query: String) {
-        if (query.isBlank()) {
+        val normalizedQuery = query.trim()
+        searchJob?.cancel()
+        latestSearchQuery = normalizedQuery
+
+        if (normalizedQuery.isBlank()) {
             _searchState.value = SearchUiState.Idle
             return
         }
         _searchState.value = SearchUiState.Loading
-        viewModelScope.launch {
-            _searchState.value = when (val result = bookMetadataRepository.searchByTitle(query)) {
+        searchJob = viewModelScope.launch {
+            val nextState = when (val result = bookMetadataRepository.searchByTitle(normalizedQuery)) {
                 is ApiLookupResult.Success -> SearchUiState.Results(result.data)
                 is ApiLookupResult.NotFound -> SearchUiState.Empty
                 is ApiLookupResult.NetworkError -> SearchUiState.NetworkError
+            }
+            if (latestSearchQuery == normalizedQuery) {
+                _searchState.value = nextState
             }
         }
     }

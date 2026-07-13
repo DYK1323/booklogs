@@ -843,8 +843,8 @@ private fun QuickLogPageInput(
             if (showPageCameraButton) {
                 Box(
                     modifier = Modifier
-                        .width(inputMinHeight)
                         .fillMaxHeight()
+                        .aspectRatio(1f, matchHeightConstraintsFirst = true)
                         .heightIn(min = inputMinHeight)
                         .background(BooklogsSurfaceMuted, RoundedCornerShape(5.dp))
                         .clickable(onClick = onCapturePage),

@@ -61,6 +61,7 @@ import com.dyk1323.booklogs.ui.common.theme.BooklogsAccent
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
 import com.dyk1323.booklogs.ui.common.theme.BooklogsHairline
 import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsSectionTitleTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentRow
 import com.dyk1323.booklogs.ui.common.theme.BooklogsSurfaceMuted
@@ -355,8 +356,8 @@ private fun SettingsSection(
     ) {
         Text(
             text = title,
-            style = SettingsSectionTitleTextStyle,
-            color = BooklogsTextPrimary,
+            style = BooklogsSectionTitleTextStyle,
+            color = BooklogsTextSecondary,
         )
         content()
     }
@@ -468,13 +469,6 @@ private fun GoalInput(
     )
 }
 
-private val SettingsSectionTitleTextStyle = TextStyle(
-    fontSize = 27.sp,
-    lineHeight = 27.sp,
-    fontWeight = FontWeight.SemiBold,
-    letterSpacing = 0.sp,
-)
-
 private val SettingsBodyTextStyle = TextStyle(
     fontSize = 19.sp,
     lineHeight = 19.sp,
@@ -572,6 +566,7 @@ private fun String.normalizedReleaseVersion(): String =
     trim()
         .removePrefix("v")
         .substringBefore("+")
+        .substringBefore("-")
 
 private fun defaultBackupFileName(): String =
     "booklogs_backup_${LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.json"

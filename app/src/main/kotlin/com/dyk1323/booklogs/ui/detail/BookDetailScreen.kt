@@ -57,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -749,11 +750,18 @@ internal fun LogDeltaRow(
     onCancelEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val cardShape = RoundedCornerShape(5.dp)
+    val cardBackground = when {
+        isExpanded -> MaterialTheme.colorScheme.surface
+        highlighted -> BooklogsSurfaceMuted
+        else -> BooklogsScreenBackground
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = booklogsScaledDp(57.dp))
-            .background(if (highlighted) BooklogsSurfaceMuted else BooklogsScreenBackground, RoundedCornerShape(5.dp))
+            .then(if (isExpanded) Modifier.shadow(elevation = 10.dp, shape = cardShape, clip = false) else Modifier)
+            .background(cardBackground, cardShape)
             .clickable(onClick = onToggleExpand)
             .animateContentSize()
             .padding(horizontal = 16.dp, vertical = 16.dp),
@@ -842,10 +850,17 @@ internal fun RoundRow(
     onDelete: () -> Unit,
 ) {
     val isOpen = round.finishedAt == null
+    val cardShape = RoundedCornerShape(5.dp)
+    val cardBackground = when {
+        isExpanded -> MaterialTheme.colorScheme.surface
+        highlighted -> BooklogsSurfaceMuted
+        else -> BooklogsScreenBackground
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (highlighted) BooklogsSurfaceMuted else BooklogsScreenBackground, RoundedCornerShape(5.dp))
+            .then(if (isExpanded) Modifier.shadow(elevation = 10.dp, shape = cardShape, clip = false) else Modifier)
+            .background(cardBackground, cardShape)
             .clickable(onClick = onToggleExpand)
             .animateContentSize()
             .padding(horizontal = 16.dp, vertical = 12.dp),

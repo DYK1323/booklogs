@@ -280,7 +280,6 @@ fun BooklogsLabeledTextField(
     val labelSpacing = booklogsScaledDp(4.dp)
     val scaledMinHeight = booklogsScaledDp(minHeight)
     val horizontalPadding = booklogsScaledDp(12.dp)
-    val singleLineVerticalPadding = booklogsScaledDp(10.dp)
     val multilineVerticalPadding = booklogsScaledDp(12.dp)
     var isFocused by remember { mutableStateOf(false) }
     val borderColor = if (isFocused) BooklogsAccent else BooklogsTextSecondary
@@ -317,7 +316,7 @@ fun BooklogsLabeledTextField(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = scaledMinHeight)
-                            .padding(horizontal = horizontalPadding, vertical = singleLineVerticalPadding),
+                            .padding(horizontal = horizontalPadding),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(

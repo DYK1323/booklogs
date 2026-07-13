@@ -107,25 +107,25 @@ val BooklogsTopBarTitleTextStyle = TextStyle(
 
 val BooklogsButtonTextStyle = BooklogsTypography.labelLarge.copy(
     lineHeight = 21.sp,
-    fontWeight = FontWeight.SemiBold,
+    fontWeight = FontWeight.Medium,
 )
 
 val BooklogsCompactButtonTextStyle = booklogsTextStyle(
     fontSize = 17,
     lineHeight = 19,
-    fontWeight = FontWeight.SemiBold,
+    fontWeight = FontWeight.Medium,
 )
 
 val BooklogsSegmentTextStyle = booklogsTextStyle(
     fontSize = 15,
     lineHeight = 17,
-    fontWeight = FontWeight.Normal,
+    fontWeight = FontWeight.Medium,
 )
 
 val BooklogsTextActionTextStyle = booklogsTextStyle(
     fontSize = 17,
     lineHeight = 19,
-    fontWeight = FontWeight.Light,
+    fontWeight = FontWeight.Medium,
 )
 
 val BooklogsSearchTextStyle = booklogsTextStyle(
