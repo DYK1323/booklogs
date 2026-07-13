@@ -53,6 +53,11 @@ jobs:
             -PversionCode=${{ github.run_number }} \
             -PversionName="0.1.0-preview.${{ github.run_number }}+${{ github.sha }}"
 
+      - name: Show preview APK size
+        run: |
+          ls -lh app/build/outputs/apk/preview/app-preview.apk
+          stat -c 'bytes=%s' app/build/outputs/apk/preview/app-preview.apk
+
       - name: Upload preview APK
         uses: actions/upload-artifact@v7
         with:
