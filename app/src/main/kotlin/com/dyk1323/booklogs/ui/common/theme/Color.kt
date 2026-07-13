@@ -1,5 +1,8 @@
 package com.dyk1323.booklogs.ui.common.theme
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 
 // Values from docs/PLAN.md "비주얼 디자인 원칙" — Apple HIG-derived palette (Apple Blue as the sole
@@ -62,3 +65,51 @@ val SurfaceContainerLowLight = Color(0xFFF2F2F7) // iOS systemGray6
 val SurfaceContainerHighestLight = Color(0xFFC7C7CC) // iOS systemGray3
 val SurfaceContainerHighestDark = Color(0xFF636366) // iOS systemGray2 (dark)
 val ScrimColor = Color(0xFF000000)
+
+val BooklogsScreenBackground: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = MaterialTheme.colorScheme.surface
+
+val BooklogsTextPrimary: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = MaterialTheme.colorScheme.onSurface
+
+val BooklogsTextSecondary: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = MaterialTheme.colorScheme.onSurfaceVariant
+
+val BooklogsTextTertiary: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+
+val BooklogsTextPlaceholder: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.56f)
+
+val BooklogsAccent: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = MaterialTheme.colorScheme.primary
+
+val BooklogsOnAccent: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = MaterialTheme.colorScheme.onPrimary
+
+val BooklogsSurfaceMuted: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = MaterialTheme.colorScheme.surfaceVariant
+
+val BooklogsHairline: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = MaterialTheme.colorScheme.outline
+
+val BooklogsOverlayScrim = ScrimColor.copy(alpha = 0.56f)
+val BooklogsOnOverlay = OnPrimary

@@ -1,4 +1,4 @@
-package com.dyk1323.booklogs.ui.review
+﻿package com.dyk1323.booklogs.ui.review
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsLabeledTextField
-import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 
 @OptIn(ExperimentalMaterial3Api::class)

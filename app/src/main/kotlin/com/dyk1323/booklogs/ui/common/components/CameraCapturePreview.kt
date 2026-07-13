@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -30,12 +29,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.dyk1323.booklogs.ui.common.theme.BooklogsBodyEmphasisTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsOnOverlay
+import com.dyk1323.booklogs.ui.common.theme.BooklogsOverlayScrim
 
 /**
  * "Open the back camera, tap to capture a still bitmap" preview — shared between quote capture
@@ -94,11 +95,11 @@ fun CameraCapturePreview(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.56f))
+                .background(BooklogsOverlayScrim)
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(text = captionText, style = MaterialTheme.typography.bodyMedium, color = Color.White)
+            Text(text = captionText, style = BooklogsBodyEmphasisTextStyle, color = BooklogsOnOverlay)
             Spacer(modifier = Modifier.height(12.dp))
             Button(
                 onClick = {

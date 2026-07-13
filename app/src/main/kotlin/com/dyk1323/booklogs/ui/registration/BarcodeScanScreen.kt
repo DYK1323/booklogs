@@ -1,4 +1,4 @@
-package com.dyk1323.booklogs.ui.registration
+﻿package com.dyk1323.booklogs.ui.registration
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -34,7 +34,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import java.util.concurrent.Executors
 

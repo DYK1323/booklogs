@@ -6,9 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -33,105 +35,37 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.dyk1323.booklogs.ui.common.theme.BooklogsAccent
+import com.dyk1323.booklogs.ui.common.theme.BooklogsBodyTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsButtonTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsCaptionTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsCompactButtonTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsHairline
+import com.dyk1323.booklogs.ui.common.theme.BooklogsOnAccent
+import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsSearchTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsSegmentTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsSurfaceMuted
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextActionTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPlaceholder
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextTertiary
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTopBarTitleTextStyle
 
 val BooklogsButtonShape = RoundedCornerShape(5.dp)
 val BooklogsBlockShape = RoundedCornerShape(5.dp)
-val BooklogsScreenBackground = Color.White
-val BooklogsTextPrimary = Color(0xFF111111)
-val BooklogsTextSecondary = Color(0xFF757575)
-val BooklogsTextTertiary = Color(0xFF8C8C8C)
-val BooklogsTextPlaceholder = Color(0xFFB3B3B3)
-val BooklogsAccent = Color(0xFF0C7EFF)
-val BooklogsSurfaceMuted = Color(0xFFF5F5F5)
-val BooklogsHairline = Color(0xFFB3B3B3)
 val BooklogsScreenHorizontalPadding = 16.dp
 val BooklogsScreenVerticalPadding = 20.dp
 val BooklogsSheetHorizontalPadding = 16.dp
 val BooklogsSheetBottomPadding = 20.dp
-
-val BooklogsTopBarTitleTextStyle = TextStyle(
-    fontSize = 27.sp,
-    lineHeight = 27.sp,
-    fontWeight = FontWeight.Normal,
-    letterSpacing = 0.sp,
-)
-
-val BooklogsButtonTextStyle = TextStyle(
-    fontSize = 21.sp,
-    lineHeight = 21.sp,
-    fontWeight = FontWeight.SemiBold,
-    letterSpacing = 0.sp,
-)
-
-val BooklogsCompactButtonTextStyle = TextStyle(
-    fontSize = 19.sp,
-    lineHeight = 19.sp,
-    fontWeight = FontWeight.SemiBold,
-    letterSpacing = 0.sp,
-)
-
-val BooklogsTextActionTextStyle = TextStyle(
-    fontSize = 19.sp,
-    lineHeight = 19.sp,
-    fontWeight = FontWeight.Light,
-    letterSpacing = 0.sp,
-)
-
-val BooklogsSearchTextStyle = TextStyle(
-    fontSize = 19.sp,
-    lineHeight = 24.sp,
-    fontWeight = FontWeight.Normal,
-    letterSpacing = 0.sp,
-)
-
-val BooklogsSectionTitleTextStyle = TextStyle(
-    fontSize = 19.sp,
-    lineHeight = 19.sp,
-    fontWeight = FontWeight.Light,
-    letterSpacing = 0.sp,
-)
-
-val BooklogsTitleTextStyle = TextStyle(
-    fontSize = 27.sp,
-    lineHeight = 29.sp,
-    fontWeight = FontWeight.SemiBold,
-    letterSpacing = 0.sp,
-)
-
-val BooklogsBodyEmphasisTextStyle = TextStyle(
-    fontSize = 21.sp,
-    lineHeight = 27.sp,
-    fontWeight = FontWeight.Medium,
-    letterSpacing = 0.sp,
-)
-
-val BooklogsBodyTextStyle = TextStyle(
-    fontSize = 19.sp,
-    lineHeight = 28.sp,
-    fontWeight = FontWeight.Light,
-    letterSpacing = 0.sp,
-)
-
-val BooklogsCaptionTextStyle = TextStyle(
-    fontSize = 16.sp,
-    lineHeight = 21.sp,
-    fontWeight = FontWeight.Normal,
-    letterSpacing = 0.sp,
-)
-
-val BooklogsCaptionEmphasisTextStyle = TextStyle(
-    fontSize = 16.sp,
-    lineHeight = 21.sp,
-    fontWeight = FontWeight.Medium,
-    letterSpacing = 0.sp,
-)
+private val BooklogsSegmentOuterPadding = 4.dp
+private val BooklogsSegmentChipHorizontalPadding = 8.dp
+private val BooklogsSegmentChipVerticalPadding = 6.dp
 
 @Composable
 fun BooklogsTopBar(
@@ -140,16 +74,18 @@ fun BooklogsTopBar(
     modifier: Modifier = Modifier,
     actions: @Composable () -> Unit = {},
 ) {
+    val backgroundColor = BooklogsScreenBackground
+    val hairlineColor = BooklogsHairline
     Row(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .height(48.dp)
-            .background(Color.White)
+            .heightIn(min = 48.dp)
+            .background(backgroundColor)
             .drawBehind {
                 val stroke = 0.8.dp.toPx()
                 drawLine(
-                    color = BooklogsHairline,
+                    color = hairlineColor,
                     start = Offset(0f, size.height - stroke / 2f),
                     end = Offset(size.width, size.height - stroke / 2f),
                     strokeWidth = stroke,
@@ -192,24 +128,29 @@ fun BooklogsFilledButton(
     modifier: Modifier = Modifier,
     primary: Boolean = false,
     enabled: Boolean = true,
-    height: Dp = 42.dp,
+    height: Dp? = null,
     compact: Boolean = false,
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.height(height),
+        modifier = if (height != null) modifier.height(height) else modifier,
         enabled = enabled,
         shape = BooklogsButtonShape,
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (primary) BooklogsAccent else BooklogsSurfaceMuted,
-            contentColor = if (primary) Color.White else BooklogsTextSecondary,
+            contentColor = if (primary) BooklogsOnAccent else BooklogsTextSecondary,
             disabledContainerColor = BooklogsSurfaceMuted,
             disabledContentColor = BooklogsTextPlaceholder,
         ),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
     ) {
-        Text(text = text, style = if (compact) BooklogsCompactButtonTextStyle else BooklogsButtonTextStyle)
+        Text(
+            text = text,
+            style = if (compact) BooklogsCompactButtonTextStyle else BooklogsButtonTextStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -218,9 +159,9 @@ fun BooklogsTextAction(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    height: Dp = 36.dp,
+    height: Dp? = null,
 ) {
-    TextButton(onClick = onClick, modifier = modifier.height(height)) {
+    TextButton(onClick = onClick, modifier = if (height != null) modifier.height(height) else modifier) {
         Text(
             text = text,
             style = BooklogsTextActionTextStyle,
@@ -253,7 +194,7 @@ fun BooklogsSearchField(
         onValueChange = onValueChange,
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .heightIn(min = 48.dp)
             .background(BooklogsScreenBackground, BooklogsBlockShape)
             .border(0.5.dp, BooklogsTextSecondary, BooklogsBlockShape),
         singleLine = true,
@@ -262,11 +203,14 @@ fun BooklogsSearchField(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .heightIn(min = 48.dp)
                     .padding(horizontal = 20.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
                     if (value.isEmpty()) {
                         Text(
                             text = placeholder,
@@ -311,10 +255,9 @@ fun BooklogsLabeledTextField(
         )
         val fieldModifier = Modifier
             .fillMaxWidth()
-            .then(if (fieldWeight != null) Modifier.weight(fieldWeight) else Modifier.height(minHeight))
+            .then(if (fieldWeight != null) Modifier.weight(fieldWeight) else Modifier.heightIn(min = minHeight))
             .background(BooklogsScreenBackground, BooklogsBlockShape)
             .border(0.5.dp, BooklogsTextSecondary, BooklogsBlockShape)
-            .padding(horizontal = 12.dp, vertical = 12.dp)
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
@@ -325,6 +268,28 @@ fun BooklogsLabeledTextField(
                 color = if (enabled) BooklogsTextPrimary else BooklogsTextSecondary,
             ),
             keyboardOptions = keyboardOptions,
+            decorationBox = { innerTextField ->
+                if (singleLine) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = minHeight)
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            innerTextField()
+                        }
+                    }
+                } else {
+                    Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
+                        innerTextField()
+                    }
+                }
+            },
         )
         supportingText?.let {
             Text(
@@ -359,7 +324,7 @@ fun BooklogsNumberTextField(
 @Composable
 fun BooklogsListBlock(
     modifier: Modifier = Modifier,
-    backgroundColor: Color = Color.White,
+    backgroundColor: Color = BooklogsScreenBackground,
     content: @Composable () -> Unit,
 ) {
     Box(
@@ -433,10 +398,10 @@ fun BooklogsSegmentRow(modifier: Modifier = Modifier, content: @Composable RowSc
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(43.dp)
+            .height(IntrinsicSize.Min)
             .background(BooklogsSurfaceMuted, RoundedCornerShape(8.dp))
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(BooklogsSegmentOuterPadding),
+        horizontalArrangement = Arrangement.spacedBy(BooklogsSegmentOuterPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         content()
@@ -452,16 +417,19 @@ fun RowScope.BooklogsSegmentButton(
 ) {
     Box(
         modifier = modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .height(35.dp)
-            .background(if (selected) BooklogsScreenBackground else Color.Transparent, RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick),
+            .weight(1f, fill = true)
+            .fillMaxHeight()
+            .background(if (selected) BooklogsScreenBackground else Color.Transparent, RoundedCornerShape(5.dp))
+            .clickable(onClick = onClick)
+            .padding(
+                horizontal = BooklogsSegmentChipHorizontalPadding,
+                vertical = BooklogsSegmentChipVerticalPadding,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,
-            style = BooklogsCompactButtonTextStyle,
+            style = BooklogsSegmentTextStyle,
             color = if (selected) BooklogsTextPrimary else BooklogsTextSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

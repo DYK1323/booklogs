@@ -1,4 +1,4 @@
-package com.dyk1323.booklogs.ui.dashboard
+﻿package com.dyk1323.booklogs.ui.dashboard
 
 import android.Manifest
 import android.content.Intent
@@ -19,12 +19,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -84,26 +88,27 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.dyk1323.booklogs.domain.usecase.DayPageTotal
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
-import com.dyk1323.booklogs.ui.common.components.BooklogsAccent
-import com.dyk1323.booklogs.ui.common.components.BooklogsBodyEmphasisTextStyle
-import com.dyk1323.booklogs.ui.common.components.BooklogsBodyTextStyle
-import com.dyk1323.booklogs.ui.common.components.BooklogsCaptionTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsAccent
+import com.dyk1323.booklogs.ui.common.theme.BooklogsBodyEmphasisTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsBodyTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsCaptionTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
-import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetBottomPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetHorizontalPadding
-import com.dyk1323.booklogs.ui.common.components.BooklogsSurfaceMuted
+import com.dyk1323.booklogs.ui.common.theme.BooklogsSurfaceMuted
 import com.dyk1323.booklogs.ui.common.components.BooklogsTextAction
-import com.dyk1323.booklogs.ui.common.components.BooklogsTextPlaceholder
-import com.dyk1323.booklogs.ui.common.components.BooklogsTextSecondary
-import com.dyk1323.booklogs.ui.common.components.BooklogsTitleTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPlaceholder
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTitleTextStyle
 import com.dyk1323.booklogs.ui.common.components.CameraCapturePreview
 import com.dyk1323.booklogs.ui.common.components.EmptyState
 import com.dyk1323.booklogs.ui.common.formatRelativeTime
@@ -373,7 +378,7 @@ private fun TodayPagesHero(todayPages: Int, dailyGoalPages: Int?, totals: List<D
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(149.dp)
+            .heightIn(min = 149.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(BooklogsAccent),
     ) {
@@ -385,7 +390,7 @@ private fun TodayPagesHero(todayPages: Int, dailyGoalPages: Int?, totals: List<D
         )
         Row(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top,
@@ -419,7 +424,7 @@ private fun TodayPagesHero(todayPages: Int, dailyGoalPages: Int?, totals: List<D
                 dailyGoalPages = dailyGoalPages,
                 modifier = Modifier
                     .width(208.dp)
-                    .height(109.dp),
+                    .heightIn(min = 109.dp),
             )
         }
     }
@@ -513,12 +518,15 @@ private fun BookShelfTile(item: BookShelfItemUi, onClick: () -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = item.book.title,
-            style = BooklogsBodyTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
-            maxLines = 1,
+            style = BooklogsBodyTextStyle.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium,
+            ),
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 2.dp),
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = progressCaption(item),
             style = BooklogsCaptionTextStyle,
@@ -554,10 +562,10 @@ private fun DashboardHeroBackground(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun DashboardBarColumn(total: DayPageTotal, maxValue: Int) {
+private fun RowScope.DashboardBarColumn(total: DayPageTotal, maxValue: Int) {
     val barHeight = ((total.totalPages.toFloat() / maxValue.toFloat()) * 77f).coerceAtLeast(4f)
     Box(
-        modifier = Modifier.width(24.dp),
+        modifier = Modifier.weight(1f),
         contentAlignment = Alignment.BottomCenter,
     ) {
         Box(
@@ -575,10 +583,10 @@ private fun DashboardBarColumn(total: DayPageTotal, maxValue: Int) {
 }
 
 @Composable
-private fun DashboardBarLabel(total: DayPageTotal) {
+private fun RowScope.DashboardBarLabel(total: DayPageTotal) {
     val date = LocalDate.ofEpochDay(total.epochDay)
     Column(
-        modifier = Modifier.width(24.dp),
+        modifier = Modifier.weight(1f),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -586,21 +594,25 @@ private fun DashboardBarLabel(total: DayPageTotal) {
             text = date.dayOfMonth.toString(),
             style = MaterialTheme.typography.labelMedium.copy(
                 fontSize = 11.sp,
-                lineHeight = 11.sp,
+                lineHeight = TextUnit.Unspecified,
                 fontWeight = FontWeight.Normal,
             ),
             color = Color.White,
             textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         Text(
             text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).uppercase(Locale.ENGLISH),
             style = MaterialTheme.typography.labelSmall.copy(
                 fontSize = 8.sp,
-                lineHeight = 8.sp,
+                lineHeight = TextUnit.Unspecified,
                 fontWeight = FontWeight.Normal,
             ),
             color = Color.White,
             textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -621,10 +633,11 @@ private fun DashboardSettingsIcon(modifier: Modifier = Modifier) {
             )
             .toPath()
     }
+    val strokeColor = BooklogsTextSecondary
     Canvas(modifier = modifier.size(20.dp)) {
         scale(scaleX = size.width / 18.1611f, scaleY = size.height / 17.2122f, pivot = Offset.Zero) {
-            drawPath(path = outerPath, color = BooklogsTextSecondary, style = Stroke(width = 1.5f))
-            drawPath(path = innerPath, color = BooklogsTextSecondary, style = Stroke(width = 1.5f))
+            drawPath(path = outerPath, color = strokeColor, style = Stroke(width = 1.5f))
+            drawPath(path = innerPath, color = strokeColor, style = Stroke(width = 1.5f))
         }
     }
 }
@@ -770,8 +783,10 @@ private fun QuickLogPageInput(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Bottom,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             BasicTextField(
@@ -779,7 +794,8 @@ private fun QuickLogPageInput(
                 onValueChange = onValueChange,
                 modifier = Modifier
                     .weight(1f)
-                    .height(42.dp),
+                    .fillMaxHeight()
+                    .heightIn(min = 42.dp),
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                 keyboardOptions = KeyboardOptions(
@@ -792,7 +808,7 @@ private fun QuickLogPageInput(
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.White, RoundedCornerShape(4.dp))
+                            .background(BooklogsScreenBackground, RoundedCornerShape(4.dp))
                             .border(
                                 width = 0.5.dp,
                                 color = if (errorMessage != null) MaterialTheme.colorScheme.error else BooklogsTextSecondary,
@@ -801,7 +817,10 @@ private fun QuickLogPageInput(
                             .padding(horizontal = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Box(modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
                             if (value.text.isEmpty()) {
                                 Text(
                                     text = "현재까지 읽은 페이지",
@@ -822,7 +841,9 @@ private fun QuickLogPageInput(
             if (showPageCameraButton) {
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .width(42.dp)
+                        .fillMaxHeight()
+                        .heightIn(min = 42.dp)
                         .background(BooklogsSurfaceMuted, RoundedCornerShape(5.dp))
                         .clickable(onClick = onCapturePage),
                     contentAlignment = Alignment.Center,

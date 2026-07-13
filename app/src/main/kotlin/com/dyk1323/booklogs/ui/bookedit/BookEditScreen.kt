@@ -1,4 +1,4 @@
-package com.dyk1323.booklogs.ui.bookedit
+﻿package com.dyk1323.booklogs.ui.bookedit
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +25,7 @@ import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsLabeledTextField
 import com.dyk1323.booklogs.ui.common.components.BooklogsNumberTextField
-import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.FormatChoiceButton
 

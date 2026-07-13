@@ -1,4 +1,4 @@
-package com.dyk1323.booklogs.ui.detail
+﻿package com.dyk1323.booklogs.ui.detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,12 +32,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSearchField
-import com.dyk1323.booklogs.ui.common.components.BooklogsTextActionTextStyle
-import com.dyk1323.booklogs.ui.common.components.BooklogsTextPrimary
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextActionTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.EmptyState
 
@@ -77,7 +77,7 @@ fun ReviewListScreen(
                             imageVector = Icons.Outlined.Add,
                             contentDescription = "독후감 작성",
                             modifier = Modifier.size(22.dp),
-                            tint = Color.Black,
+                            tint = BooklogsTextPrimary,
                         )
                     }
                 },

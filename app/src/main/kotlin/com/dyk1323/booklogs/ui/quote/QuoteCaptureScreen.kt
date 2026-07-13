@@ -1,4 +1,4 @@
-package com.dyk1323.booklogs.ui.quote
+﻿package com.dyk1323.booklogs.ui.quote
 
 import android.Manifest
 import android.content.Context
@@ -71,7 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.dyk1323.booklogs.ui.common.components.BooklogsLabeledTextField
 import com.dyk1323.booklogs.ui.common.components.BooklogsNumberTextField
-import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.CameraCapturePreview
 import com.dyk1323.booklogs.ui.common.components.LoadingOverlay
@@ -376,7 +376,7 @@ private fun WordSelectPhotoContent(
     if (startIndex != null && endIndex != null) {
         ModalBottomSheet(
             onDismissRequest = onCancelSelection,
-            containerColor = Color.White,
+            containerColor = BooklogsScreenBackground,
             tonalElevation = 0.dp,
         ) {
             GapAdjustmentSheetContent(

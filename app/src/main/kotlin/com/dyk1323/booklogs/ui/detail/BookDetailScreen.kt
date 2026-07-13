@@ -60,6 +60,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.dyk1323.booklogs.domain.model.Book
 import com.dyk1323.booklogs.domain.model.BookFormat
 import com.dyk1323.booklogs.domain.model.BookStatus
@@ -71,30 +72,31 @@ import com.dyk1323.booklogs.domain.model.RoundEndReason
 import com.dyk1323.booklogs.domain.usecase.ConvertPagePercentUseCase
 import com.dyk1323.booklogs.domain.usecase.LogDelta
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
-import com.dyk1323.booklogs.ui.common.components.BooklogsBodyEmphasisTextStyle
-import com.dyk1323.booklogs.ui.common.components.BooklogsBodyTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsBodyEmphasisTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsBodyTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsCardActions
-import com.dyk1323.booklogs.ui.common.components.BooklogsCaptionEmphasisTextStyle
-import com.dyk1323.booklogs.ui.common.components.BooklogsCaptionTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsCaptionEmphasisTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsCaptionTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsContentCard
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsIconAction
 import com.dyk1323.booklogs.ui.common.components.BooklogsLabeledTextField
 import com.dyk1323.booklogs.ui.common.components.BooklogsListBlock
 import com.dyk1323.booklogs.ui.common.components.BooklogsNumberTextField
+import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentRow
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetBottomPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetHorizontalPadding
-import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSectionEmptyText
-import com.dyk1323.booklogs.ui.common.components.BooklogsSectionTitleTextStyle
-import com.dyk1323.booklogs.ui.common.components.BooklogsSurfaceMuted
+import com.dyk1323.booklogs.ui.common.theme.BooklogsSectionTitleTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsSurfaceMuted
 import com.dyk1323.booklogs.ui.common.components.BooklogsTextAction
-import com.dyk1323.booklogs.ui.common.components.BooklogsTextPrimary
-import com.dyk1323.booklogs.ui.common.components.BooklogsTextSecondary
-import com.dyk1323.booklogs.ui.common.components.BooklogsTitleTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTitleTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import java.time.Instant
 import java.time.ZoneId
@@ -720,25 +722,11 @@ private fun DetailSection(
 private fun StatusActions(status: BookStatus, onStatusClick: (BookStatus) -> Unit) {
     BooklogsSegmentRow {
         listOf(BookStatus.READING, BookStatus.FINISHED, BookStatus.PAUSED, BookStatus.DROPPED).forEach { target ->
-            Button(
+            BooklogsSegmentButton(
+                text = statusTabLabel(target),
+                selected = target == status,
                 onClick = { if (target != status) onStatusClick(target) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(5.dp),
-                enabled = target != status,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (target == status) Color.White else Color.Transparent,
-                    contentColor = if (target == status) BooklogsTextPrimary else BooklogsTextSecondary,
-                    disabledContainerColor = Color.White,
-                    disabledContentColor = BooklogsTextPrimary,
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-                contentPadding = PaddingValues(vertical = 8.dp),
-            ) {
-                Text(
-                    text = statusTabLabel(target),
-                    style = BooklogsBodyEmphasisTextStyle.copy(fontWeight = FontWeight.Normal),
-                )
-            }
+            )
         }
     }
 }
@@ -868,10 +856,15 @@ internal fun RoundRow(
                 verticalAlignment = Alignment.Top,
             ) {
                 Column {
-                    Text(text = "${round.roundNumber}번째 라운드", style = BooklogsBodyEmphasisTextStyle, color = BooklogsTextPrimary)
+                    Text(
+                        text = "${round.roundNumber}번째 라운드",
+                        style = BooklogsBodyEmphasisTextStyle.copy(lineHeight = 19.sp),
+                        color = BooklogsTextPrimary,
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = roundPeriodText(round),
-                        style = BooklogsCaptionTextStyle,
+                        style = BooklogsCaptionTextStyle.copy(lineHeight = 14.sp),
                         color = BooklogsTextSecondary,
                     )
                 }
@@ -974,30 +967,25 @@ internal fun QuoteCard(
     var expanded by remember(quote.id) { mutableStateOf(false) }
     BooklogsContentCard(
         highlighted = true,
-        minHeight = 116.dp,
         onClick = { expanded = !expanded },
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f, fill = false),
-            ) {
+            Text(
+                text = quoteDisplayText(quote),
+                style = BooklogsBodyTextStyle,
+                color = BooklogsTextPrimary,
+                maxLines = if (expanded) Int.MAX_VALUE else 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+            quotePageLabel(quote)?.let {
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = quote.text,
-                    style = BooklogsBodyTextStyle,
-                    color = BooklogsTextPrimary,
-                    maxLines = if (expanded) Int.MAX_VALUE else 4,
-                    overflow = TextOverflow.Ellipsis,
+                    text = it,
+                    style = BooklogsCaptionTextStyle,
+                    color = BooklogsTextSecondary,
                 )
-                quotePageLabel(quote)?.let {
-                    Text(
-                        text = it,
-                        style = BooklogsCaptionTextStyle,
-                        color = BooklogsTextSecondary,
-                    )
-                }
             }
             Spacer(modifier = Modifier.height(12.dp))
             BooklogsCardActions {
@@ -1106,51 +1094,33 @@ internal fun ReviewCard(
         onClick = { expanded = !expanded },
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            if (expanded) {
-                Text(text = review.content, style = BooklogsBodyTextStyle, color = BooklogsTextPrimary)
-            } else {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(
-                        text = reviewTitle(review),
-                        modifier = Modifier.weight(1f),
-                        style = BooklogsBodyEmphasisTextStyle,
-                        color = BooklogsTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = formatDate(review.createdAt),
-                        style = BooklogsCaptionTextStyle,
-                        color = BooklogsTextSecondary,
-                    )
-                }
-            }
-            if (expanded) {
-                review.rating?.let {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "★".repeat(it),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = formatDate(review.createdAt),
-                    style = BooklogsCaptionTextStyle,
-                    color = BooklogsTextSecondary,
-                )
-                BooklogsCardActions {
-                    BooklogsIconAction(Icons.Outlined.Edit, "독후감 수정", onEdit, iconSize = 24.dp)
-                    BooklogsIconAction(Icons.Outlined.Delete, "독후감 삭제", onDelete, iconSize = 24.dp)
-                }
+            Text(
+                text = reviewDisplayText(review),
+                style = BooklogsBodyTextStyle,
+                color = BooklogsTextPrimary,
+                maxLines = if (expanded) Int.MAX_VALUE else 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = formatDate(review.createdAt),
+                style = BooklogsCaptionTextStyle,
+                color = BooklogsTextSecondary,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            BooklogsCardActions {
+                BooklogsIconAction(Icons.Outlined.Edit, "독후감 수정", onEdit, iconSize = 24.dp)
+                BooklogsIconAction(Icons.Outlined.Delete, "독후감 삭제", onDelete, iconSize = 24.dp)
             }
         }
     }
 }
 
-internal fun reviewTitle(review: Review): String =
-    review.content.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: "(내용 없음)"
+internal fun quoteDisplayText(quote: Quote): String =
+    quote.text.takeIf { it.isNotBlank() } ?: "(내용 없음)"
+
+internal fun reviewDisplayText(review: Review): String =
+    review.content.takeIf { it.isNotBlank() } ?: "(내용 없음)"
 
 internal fun quotePageLabel(quote: Quote): String? {
     val start = quote.pageNumber ?: return null

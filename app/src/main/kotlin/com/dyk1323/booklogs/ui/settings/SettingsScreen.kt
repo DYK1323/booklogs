@@ -1,4 +1,4 @@
-package com.dyk1323.booklogs.ui.settings
+﻿package com.dyk1323.booklogs.ui.settings
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -12,11 +12,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -50,10 +53,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.dyk1323.booklogs.data.settings.ThemeMode
+import com.dyk1323.booklogs.ui.common.theme.BooklogsAccent
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
-import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsHairline
+import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentRow
+import com.dyk1323.booklogs.ui.common.theme.BooklogsSurfaceMuted
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPlaceholder
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -87,7 +96,7 @@ fun SettingsScreen(
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color.White)
+                .background(BooklogsScreenBackground)
                 .padding(innerPadding)
                 .padding(horizontal = 24.dp, vertical = 36.dp),
             verticalArrangement = Arrangement.spacedBy(36.dp),
@@ -129,7 +138,7 @@ fun SettingsScreen(
                                 text = formatReminderTime(uiState.reminderHour, uiState.reminderMinute),
                                 modifier = Modifier.clickable { showTimePicker = true },
                                 style = SettingsActionTextStyle.copy(fontWeight = FontWeight.Medium),
-                                color = Color(0xFF0C7EFF),
+                                color = BooklogsAccent,
                             )
                         }
                     }
@@ -139,21 +148,26 @@ fun SettingsScreen(
             SettingsSection(title = "일일 목표") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         GoalInput(
                             value = uiState.dailyGoalPagesText,
                             onValueChange = viewModel::updateDailyGoalPagesText,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                         )
                         BooklogsFilledButton(
                             text = "저장",
                             onClick = viewModel::saveDailyGoalPages,
                             primary = true,
                             modifier = Modifier
-                                .width(64.dp),
+                                .width(64.dp)
+                                .fillMaxHeight(),
                             compact = true,
                         )
                     }
@@ -165,7 +179,7 @@ fun SettingsScreen(
                         Text(
                             text = "비워두면 목표 없이 기록만 표시돼요.",
                             style = SettingsCaptionTextStyle,
-                            color = Color(0xFF757575),
+                            color = BooklogsTextSecondary,
                         )
                     }
                 }
@@ -277,7 +291,7 @@ private fun SettingsSection(
         Text(
             text = title,
             style = SettingsSectionTitleTextStyle,
-            color = Color.Black,
+            color = BooklogsTextPrimary,
         )
         content()
     }
@@ -293,7 +307,7 @@ private fun ReminderToggle(
             .width(48.dp)
             .height(24.dp)
             .background(
-                color = if (checked) Color(0xFF0969DA) else Color(0xFFF5F5F5),
+                color = if (checked) BooklogsAccent else BooklogsSurfaceMuted,
                 shape = RoundedCornerShape(6.dp),
             )
             .padding(2.dp)
@@ -312,7 +326,7 @@ private fun ReminderToggle(
         Box(
             modifier = Modifier
                 .size(width = 21.dp, height = 20.dp)
-                .background(Color.White, RoundedCornerShape(4.dp)),
+                .background(BooklogsScreenBackground, RoundedCornerShape(4.dp)),
         )
         if (!checked) {
             Spacer(modifier = Modifier.weight(1f))
@@ -327,10 +341,11 @@ private fun ToggleCheckGlyph() {
             "M0.75 6.75V1.5",
         ).toPath()
     }
+    val checkColor = MaterialTheme.colorScheme.onPrimary
     androidx.compose.foundation.Canvas(modifier = Modifier.size(width = 1.5.dp, height = 13.5.dp)) {
         drawPath(
             path = path,
-            color = Color.White,
+            color = checkColor,
             style = Stroke(width = 1.5f),
         )
     }
@@ -345,25 +360,30 @@ private fun GoalInput(
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.height(42.dp),
+        modifier = modifier
+            .fillMaxHeight()
+            .heightIn(min = 42.dp),
         singleLine = true,
-        textStyle = SettingsInputTextStyle.copy(color = Color.Black),
+        textStyle = SettingsInputTextStyle.copy(color = BooklogsTextPrimary),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         decorationBox = { innerTextField ->
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White, RoundedCornerShape(5.dp))
-                    .border(0.5.dp, Color(0xFF757575), RoundedCornerShape(5.dp))
+                    .background(BooklogsScreenBackground, RoundedCornerShape(5.dp))
+                    .border(0.5.dp, BooklogsHairline, RoundedCornerShape(5.dp))
                     .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
                     if (value.isEmpty()) {
                         Text(
                             text = "하루에 읽을 페이지 수 목표",
                             style = SettingsInputTextStyle,
-                            color = Color(0xFFB3B3B3),
+                            color = BooklogsTextPlaceholder,
                         )
                     }
                     innerTextField()
@@ -371,7 +391,7 @@ private fun GoalInput(
                 Text(
                     text = "p",
                     style = SettingsInputTextStyle,
-                    color = Color(0xFFB3B3B3),
+                    color = BooklogsTextPlaceholder,
                 )
             }
         },

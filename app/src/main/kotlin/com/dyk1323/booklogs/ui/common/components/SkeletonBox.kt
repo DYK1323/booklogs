@@ -7,12 +7,12 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
 
 /** Shimmer placeholder for content that hasn't loaded yet — see docs/PLAN.md "로딩/대기 상태 UX". */
 @Composable
@@ -26,7 +26,7 @@ fun SkeletonBox(modifier: Modifier = Modifier, shape: Shape = RoundedCornerShape
     )
     androidx.compose.foundation.layout.Box(
         modifier = modifier.background(
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha * 0.16f),
+            color = BooklogsTextPrimary.copy(alpha = alpha * 0.16f),
             shape = shape,
         ),
     )

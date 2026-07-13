@@ -1,4 +1,4 @@
-package com.dyk1323.booklogs.ui.registration
+﻿package com.dyk1323.booklogs.ui.registration
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,14 +23,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dyk1323.booklogs.domain.model.BookMetadata
-import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenHorizontalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsScreenVerticalPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSearchField
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.SkeletonBox
+import com.dyk1323.booklogs.ui.common.theme.BooklogsBodyTextStyle
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
 
 /** docs/PLAN.md 화면 흐름 #2 제목 검색 경로 — 카카오 우선, 0건일 때만 Google Books 폴백(리포지토리가 처리). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -87,11 +90,17 @@ fun TitleSearchScreen(
                 }
                 SearchUiState.Empty -> Text(
                     text = "검색 결과가 없어요. 직접 입력으로 등록할 수 있어요.",
-                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = BooklogsBodyTextStyle,
+                    color = BooklogsTextSecondary,
+                    textAlign = TextAlign.Center,
                 )
                 SearchUiState.NetworkError -> Text(
                     text = "인터넷 연결을 확인해주세요.",
-                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = BooklogsBodyTextStyle,
+                    color = BooklogsTextSecondary,
+                    textAlign = TextAlign.Center,
                 )
             }
         }
@@ -111,6 +120,7 @@ private fun SearchResultRow(item: BookMetadata, onClick: () -> Unit, modifier: M
             Text(text = item.title, style = MaterialTheme.typography.bodyMedium)
             val subtitle = listOfNotNull(item.author, item.publisher).joinToString(" · ")
             if (subtitle.isNotBlank()) {
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(text = subtitle, style = MaterialTheme.typography.labelMedium)
             }
         }

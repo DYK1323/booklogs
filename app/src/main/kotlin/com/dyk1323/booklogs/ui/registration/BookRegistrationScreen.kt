@@ -1,4 +1,4 @@
-package com.dyk1323.booklogs.ui.registration
+﻿package com.dyk1323.booklogs.ui.registration
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,13 +10,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
-import com.dyk1323.booklogs.ui.common.components.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
+import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 
 private val RegistrationTitleTextStyle = TextStyle(
@@ -51,7 +51,7 @@ fun BookRegistrationScreen(
             Text(
                 text = "어떻게 등록할까요?",
                 style = RegistrationTitleTextStyle,
-                color = Color.Black,
+                color = BooklogsTextPrimary,
                 modifier = Modifier.padding(bottom = 20.dp),
             )
             BooklogsFilledButton(
