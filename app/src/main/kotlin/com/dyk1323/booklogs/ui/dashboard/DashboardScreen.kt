@@ -77,6 +77,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -106,6 +107,7 @@ import com.dyk1323.booklogs.ui.common.components.BooklogsSheetBottomPadding
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetHorizontalPadding
 import com.dyk1323.booklogs.ui.common.theme.BooklogsSurfaceMuted
 import com.dyk1323.booklogs.ui.common.components.BooklogsTextAction
+import com.dyk1323.booklogs.ui.common.components.booklogsScaledDp
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPlaceholder
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTitleTextStyle
@@ -515,7 +517,7 @@ private fun BookShelfTile(item: BookShelfItemUi, onClick: () -> Unit) {
                     .background(Color.Black.copy(alpha = 0.2f), RoundedCornerShape(4.dp)),
             )
         }
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(booklogsScaledDp(12.dp)))
         Text(
             text = item.book.title,
             style = BooklogsBodyTextStyle.copy(
@@ -526,7 +528,7 @@ private fun BookShelfTile(item: BookShelfItemUi, onClick: () -> Unit) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 2.dp),
         )
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(booklogsScaledDp(6.dp)))
         Text(
             text = progressCaption(item),
             style = BooklogsCaptionTextStyle,
@@ -721,13 +723,11 @@ private fun QuickLogSheet(
             onClick = onCaptureQuote,
             modifier = Modifier
                 .fillMaxWidth(),
-            height = 43.dp,
             compact = true,
         )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(43.dp)
                 .padding(start = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
@@ -735,28 +735,21 @@ private fun QuickLogSheet(
             BooklogsTextAction(
                 text = "상세보기",
                 onClick = onOpenDetail,
-                height = 43.dp,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(booklogsScaledDp(8.dp)),
             ) {
                 BooklogsFilledButton(
                     text = "취소",
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .width(64.dp),
-                    height = 43.dp,
                     compact = true,
                 )
                 BooklogsFilledButton(
                     text = if (showSuccessCheck) "저장" else state.saveButtonLabel,
                     onClick = onSave,
                     enabled = !state.isSaving,
-                    modifier = Modifier
-                        .width(64.dp),
                     primary = true,
-                    height = 43.dp,
                     compact = true,
                 )
             }
@@ -775,19 +768,27 @@ private fun QuickLogPageInput(
     onDone: () -> Unit,
     onCapturePage: () -> Unit,
 ) {
+    val inputMinHeight = booklogsScaledDp(42.dp)
+    var isFocused by remember { mutableStateOf(false) }
+    val activeBorderColor = when {
+        errorMessage != null -> MaterialTheme.colorScheme.error
+        isFocused -> BooklogsAccent
+        else -> BooklogsTextSecondary
+    }
+    val activeBorderWidth = if (isFocused && errorMessage == null) 1.dp else 0.5.dp
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = inputLabel,
             style = BooklogsCaptionTextStyle,
             color = BooklogsTextSecondary,
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(booklogsScaledDp(4.dp)))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(booklogsScaledDp(8.dp)),
         ) {
             BasicTextField(
                 value = value,
@@ -795,7 +796,8 @@ private fun QuickLogPageInput(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .heightIn(min = 42.dp),
+                    .heightIn(min = inputMinHeight)
+                    .onFocusChanged { isFocused = it.isFocused },
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                 keyboardOptions = KeyboardOptions(
@@ -808,13 +810,13 @@ private fun QuickLogPageInput(
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(BooklogsScreenBackground, RoundedCornerShape(4.dp))
+                            .background(Color.Transparent, RoundedCornerShape(4.dp))
                             .border(
-                                width = 0.5.dp,
-                                color = if (errorMessage != null) MaterialTheme.colorScheme.error else BooklogsTextSecondary,
+                                width = activeBorderWidth,
+                                color = activeBorderColor,
                                 shape = RoundedCornerShape(5.dp),
                             )
-                            .padding(horizontal = 12.dp),
+                            .padding(horizontal = booklogsScaledDp(12.dp)),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(
@@ -841,9 +843,9 @@ private fun QuickLogPageInput(
             if (showPageCameraButton) {
                 Box(
                     modifier = Modifier
-                        .width(42.dp)
+                        .width(inputMinHeight)
                         .fillMaxHeight()
-                        .heightIn(min = 42.dp)
+                        .heightIn(min = inputMinHeight)
                         .background(BooklogsSurfaceMuted, RoundedCornerShape(5.dp))
                         .clickable(onClick = onCapturePage),
                     contentAlignment = Alignment.Center,
@@ -858,7 +860,7 @@ private fun QuickLogPageInput(
             }
         }
         errorMessage?.let {
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(booklogsScaledDp(6.dp)))
             Text(
                 text = it,
                 style = BooklogsCaptionTextStyle,

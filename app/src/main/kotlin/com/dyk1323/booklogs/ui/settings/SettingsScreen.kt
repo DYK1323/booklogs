@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.PathParser
@@ -64,6 +65,7 @@ import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPlaceholder
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
+import com.dyk1323.booklogs.ui.common.components.booklogsScaledDp
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -146,12 +148,12 @@ fun SettingsScreen(
             }
 
             SettingsSection(title = "일일 목표") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(booklogsScaledDp(8.dp))) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(IntrinsicSize.Min),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(booklogsScaledDp(8.dp)),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         GoalInput(
@@ -166,7 +168,6 @@ fun SettingsScreen(
                             onClick = viewModel::saveDailyGoalPages,
                             primary = true,
                             modifier = Modifier
-                                .width(64.dp)
                                 .fillMaxHeight(),
                             compact = true,
                         )
@@ -209,16 +210,15 @@ fun SettingsScreen(
             }
 
             SettingsSection(title = "데이터 백업") {
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.spacedBy(booklogsScaledDp(8.dp)),
                 ) {
                     BooklogsFilledButton(
                         text = if (uiState.isExportingBackup) "데이터 내보내는 중" else "데이터 내보내기",
                         onClick = { exportLauncher.launch(defaultBackupFileName()) },
                         modifier = Modifier
-                            .weight(1f),
+                            .fillMaxWidth(),
                         compact = true,
                     )
                     BooklogsFilledButton(
@@ -226,7 +226,7 @@ fun SettingsScreen(
                         onClick = { importPickerLauncher.launch(arrayOf("*/*")) },
                         primary = true,
                         modifier = Modifier
-                            .weight(1f),
+                            .fillMaxWidth(),
                         compact = true,
                     )
                 }
@@ -357,12 +357,17 @@ private fun GoalInput(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val minHeight = booklogsScaledDp(42.dp)
+    var isFocused by remember { mutableStateOf(false) }
+    val borderColor = if (isFocused) BooklogsAccent else BooklogsHairline
+    val borderWidth = if (isFocused) 1.dp else 0.5.dp
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier
             .fillMaxHeight()
-            .heightIn(min = 42.dp),
+            .heightIn(min = minHeight)
+            .onFocusChanged { isFocused = it.isFocused },
         singleLine = true,
         textStyle = SettingsInputTextStyle.copy(color = BooklogsTextPrimary),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -370,9 +375,9 @@ private fun GoalInput(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(BooklogsScreenBackground, RoundedCornerShape(5.dp))
-                    .border(0.5.dp, BooklogsHairline, RoundedCornerShape(5.dp))
-                    .padding(horizontal = 12.dp),
+                    .background(Color.Transparent, RoundedCornerShape(5.dp))
+                    .border(borderWidth, borderColor, RoundedCornerShape(5.dp))
+                    .padding(horizontal = booklogsScaledDp(12.dp)),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(

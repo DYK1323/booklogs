@@ -31,6 +31,8 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,6 +46,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -54,7 +57,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -83,6 +85,7 @@ import com.dyk1323.booklogs.ui.common.components.BooklogsIconAction
 import com.dyk1323.booklogs.ui.common.components.BooklogsLabeledTextField
 import com.dyk1323.booklogs.ui.common.components.BooklogsListBlock
 import com.dyk1323.booklogs.ui.common.components.BooklogsNumberTextField
+import com.dyk1323.booklogs.ui.common.components.BooklogsReadOnlyTextField
 import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentRow
 import com.dyk1323.booklogs.ui.common.components.BooklogsSheetBottomPadding
@@ -98,9 +101,13 @@ import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTitleTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
+import com.dyk1323.booklogs.ui.common.components.booklogsScaledDp
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -538,9 +545,9 @@ private fun BookHeader(state: BookDetailUiState) {
         Spacer(modifier = Modifier.width(16.dp))
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(booklogsScaledDp(8.dp)),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(booklogsScaledDp(4.dp))) {
                 Text(
                     text = book.title,
                     style = BooklogsTitleTextStyle,
@@ -559,7 +566,7 @@ private fun BookHeader(state: BookDetailUiState) {
                     )
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(booklogsScaledDp(4.dp))) {
                 Text(
                     text = progressText(state),
                     style = BooklogsBodyTextStyle.copy(fontWeight = FontWeight.Medium),
@@ -654,7 +661,7 @@ fun QuoteEditScreen(
                 fieldWeight = 1f,
             )
             uiState.message?.takeUnless { it == "인용구를 수정했어요." }?.let {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(booklogsScaledDp(6.dp)))
                 Text(
                     text = it,
                     style = BooklogsCaptionTextStyle,
@@ -664,7 +671,7 @@ fun QuoteEditScreen(
             Spacer(modifier = Modifier.height(10.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.spacedBy(booklogsScaledDp(8.dp), Alignment.End),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 BooklogsFilledButton(
@@ -673,17 +680,14 @@ fun QuoteEditScreen(
                         viewModel.cancelEditQuote()
                         onBack()
                     },
-                    modifier = Modifier.width(72.dp),
                     compact = true,
                 )
-                Spacer(modifier = Modifier.width(8.dp))
                 BooklogsFilledButton(
                     text = "수정 저장",
                     onClick = {
                         saveRequested = true
                         viewModel.saveQuote()
                     },
-                    modifier = Modifier.width(96.dp),
                     primary = true,
                     compact = true,
                 )
@@ -748,12 +752,14 @@ internal fun LogDeltaRow(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = booklogsScaledDp(57.dp))
             .background(if (highlighted) BooklogsSurfaceMuted else BooklogsScreenBackground, RoundedCornerShape(5.dp))
             .clickable(onClick = onToggleExpand)
             .animateContentSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        contentAlignment = if (isExpanded) Alignment.TopStart else Alignment.CenterStart,
     ) {
-        Column {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -767,41 +773,36 @@ internal fun LogDeltaRow(
                 )
             }
             if (isExpanded) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(booklogsScaledDp(8.dp)))
                 Text(
                     text = deltaLabel(book, delta),
                     style = BooklogsCaptionTextStyle,
                     color = BooklogsTextSecondary,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(booklogsScaledDp(14.dp)))
                 val inputLabel = if (book.format == BookFormat.EBOOK) "진행률" else "페이지"
                 val inputSuffix = if (book.format == BookFormat.EBOOK) "%" else "p"
-                OutlinedTextField(
+                BooklogsNumberTextField(
                     value = editInputText,
                     onValueChange = onEditInputChanged,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text(inputLabel) },
-                    suffix = { Text(inputSuffix) },
-                    singleLine = true,
+                    label = inputLabel,
+                    suffix = inputSuffix,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number,
                         imeAction = ImeAction.Done,
                     ),
                     keyboardActions = KeyboardActions(onDone = { onSaveEdit() }),
-                    isError = editErrorMessage != null,
-                    supportingText = editErrorMessage?.let { { Text(it) } },
+                    supportingText = editErrorMessage,
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     TextButton(onClick = onDelete) {
                         Text(text = "삭제", color = MaterialTheme.colorScheme.error)
                     }
-                    Row {
-                        TextButton(onClick = onCancelEdit) { Text(text = "취소") }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Button(onClick = onSaveEdit, shape = RoundedCornerShape(8.dp)) {
-                            Text(text = "수정 저장")
-                        }
+                    Row(horizontalArrangement = Arrangement.spacedBy(booklogsScaledDp(8.dp))) {
+                        BooklogsFilledButton(text = "취소", onClick = onCancelEdit, compact = true)
+                        BooklogsFilledButton(text = "수정 저장", onClick = onSaveEdit, primary = true, compact = true)
                     }
                 }
             }
@@ -855,13 +856,15 @@ internal fun RoundRow(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top,
             ) {
-                Column {
+                Column(
+                    modifier = Modifier.weight(1f),
+                ) {
                     Text(
                         text = "${round.roundNumber}번째 라운드",
                         style = BooklogsBodyEmphasisTextStyle.copy(lineHeight = 19.sp),
                         color = BooklogsTextPrimary,
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(booklogsScaledDp(6.dp)))
                     Text(
                         text = roundPeriodText(round),
                         style = BooklogsCaptionTextStyle.copy(lineHeight = 14.sp),
@@ -870,29 +873,30 @@ internal fun RoundRow(
                 }
                 Text(
                     text = if (isOpen) "읽는 중" else roundEndReasonLabel(round.endReason),
+                    modifier = Modifier.padding(start = 8.dp),
                     style = BooklogsCaptionEmphasisTextStyle,
                     color = BooklogsTextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             if (isExpanded) {
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
+                Spacer(modifier = Modifier.height(booklogsScaledDp(14.dp)))
+                RoundDatePickerField(
                     value = startedAtText,
                     onValueChange = onStartedAtChanged,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("시작일 (yyyy.MM.dd)") },
-                    singleLine = true,
+                    label = "시작일",
                 )
                 if (!isOpen) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
+                    Spacer(modifier = Modifier.height(booklogsScaledDp(8.dp)))
+                    RoundDatePickerField(
                         value = finishedAtText,
                         onValueChange = onFinishedAtChanged,
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("종료일 (yyyy.MM.dd)") },
-                        singleLine = true,
+                        label = "종료일",
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(booklogsScaledDp(8.dp)))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(RoundEndReason.COMPLETED to "완독", RoundEndReason.DROPPED to "중단").forEach { (reason, label) ->
                             val selected = endReason == reason
@@ -909,17 +913,16 @@ internal fun RoundRow(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
+                Spacer(modifier = Modifier.height(booklogsScaledDp(8.dp)))
+                BooklogsNumberTextField(
                     value = startingPageText,
                     onValueChange = onStartingPageChanged,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("시작 페이지") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                    label = "시작 페이지",
+                    suffix = "p",
                 )
                 message?.let {
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(booklogsScaledDp(6.dp)))
                     Text(
                         text = it,
                         style = MaterialTheme.typography.labelMedium,
@@ -934,10 +937,9 @@ internal fun RoundRow(
                         }
                     }
                     Spacer(modifier = Modifier.weight(1f))
-                    TextButton(onClick = onCancel) { Text(text = "취소") }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Button(onClick = onSave, shape = RoundedCornerShape(8.dp)) {
-                        Text(text = "저장")
+                    Row(horizontalArrangement = Arrangement.spacedBy(booklogsScaledDp(8.dp))) {
+                        BooklogsFilledButton(text = "취소", onClick = onCancel, compact = true)
+                        BooklogsFilledButton(text = "저장", onClick = onSave, primary = true, compact = true)
                     }
                 }
             }
@@ -955,6 +957,52 @@ private fun roundEndReasonLabel(reason: RoundEndReason?): String = when (reason)
     RoundEndReason.COMPLETED -> "완독"
     RoundEndReason.DROPPED -> "중단"
     null -> "-"
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RoundDatePickerField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    var showPicker by remember { mutableStateOf(false) }
+
+    BooklogsReadOnlyTextField(
+        value = value,
+        label = label,
+        onClick = { showPicker = true },
+        modifier = modifier,
+    )
+
+    if (showPicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = value.toDatePickerMillis(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { showPicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { selectedMillis ->
+                            onValueChange(selectedMillis.toRoundDateText())
+                        }
+                        showPicker = false
+                    },
+                ) {
+                    Text("확인")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) {
+                    Text("취소")
+                }
+            },
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 }
 
 @Composable
@@ -980,14 +1028,14 @@ internal fun QuoteCard(
                 overflow = TextOverflow.Ellipsis,
             )
             quotePageLabel(quote)?.let {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(booklogsScaledDp(6.dp)))
                 Text(
                     text = it,
                     style = BooklogsCaptionTextStyle,
                     color = BooklogsTextSecondary,
                 )
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(booklogsScaledDp(12.dp)))
             BooklogsCardActions {
                 BooklogsIconAction(Icons.Outlined.ChatBubbleOutline, "댓글", onComments)
                 BooklogsIconAction(Icons.Outlined.Edit, "인용구 수정", onEdit, iconSize = 24.dp)
@@ -1013,7 +1061,7 @@ internal fun QuoteCommentsSheetContent(
             .padding(bottom = BooklogsSheetBottomPadding),
     ) {
         Text(text = "댓글", style = MaterialTheme.typography.titleLarge)
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(booklogsScaledDp(12.dp)))
         if (comments.isEmpty()) {
             Text(
                 text = "아직 댓글이 없어요",
@@ -1101,13 +1149,13 @@ internal fun ReviewCard(
                 maxLines = if (expanded) Int.MAX_VALUE else 4,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(booklogsScaledDp(6.dp)))
             Text(
                 text = formatDate(review.createdAt),
                 style = BooklogsCaptionTextStyle,
                 color = BooklogsTextSecondary,
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(booklogsScaledDp(12.dp)))
             BooklogsCardActions {
                 BooklogsIconAction(Icons.Outlined.Edit, "독후감 수정", onEdit, iconSize = 24.dp)
                 BooklogsIconAction(Icons.Outlined.Delete, "독후감 삭제", onDelete, iconSize = 24.dp)
@@ -1139,6 +1187,24 @@ internal fun formatDate(timestampMillis: Long): String {
     val formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
     return Instant.ofEpochMilli(timestampMillis).atZone(ZoneId.systemDefault()).format(formatter)
 }
+
+private val roundEditDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
+
+private fun String.toDatePickerMillis(): Long? =
+    try {
+        LocalDate.parse(this, roundEditDateFormatter)
+            .atStartOfDay(ZoneOffset.UTC)
+            .toInstant()
+            .toEpochMilli()
+    } catch (_: DateTimeParseException) {
+        null
+    }
+
+private fun Long.toRoundDateText(): String =
+    Instant.ofEpochMilli(this)
+        .atZone(ZoneOffset.UTC)
+        .toLocalDate()
+        .format(roundEditDateFormatter)
 
 private fun statusTabLabel(target: BookStatus): String = when (target) {
     BookStatus.READING -> "읽는중"

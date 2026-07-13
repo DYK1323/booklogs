@@ -1,5 +1,6 @@
 ﻿package com.dyk1323.booklogs.ui.library
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -19,8 +20,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -33,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dyk1323.booklogs.domain.model.BookStatus
 import com.dyk1323.booklogs.ui.common.components.BookCoverImage
 import com.dyk1323.booklogs.ui.common.theme.BooklogsAccent
@@ -45,6 +43,7 @@ import com.dyk1323.booklogs.ui.common.components.BooklogsSearchField
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.EmptyState
+import com.dyk1323.booklogs.ui.common.components.booklogsScaledDp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,28 +75,23 @@ fun LibraryScreen(
                 onValueChange = viewModel::updateQuery,
                 placeholder = "제목 또는 저자 검색",
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(booklogsScaledDp(12.dp)))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(booklogsScaledDp(8.dp)),
             ) {
                 uiState.filters.forEach { filter ->
                     val selected = uiState.selectedFilter == filter
-                    AssistChip(
+                    LibraryFilterPill(
+                        text = "${filter.label} ${uiState.countsByFilter[filter] ?: 0}",
+                        selected = selected,
                         onClick = { viewModel.selectFilter(filter) },
-                        label = { Text("${filter.label} ${uiState.countsByFilter[filter] ?: 0}") },
-                        shape = RoundedCornerShape(999.dp),
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = if (selected) BooklogsAccent else BooklogsSurfaceMuted,
-                            labelColor = if (selected) Color.White else BooklogsTextSecondary,
-                        ),
-                        border = null,
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(booklogsScaledDp(26.dp)))
             if (uiState.books.isEmpty() && !uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(message = "조건에 맞는 책이 없어요", icon = null)
@@ -105,7 +99,7 @@ fun LibraryScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(booklogsScaledDp(12.dp)),
                 ) {
                     items(uiState.books, key = { it.book.id }) { item ->
                         LibraryBookRow(item = item, onClick = { onBookClick(item.book.id) })
@@ -117,24 +111,54 @@ fun LibraryScreen(
 }
 
 @Composable
+private fun LibraryFilterPill(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .background(
+                color = if (selected) BooklogsAccent else BooklogsSurfaceMuted,
+                shape = RoundedCornerShape(999.dp),
+            )
+            .clickable(onClick = onClick)
+            .padding(
+                horizontal = booklogsScaledDp(12.dp),
+                vertical = booklogsScaledDp(6.dp),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) Color.White else BooklogsTextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
 private fun LibraryBookRow(item: LibraryBookItemUi, onClick: () -> Unit) {
+    val coverWidth = booklogsScaledDp(58.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .height(IntrinsicSize.Min)
-            .padding(vertical = 4.dp),
+            .padding(vertical = booklogsScaledDp(4.dp)),
         verticalAlignment = Alignment.Top,
     ) {
         BookCoverImage(
             coverImageUrl = item.book.coverImageUrl,
             modifier = Modifier
-                .width(58.dp)
+                .width(coverWidth)
                 .aspectRatio(0.68f),
             shape = RoundedCornerShape(6.dp),
-            placeholderIconSize = 28.dp,
+            placeholderIconSize = booklogsScaledDp(28.dp),
         )
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(booklogsScaledDp(14.dp)))
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -144,23 +168,25 @@ private fun LibraryBookRow(item: LibraryBookItemUi, onClick: () -> Unit) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
                         text = item.book.title,
-                        style = MaterialTheme.typography.titleMedium.copy(lineHeight = 21.sp),
+                        style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.weight(1f),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(booklogsScaledDp(10.dp)))
                     Text(
                         text = statusLabel(item.book.status),
                         style = MaterialTheme.typography.labelMedium,
                         color = BooklogsAccent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 item.book.author?.let {
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(booklogsScaledDp(2.dp)))
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.labelMedium.copy(lineHeight = 15.sp),
+                        style = MaterialTheme.typography.labelMedium,
                         color = BooklogsTextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
