@@ -8,7 +8,6 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,7 +42,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.PathParser
@@ -59,14 +56,12 @@ import com.dyk1323.booklogs.BuildConfig
 import com.dyk1323.booklogs.data.settings.ThemeMode
 import com.dyk1323.booklogs.ui.common.theme.BooklogsAccent
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
-import com.dyk1323.booklogs.ui.common.theme.BooklogsHairline
-import com.dyk1323.booklogs.ui.common.theme.BooklogsInputTextStyle
+import com.dyk1323.booklogs.ui.common.components.BooklogsInlineTextField
 import com.dyk1323.booklogs.ui.common.theme.BooklogsScreenBackground
 import com.dyk1323.booklogs.ui.common.theme.BooklogsSectionTitleTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsSegmentRow
 import com.dyk1323.booklogs.ui.common.theme.BooklogsSurfaceMuted
-import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPlaceholder
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextPrimary
 import com.dyk1323.booklogs.ui.common.theme.BooklogsTextSecondary
 import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
@@ -425,49 +420,14 @@ private fun GoalInput(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val minHeight = booklogsScaledDp(48.dp)
-    var isFocused by remember { mutableStateOf(false) }
-    val borderColor = if (isFocused) BooklogsAccent else BooklogsHairline
-    val borderWidth = if (isFocused) 1.dp else 0.5.dp
-    BasicTextField(
+    BooklogsInlineTextField(
         value = value,
         onValueChange = onValueChange,
+        placeholder = "하루에 읽을 페이지 수 목표",
         modifier = modifier
-            .fillMaxHeight()
-            .heightIn(min = minHeight)
-            .onFocusChanged { isFocused = it.isFocused },
-        singleLine = true,
-        textStyle = BooklogsInputTextStyle.copy(color = BooklogsTextPrimary),
+            .fillMaxHeight(),
+        suffix = "p",
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        decorationBox = { innerTextField ->
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Transparent, RoundedCornerShape(5.dp))
-                    .border(borderWidth, borderColor, RoundedCornerShape(5.dp))
-                    .padding(horizontal = booklogsScaledDp(12.dp)),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    if (value.isEmpty()) {
-                        Text(
-                            text = "하루에 읽을 페이지 수 목표",
-                            style = BooklogsInputTextStyle,
-                            color = BooklogsTextPlaceholder,
-                        )
-                    }
-                    innerTextField()
-                }
-                Text(
-                    text = "p",
-                    style = BooklogsInputTextStyle,
-                    color = BooklogsTextPlaceholder,
-                )
-            }
-        },
     )
 }
 

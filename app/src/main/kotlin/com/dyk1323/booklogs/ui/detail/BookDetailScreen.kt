@@ -39,7 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -84,6 +83,7 @@ import com.dyk1323.booklogs.ui.common.theme.BooklogsCaptionTextStyle
 import com.dyk1323.booklogs.ui.common.components.BooklogsContentCard
 import com.dyk1323.booklogs.ui.common.components.BooklogsFilledButton
 import com.dyk1323.booklogs.ui.common.components.BooklogsIconAction
+import com.dyk1323.booklogs.ui.common.components.BooklogsInlineTextField
 import com.dyk1323.booklogs.ui.common.components.BooklogsLabeledTextField
 import com.dyk1323.booklogs.ui.common.components.BooklogsListBlock
 import com.dyk1323.booklogs.ui.common.components.BooklogsNumberTextField
@@ -670,6 +670,7 @@ fun QuoteEditScreen(
                     .weight(1f),
                 singleLine = false,
                 fieldWeight = 1f,
+                textStyle = BooklogsBodyTextStyle,
             )
             uiState.message?.takeUnless { it == "인용구를 수정했어요." }?.let {
                 Spacer(modifier = Modifier.height(booklogsScaledDp(6.dp)))
@@ -1091,7 +1092,7 @@ internal fun QuoteCommentsSheetContent(
             .fillMaxWidth()
             .background(BooklogsScreenBackground)
             .padding(horizontal = BooklogsSheetHorizontalPadding)
-            .padding(bottom = BooklogsSheetBottomPadding),
+            .padding(bottom = BooklogsSheetBottomPadding + 48.dp),
     ) {
         Text(text = "댓글", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(booklogsScaledDp(12.dp)))
@@ -1139,9 +1140,10 @@ internal fun QuoteCommentsSheetContent(
             modifier = Modifier.navigationBarsPadding(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            OutlinedTextField(
+            BooklogsInlineTextField(
                 value = inputText,
                 onValueChange = onInputChanged,
+                placeholder = "댓글 추가",
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),

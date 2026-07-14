@@ -76,6 +76,7 @@ import com.dyk1323.booklogs.ui.common.components.BooklogsTopBar
 import com.dyk1323.booklogs.ui.common.components.CameraCapturePreview
 import com.dyk1323.booklogs.ui.common.components.LoadingOverlay
 import com.dyk1323.booklogs.ui.common.components.booklogsScreenBottomPadding
+import com.dyk1323.booklogs.ui.common.theme.BooklogsBodyTextStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -429,6 +430,7 @@ private fun FinalTextContent(
             singleLine = false,
             enabled = !state.isSaved,
             fieldWeight = 1f,
+            textStyle = BooklogsBodyTextStyle,
         )
         state.message?.let {
             Spacer(modifier = Modifier.height(6.dp))

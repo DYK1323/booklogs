@@ -41,7 +41,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -232,6 +234,7 @@ fun BooklogsSearchField(
             .onFocusChanged { isFocused = it.isFocused },
         singleLine = true,
         textStyle = BooklogsInputTextStyle.copy(color = BooklogsTextPrimary),
+        cursorBrush = SolidColor(BooklogsAccent),
         decorationBox = { innerTextField ->
             Row(
                 modifier = Modifier
@@ -279,6 +282,7 @@ fun BooklogsLabeledTextField(
     minHeight: Dp = if (singleLine) 48.dp else 140.dp,
     fieldWeight: Float? = null,
     containerColor: Color = Color.Transparent,
+    textStyle: TextStyle = BooklogsInputTextStyle,
 ) {
     val labelSpacing = booklogsScaledDp(4.dp)
     val scaledMinHeight = booklogsScaledDp(minHeight)
@@ -308,9 +312,10 @@ fun BooklogsLabeledTextField(
             modifier = fieldModifier,
             enabled = enabled,
             singleLine = singleLine,
-            textStyle = BooklogsInputTextStyle.copy(
+            textStyle = textStyle.copy(
                 color = if (enabled) BooklogsTextPrimary else BooklogsTextSecondary,
             ),
+            cursorBrush = SolidColor(BooklogsAccent),
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
             decorationBox = { innerTextField ->
@@ -351,6 +356,74 @@ fun BooklogsLabeledTextField(
             )
         }
     }
+}
+
+@Composable
+fun BooklogsInlineTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String = "",
+    modifier: Modifier = Modifier,
+    suffix: String? = null,
+    label: (@Composable () -> Unit)? = null,
+    singleLine: Boolean = true,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    enabled: Boolean = true,
+    minHeight: Dp = 48.dp,
+) {
+    val scaledMinHeight = booklogsScaledDp(minHeight)
+    val horizontalPadding = booklogsScaledDp(12.dp)
+    var isFocused by remember { mutableStateOf(false) }
+    val borderColor = if (isFocused) BooklogsAccent else BooklogsHairline
+    val borderWidth = if (isFocused) 1.dp else 0.5.dp
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier
+            .heightIn(min = scaledMinHeight)
+            .onFocusChanged { isFocused = it.isFocused },
+        enabled = enabled,
+        singleLine = singleLine,
+        textStyle = BooklogsInputTextStyle.copy(
+            color = if (enabled) BooklogsTextPrimary else BooklogsTextSecondary,
+        ),
+        cursorBrush = SolidColor(BooklogsAccent),
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+        decorationBox = { innerTextField ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = scaledMinHeight)
+                    .background(Color.Transparent, BooklogsBlockShape)
+                    .border(borderWidth, borderColor, BooklogsBlockShape)
+                    .padding(horizontal = horizontalPadding),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            style = BooklogsInputTextStyle,
+                            color = BooklogsTextPlaceholder,
+                        )
+                    }
+                    innerTextField()
+                }
+                suffix?.let {
+                    Text(
+                        text = it,
+                        style = BooklogsInputTextStyle,
+                        color = BooklogsTextPlaceholder,
+                    )
+                }
+            }
+        },
+    )
 }
 
 @Composable
