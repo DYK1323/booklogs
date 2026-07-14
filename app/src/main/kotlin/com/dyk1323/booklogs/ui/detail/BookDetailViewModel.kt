@@ -52,6 +52,7 @@ data class BookDetailUiState(
     val progress: Float? = null,
     val logDeltas: List<LogDelta> = emptyList(),
     val quotes: List<Quote> = emptyList(),
+    val quoteCommentCounts: Map<Long, Int> = emptyMap(),
     val reviews: List<Review> = emptyList(),
     val rounds: List<ReadingRound> = emptyList(),
     val quoteText: String = "",
@@ -100,6 +101,7 @@ private data class RoundEditState(
 
 private data class QuoteReviewRoundState(
     val quotes: List<Quote>,
+    val quoteCommentCounts: Map<Long, Int>,
     val reviews: List<Review>,
     val rounds: List<ReadingRound>,
 )
@@ -110,6 +112,7 @@ private data class BookDetailBaseState(
     val progress: Float?,
     val logDeltas: List<LogDelta>,
     val quotes: List<Quote>,
+    val quoteCommentCounts: Map<Long, Int>,
     val reviews: List<Review>,
     val rounds: List<ReadingRound>,
 )
@@ -155,6 +158,10 @@ class BookDetailViewModel(
         if (bookId == null) flowOf(emptyList()) else quoteRepository.observeForBook(bookId)
     }
 
+    private val quoteCommentCounts = selectedBookId.flatMapLatest { bookId ->
+        if (bookId == null) flowOf(emptyMap()) else quoteCommentRepository.observeCountsForBook(bookId)
+    }
+
     private val reviews = selectedBookId.flatMapLatest { bookId ->
         if (bookId == null) flowOf(emptyList()) else reviewRepository.observeForBook(bookId)
     }
@@ -171,10 +178,11 @@ class BookDetailViewModel(
     // so the outer baseState combine below stays within that limit.
     private val quotesReviewsRounds: Flow<QuoteReviewRoundState> = combine(
         quotes,
+        quoteCommentCounts,
         reviews,
         rounds,
-    ) { quoteList, reviewList, roundList ->
-        QuoteReviewRoundState(quoteList, reviewList, roundList)
+    ) { quoteList, quoteCommentCounts, reviewList, roundList ->
+        QuoteReviewRoundState(quoteList, quoteCommentCounts, reviewList, roundList)
     }
 
     private val baseState = combine(
@@ -195,6 +203,7 @@ class BookDetailViewModel(
                 .flatMap { (roundId, roundLogs) -> computeLogDeltas(roundLogs, startingPageByRound[roundId] ?: 0) }
                 .sortedByDescending { it.log.loggedAt },
             quotes = qrr.quotes,
+            quoteCommentCounts = qrr.quoteCommentCounts,
             reviews = qrr.reviews,
             rounds = qrr.rounds.sortedByDescending { it.roundNumber },
         )
@@ -248,6 +257,7 @@ class BookDetailViewModel(
             progress = base.progress,
             logDeltas = base.logDeltas,
             quotes = base.quotes,
+            quoteCommentCounts = base.quoteCommentCounts,
             reviews = base.reviews,
             rounds = base.rounds,
             quoteText = quoteForm.quoteText,

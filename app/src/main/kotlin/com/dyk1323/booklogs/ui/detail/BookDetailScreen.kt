@@ -351,6 +351,7 @@ fun BookDetailScreen(
                             uiState.quotes.take(3).forEach { quote ->
                                 QuoteCard(
                                     quote = quote,
+                                    commentCount = uiState.quoteCommentCounts[quote.id] ?: 0,
                                     onComments = { viewModel.openComments(quote.id) },
                                     onEdit = { onEditQuoteClick(quote.id) },
                                     onDelete = { pendingDeleteQuoteId = quote.id },
@@ -1042,6 +1043,7 @@ private fun RoundDatePickerField(
 @Composable
 internal fun QuoteCard(
     quote: Quote,
+    commentCount: Int,
     onComments: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -1070,10 +1072,32 @@ internal fun QuoteCard(
                 )
             }
             Spacer(modifier = Modifier.height(booklogsScaledDp(12.dp)))
-            BooklogsCardActions {
-                BooklogsIconAction(Icons.Outlined.ChatBubbleOutline, "댓글", onComments)
-                BooklogsIconAction(Icons.Outlined.Edit, "인용구 수정", onEdit, iconSize = 24.dp)
-                BooklogsIconAction(Icons.Outlined.Delete, "인용구 삭제", onDelete, iconSize = 24.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    modifier = Modifier.clickable(onClick = onComments),
+                    horizontalArrangement = Arrangement.spacedBy(booklogsScaledDp(4.dp)),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Outlined.ChatBubbleOutline,
+                        contentDescription = "댓글",
+                        modifier = Modifier.size(20.dp),
+                        tint = BooklogsTextSecondary,
+                    )
+                    Text(
+                        text = commentCount.toString(),
+                        style = BooklogsCaptionEmphasisTextStyle,
+                        color = BooklogsTextSecondary,
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(booklogsScaledDp(12.dp))) {
+                    BooklogsIconAction(Icons.Outlined.Edit, "인용구 수정", onEdit, iconSize = 24.dp)
+                    BooklogsIconAction(Icons.Outlined.Delete, "인용구 삭제", onDelete, iconSize = 24.dp)
+                }
             }
         }
     }

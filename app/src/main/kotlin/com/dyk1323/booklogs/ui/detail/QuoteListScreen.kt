@@ -125,6 +125,7 @@ fun QuoteListScreen(
                     items(filteredQuotes, key = { it.id }) { quote ->
                         QuoteCard(
                             quote = quote,
+                            commentCount = uiState.quoteCommentCounts[quote.id] ?: 0,
                             onComments = { viewModel.openComments(quote.id) },
                             onEdit = { onEditQuoteClick(quote.id) },
                             onDelete = { pendingDeleteQuoteId = quote.id },

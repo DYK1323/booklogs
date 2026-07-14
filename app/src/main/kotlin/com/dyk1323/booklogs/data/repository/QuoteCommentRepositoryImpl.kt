@@ -13,6 +13,11 @@ class QuoteCommentRepositoryImpl(
     override fun observeForQuote(quoteId: Long): Flow<List<QuoteComment>> =
         quoteCommentDao.observeForQuote(quoteId).map { entities -> entities.map { it.toDomain() } }
 
+    override fun observeCountsForBook(bookId: Long): Flow<Map<Long, Int>> =
+        quoteCommentDao.observeCountsForBook(bookId).map { counts ->
+            counts.associate { it.quoteId to it.count }
+        }
+
     override suspend fun insert(comment: QuoteComment): Long = quoteCommentDao.insert(comment.toEntity())
 
     override suspend fun deleteById(commentId: Long) = quoteCommentDao.deleteById(commentId)
